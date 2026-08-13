@@ -94,3 +94,32 @@ Stage Summary:
 - API route /api/kategori supports GET, POST, PUT, DELETE with proper validation
 - Delete protection prevents accidental deletion of categories with associated courses
 - Duplicate Kod detection with user-friendly error messages
+---
+Task ID: 2
+Agent: Main Agent
+Task: Enhance KursusTab with Add, Edit, Delete, View (Senarai Peserta) functionality
+
+Work Log:
+- Analyzed existing KursusTab (read-only table) and API (GET + POST only)
+- Added GET by id support to /api/kursus/route.ts (returns kursus with peserta list and sijil)
+- Added PUT handler with duplicate kodKursus check and proper validation
+- Added DELETE handler with protection: cannot delete courses with existing sijil; cascade deletes peserta if no sijil
+- Added pre-check for duplicate kodKursus in POST handler
+- Enhanced KursusTab component with full CRUD UI:
+  - "Tambah Kursus" button in header
+  - "Tindakan" column with View (eye), Edit (pencil), Delete (trash) icon buttons
+  - Add/Edit Dialog with all course fields: Kod, Kategori (dropdown), Nama BM, Nama BI, Tarikh Mula/Tamat, Tempoh, Status, Penyelaras, Tempat, Penganjur Bersama, Catatan
+  - View Dialog (Papar Maklumat Kursus) showing:
+    - Info cards: Tarikh Mula, Tarikh Tamat, Tempoh, Penyelaras
+    - Senarai Peserta table: #, Nama Penuh, No. MyKad, Kelayakan, Sijil count
+  - Delete Confirmation Dialog with warnings for sijil protection and peserta cascade
+  - Toast notifications for all operations
+  - Claymorphism styling consistent with app design
+- Passed lint check
+- Verified all operations via Agent Browser: Add, Edit, Delete, View (Senarai Peserta), Delete Protection
+
+Stage Summary:
+- KursusTab now fully supports Add, Edit, Delete, View (Senarai Peserta) operations
+- API route /api/kursus supports GET (list + single), POST, PUT, DELETE with proper validation
+- View dialog shows course info + full participant list with sijil status
+- Delete protection prevents deletion of courses with generated sijil
