@@ -1,0 +1,242 @@
+// e-Sijil ADTEC Sandakan - Sistem Cetak Sijil Digital Dinamik
+// Prisma Schema v1.0
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// M1: Autentikasi & Pengurusan Pengguna
+// ============================================================
+model Pengguna {
+  id              String   @id @default(cuid())
+  namaPenuh       String
+  emel            String   @unique
+  kataLaluanHash  String
+  peranan         String   @default("penyelaras") // super_admin | admin | penyelaras
+  noTelefon       String?
+  status          String   @default("aktif") // aktif | tidak_aktif | dikunci
+  percubaanGagal  Int      @default(0)
+  logMasukTerakhir DateTime?
+  diciptaPada     DateTime @default(now())
+  dikemaskiniPada DateTime @updatedAt
+
+  // Relations
+  kursusDicipta   Kursus[]     @relation("KursusDicipta")
+  templatDimuatNaik TemplatSijil[] @relation("TemplatDimuatNaik")
+  logAudit        LogAudit[]   @relation("AuditOleh")
+
+  @@map("pengguna")
+}
+
+// ============================================================
+// M2: Pengurusan Kategori Program
+// ============================================================
+model KategoriProgram {
+  id            String   @id @default(cuid())
+  kodKategori   String   @unique // KP, PI, BK, LDS, PK, LIP
+  namaKategori  String
+  keterangan    String?
+  warnaLabel    String   @default("#7C6CF0")
+  status        String   @default("aktif") // aktif | arkib
+  diciptaPada   DateTime @default(now())
+  dikemaskiniPada DateTime @updatedAt
+
+  // Foreign Key
+  templatLalaiId  String?
+
+  // Relations
+  kursus        Kursus[]
+  templatLalai  TemplatSijil? @relation("TemplatLalaiKategori", fields: [templatLalaiId], references: [id])
+
+  @@map("kategori_program")
+}
+
+// ============================================================
+// M3: Pengurusan Kursus / Program
+// ============================================================
+model Kursus {
+  id              String   @id @default(cuid())
+  kodKursus       String   @unique // ADTEC-SDK/KP/2026/017
+  namaKursusBm    String
+  namaKursusBi    String?
+  tempohJam       Int?
+  namaPenyelaras  String?
+  tempat          String?   @default("ADTEC JTM Kampus Sandakan")
+  penganjurBersama String?
+  catatan         String?
+  status          String   @default("draf") // draf | aktif | tamat | arkib
+  tarikhMula      DateTime
+  tarikhTamat     DateTime
+  diciptaPada     DateTime @default(now())
+  dikemaskiniPada DateTime @updatedAt
+
+  // Foreign Keys
+  kategoriId      String
+  templatKhususId String? // override templat lalai kategori
+  diciptaOlehId   String
+
+  // Relations
+  kategori        KategoriProgram  @relation(fields: [kategoriId], references: [id])
+  templatKhusus   TemplatSijil?   @relation("TemplatKhususKursus", fields: [templatKhususId], references: [id])
+  diciptaOleh     Pengguna        @relation("KursusDicipta", fields: [diciptaOlehId], references: [id])
+  peserta         Peserta[]
+  sijil           Sijil[]
+
+  @@map("kursus")
+}
+
+// ============================================================
+// M4: Pengurusan Peserta
+// ============================================================
+model Peserta {
+  id              String   @id @default(cuid())
+  namaPenuh       String   // UPPERCASE
+  noMykad         String   // 12 digit tanpa garis
+  noMykadHash     String   // SHA-256 hash untuk carian
+  jenisPengecam   String   @default("mykad") // mykad | pasport
+  noTelefon       String?
+  emel            String?
+  jantina         String?  // lelaki | perempuan
+  statusKelayakan String   @default("layak") // layak | tidak_layak | ditangguh
+  catatan         String?
+  diciptaPada     DateTime @default(now())
+  dikemaskiniPada DateTime @updatedAt
+
+  // Foreign Keys
+  kursusId        String
+
+  // Relations
+  kursus          Kursus   @relation(fields: [kursusId], references: [id])
+  sijil           Sijil[]
+
+  @@unique([kursusId, noMykadHash])
+  @@map("peserta")
+}
+
+// ============================================================
+// M5: Pengurusan Templat Sijil
+// ============================================================
+model TemplatSijil {
+  id            String   @id @default(cuid())
+  namaTemplat   String
+  keterangan    String?
+  laluanFail    String   // path ke fail templat
+  jenisFail     String   @default("png") // png | jpg | pdf | svg
+  orientasi     String   @default("landskap") // landskap | potret
+  saizKertas    String   @default("a4") // a4 | a5 | letter
+  lebarPx       Int      @default(3508)
+  tinggiPx      Int      @default(2480)
+  versi         Int      @default(1)
+  status        String   @default("draf") // draf | aktif | arkib
+  diciptaPada   DateTime @default(now())
+  dikemaskiniPada DateTime @updatedAt
+
+  // Foreign Keys
+  dimuatNaikOlehId String
+
+  // Relations
+  dimuatNaikOleh  Pengguna      @relation("TemplatDimuatNaik", fields: [dimuatNaikOlehId], references: [id])
+  medanTemplat    MedanTemplat[]
+  kategoriLalai   KategoriProgram[] @relation("TemplatLalaiKategori")
+  kursusKhusus    Kursus[]     @relation("TemplatKhususKursus")
+  sijil           Sijil[]
+
+  @@map("templat_sijil")
+}
+
+model MedanTemplat {
+  id            String   @id @default(cuid())
+  kunciMedan    String   // nama_penuh, no_mykad, nama_kursus, etc.
+  jenisElemen   String   @default("teks") // teks | imej | qr
+  posXPeratus   Float    @default(50) // 0-100%
+  posYPeratus   Float    @default(50) // 0-100%
+  lebarPeratus  Float    @default(40) // 0-100%
+  keluargaFon   String   @default("Times New Roman")
+  saizFon       Float    @default(24)
+  warnaFon      String   @default("#000000")
+  gayaFon       String   @default("normal") // normal | tebal | condong | tebal_condong
+  penjajaran    String   @default("tengah") // kiri | tengah | kanan
+  autoKecil     Boolean  @default(true)
+
+  // Foreign Keys
+  templatId     String
+
+  // Relations
+  templat       TemplatSijil @relation(fields: [templatId], references: [id], onDelete: Cascade)
+
+  @@map("medan_templat")
+}
+
+// ============================================================
+// M6: Enjin Penjanaan Sijil Dinamik
+// ============================================================
+model Sijil {
+  id              String   @id @default(cuid())
+  noSiri          String   @unique // ADTEC/SDK/2026/KP/00142
+  kodQr           String?  // URL pengesahan
+  laluanPdf       String?  // cached PDF path
+  status          String   @default("sah") // sah | dibatalkan
+  sebabBatal      String?
+  bilMuatTurun    Int      @default(0)
+  dijanaPada      DateTime @default(now())
+  muatTurunTerakhir DateTime?
+  versiTemplat    Int      @default(1)
+
+  // Foreign Keys
+  pesertaId       String
+  kursusId        String
+  templatId       String
+
+  // Relations
+  peserta         Peserta     @relation(fields: [pesertaId], references: [id])
+  kursus          Kursus      @relation(fields: [kursusId], references: [id])
+  templat         TemplatSijil @relation(fields: [templatId], references: [id])
+
+  @@map("sijil")
+}
+
+// ============================================================
+// M10: Log Audit & Tetapan Sistem
+// ============================================================
+model LogAudit {
+  id            String   @id @default(cuid())
+  tindakan      String   // cipta | sunting | padam | jana | log_masuk | carian
+  entiti         String   // nama jadual terlibat
+  idEntiti       String?  // kunci rekod terlibat
+  butiran       String?  // JSON butiran perubahan
+  alamatIp      String?
+  agenPengguna  String?
+  diciptaPada   DateTime @default(now())
+
+  // Foreign Keys
+  penggunaId    String?
+
+  // Relations
+  pengguna      Pengguna? @relation("AuditOleh", fields: [penggunaId], references: [id])
+
+  @@map("log_audit")
+}
+
+model TetapanSistem {
+  id              String   @id @default(cuid())
+  namaInstitusi   String   @default("ADTEC JTM Kampus Sandakan")
+  alamatInstitusi String?  @default("Jabatan Tenaga Manusia, Kementerian Sumber Manusia")
+  emelHubungan   String?  @default("adtec.sandakan@jtm.gov.my")
+  telefonHubungan String? 
+  namaPengarah    String?  @default("Pengarah ADTEC Sandakan")
+  laluanTandatangan String? // path ke imej tandatangan
+  laluanLogo     String?  @default("/logo-adtec.png")
+  teksPengaki    String?  @default("Sijil ini dikeluarkan oleh ADTEC JTM Kampus Sandakan")
+  pengesahanKedua Boolean @default(false)
+  captchaAktif   Boolean @default(false)
+  modPenyelenggaraan Boolean @default(false)
+  dikemaskiniPada DateTime @updatedAt
+
+  @@map("tetapan_sistem")
+}

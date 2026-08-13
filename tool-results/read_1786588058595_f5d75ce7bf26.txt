@@ -1,0 +1,2002 @@
+     1→1
+     2→PRODUCT REQUIREMENTS DOCUMENT · V1.0
+     3→Sistem Cetak Sijil
+     4→Digital Dinamik
+     5→e-Sijil ADTEC Sandakan
+     6→Advanced Technology Training Centre (ADTEC)
+     7→Jabatan Tenaga Manusia (JTM) — Kampus Sandakan
+     8→Kementerian Sumber Manusia, Malaysia
+     9→Templat Dinamik
+    10→Carian MyKad
+    11→Cetak Automatik
+    12→Claymorphism UI
+    13→Nama Dokumen
+    14→Product Requirements Document (PRD) — Sistem Cetak Sijil
+    15→Kod Projek
+    16→SCS-ADTEC-SDK
+    17→Versi
+    18→1.0 (Draf Awal untuk Kelulusan)
+    19→Tarikh Dokumen
+    20→13 Ogos 2026
+    21→Disediakan Oleh
+    22→Unit Pembangunan Sistem / Programmer, ADTEC JTM Kampus
+    23→Sandakan
+    24→Pemilik Produk
+    25→Bahagian Latihan & Pusat Sumber dan Multimedia (PSM)
+    26→Status
+    27→Menunggu semakan & kelulusan Pengurusan
+    28→Klasifikasi
+    29→Terhad — Kegunaan Dalaman ADTEC
+    30→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+    31→1
+    32→
+    33→2
+    34→i
+    35→Kandungan Dokumen
+    36→1. Ringkasan Eksekutif
+    37→3
+    38→2. Latar Belakang & Pernyataan Masalah
+    39→4
+    40→3. Matlamat, Objektif & Metrik Kejayaan
+    41→5
+    42→4. Skop Projek
+    43→6
+    44→5. Persona Pengguna & Matriks Peranan
+    45→8
+    46→6. Kisah Pengguna (User Stories) & Kriteria Penerimaan
+    47→10
+    48→7. Keperluan Fungsian (Functional Requirements)
+    49→13
+    50→8. Keperluan Bukan Fungsian (Non-Functional)
+    51→20
+    52→9. Reka Bentuk Data & Skema Pangkalan Data
+    53→22
+    54→10. Aliran Proses Sistem
+    55→27
+    56→11. Spesifikasi Templat Sijil & Enjin Penjanaan
+    57→29
+    58→12. Reka Bentuk UI/UX — Gaya Claymorphism
+    59→32
+    60→13. Seni Bina Sistem & Timbunan Teknologi
+    61→36
+    62→14. Spesifikasi API
+    63→38
+    64→15. Keselamatan, Privasi & Pematuhan PDPA
+    65→40
+    66→16. Pelan Pengujian & Kes Ujian UAT
+    67→42
+    68→17. Fasa Pelaksanaan & Jadual Projek
+    69→45
+    70→18. Risiko & Pelan Mitigasi
+    71→47
+    72→19. Kriteria Penerimaan Projek (Definition of Done)
+    73→48
+    74→20. Peningkatan Masa Hadapan (Roadmap)
+    75→48
+    76→21. Lampiran
+    77→49
+    78→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+    79→2
+    80→
+    81→3
+    82→1
+    83→Ringkasan Eksekutif
+    84→Sistem Cetak Sijil (e-Sijil ADTEC Sandakan) ialah sebuah aplikasi web yang dibangunkan untuk mengautomasikan
+    85→keseluruhan kitaran hayat pengeluaran sijil di ADTEC JTM Kampus Sandakan — bermula daripada pendaftaran
+    86→program, pengurusan senarai peserta, penetapan templat reka bentuk sijil, sehingga penjanaan dan pencetakan sijil
+    87→oleh peserta sendiri.
+    88→Sistem ini terbahagi kepada dua antara muka utama yang berbeza fungsi tetapi berkongsi satu pangkalan data:
+    89→Portal Pentadbir (Back-end) — akses terkawal melalui log masuk. Pentadbir menguruskan senarai
+    90→kursus/program, senarai peserta bagi setiap kursus, serta memuat naik dan menetapkan templat sijil tersuai
+    91→mengikut kategori program. Pentadbir turut memetakan medan data dinamik (nama, no. MyKad, nama kursus,
+    92→tarikh) ke atas kedudukan yang tepat pada templat.
+    93→Portal Pengguna Akhir (Front-end) — antara muka awam tanpa log masuk. Peserta hanya memasukkan nombor
+    94→MyKad sebagai pengecam unik. Sistem akan mengesahkan kelayakan, memaparkan senarai sijil yang layak
+    95→dimiliki, dan menjana fail PDF sijil secara automatik untuk dimuat turun atau dicetak serta-merta.
+    96→Reka bentuk antara muka menggunakan gaya visual Claymorphism — permukaan lembut menyerupai tanah liat
+    97→dengan sudut membulat besar, bayang berganda (luar & dalam), serta palet warna pastel yang mesra mata. Gaya ini
+    98→dipilih untuk mengurangkan rasa gerun terhadap sistem kerajaan yang lazimnya kaku, sekali gus meningkatkan kadar
+    99→penggunaan kendiri (self-service) dalam kalangan peserta kursus.
+   100→< 30s
+   101→MASA JANA SIJIL
+   102→1
+   103→INPUT DIPERLUKAN
+   104→0
+   105→KERTAS TERBUANG
+   106→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+   107→3
+   108→
+   109→4
+   110→2
+   111→Latar Belakang & Pernyataan Masalah
+   112→2.1 Situasi Semasa
+   113→Pada masa ini, pengeluaran sijil bagi kursus jangka pendek, program industri, bengkel, kursus kemahiran dan
+   114→program latihan di ADTEC JTM Kampus Sandakan dilaksanakan secara separa-manual:
+   115→Templat sijil disimpan sebagai fail Microsoft Word atau Adobe Photoshop di komputer individu penyelaras
+   116→program.
+   117→Nama peserta ditaip semula atau digabungkan melalui mail merge daripada senarai kehadiran dalam Microsoft
+   118→Excel.
+   119→Sijil dicetak secara pukal, kemudian diagihkan secara fizikal semasa majlis penutup atau diambil sendiri di
+   120→pejabat.
+   121→Permohonan cetak semula (sijil hilang/rosak) memerlukan carian manual dalam fail lama yang kadangkala sudah
+   122→tidak dapat dikesan.
+   123→2.2 Masalah Yang Dikenal Pasti
+   124→Kod
+   125→Masalah
+   126→Kesan Terhadap Operasi
+   127→P-01
+   128→Ralat ejaan nama & nombor MyKad semasa taip
+   129→manual
+   130→Sijil perlu dicetak semula; pembaziran kertas berlapis emas
+   131→dan masa staf
+   132→P-02
+   133→Templat berselerak di komputer berbeza tanpa
+   134→kawalan versi
+   135→Reka bentuk tidak seragam antara program; identiti korporat
+   136→ADTEC tidak konsisten
+   137→P-03
+   138→Tiada rekod berpusat siapa telah menerima sijil
+   139→Sukar mengesahkan tuntutan peserta; audit sukar
+   140→dilaksanakan
+   141→P-04
+   142→Permohonan cetak semula mengambil masa 3–7
+   143→hari bekerja
+   144→Aduan peserta; beban kerja tambahan kepada staf
+   145→pentadbiran
+   146→P-05
+   147→Sijil fizikal mudah dipalsukan (tiada elemen
+   148→pengesahan)
+   149→Risiko integriti terhadap kelayakan yang dikeluarkan ADTEC
+   150→P-06
+   151→Peserta luar daerah terpaksa hadir ke kampus untuk
+   152→ambil sijil
+   153→Kos perjalanan peserta; sijil tidak dituntut bertimbun di
+   154→pejabat
+   155→P-07
+   156→Bergantung sepenuhnya kepada seorang staf yang
+   157→mahir mail merge
+   158→Operasi terhenti apabila staf berkenaan cuti atau bertukar
+   159→2.3 Peluang Penambahbaikan
+   160→Cadangan penyelesaian: Pusatkan semua templat, senarai kursus dan senarai peserta ke dalam satu pangkalan data berpusat,
+   161→kemudian serahkan proses pengeluaran akhir kepada peserta sendiri melalui satu medan input tunggal — nombor MyKad. Beban
+   162→kerja staf beralih daripada mengeluarkan sijil kepada mengesahkan data, iaitu tugas yang jauh lebih ringan dan lebih bernilai.
+   163→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+   164→4
+   165→
+   166→5
+   167→3
+   168→Matlamat, Objektif & Metrik Kejayaan
+   169→3.1 Matlamat Utama
+   170→Mewujudkan satu sistem pengeluaran sijil berpusat, fleksibel dan bersifat layan-diri yang membolehkan mana-
+   171→mana peserta program ADTEC Sandakan memperoleh sijil rasmi mereka dalam masa kurang satu minit, tanpa
+   172→campur tangan staf.
+   173→3.2 Objektif Khusus
+   174→Kod
+   175→Objektif
+   176→OBJ-01
+   177→Membolehkan Pentadbir memuat naik, menyunting dan menyahaktifkan templat sijil mengikut kategori program
+   178→secara bebas, tanpa perlu mengubah kod sistem.
+   179→OBJ-02
+   180→Menyediakan enjin penjanaan sijil dinamik yang menggabungkan data peserta dengan templat terpilih dan
+   181→mengeluarkan fail PDF sedia cetak.
+   182→OBJ-03
+   183→Membolehkan pengguna akhir menjana sijil hanya dengan memasukkan nombor MyKad — tiada kata laluan, tiada
+   184→pendaftaran akaun.
+   185→OBJ-04
+   186→Menyelenggara daftar berpusat bagi semua kursus/program dan senarai peserta yang berkaitan dengan setiap kursus.
+   187→OBJ-05
+   188→Menyediakan elemen pengesahan digital (nombor siri unik + kod QR) pada setiap sijil bagi mencegah pemalsuan.
+   189→OBJ-06
+   190→Menghasilkan laporan statistik pengeluaran sijil untuk keperluan pelaporan Bahagian Latihan kepada Ibu Pejabat JTM.
+   191→OBJ-07
+   192→Memastikan pengendalian data peribadi mematuhi Akta Perlindungan Data Peribadi 2010 (PDPA) dan Pekeliling
+   193→Keselamatan ICT Sektor Awam.
+   194→3.3 Metrik Kejayaan (KPI)
+   195→Metrik
+   196→Garis Dasar Semasa
+   197→Sasaran (6 bulan)
+   198→Kaedah Ukuran
+   199→Masa purata peserta memperoleh sijil
+   200→3–7 hari bekerja
+   201→< 1 minit
+   202→Log masa sistem
+   203→Kadar ralat data pada sijil
+   204→~8% cetakan semula
+   205→< 1%
+   206→Rekod aduan
+   207→pembetulan
+   208→Peratus sijil dijana secara layan-diri
+   209→0%
+   210→≥ 85%
+   211→Nisbah jana-
+   212→sendiri vs jana-
+   213→admin
+   214→Jam kerja staf untuk pengeluaran sijil
+   215→~12 jam/program
+   216→< 1.5 jam/program
+   217→Kajian masa kerja
+   218→Ketersediaan sistem (uptime)
+   219→Tiada
+   220→≥ 99%
+   221→Pemantauan hos
+   222→Kepuasan pengguna (SUS Score)
+   223→Tiada
+   224→≥ 80/100
+   225→Borang maklum
+   226→balas dalam sistem
+   227→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+   228→5
+   229→
+   230→6
+   231→4
+   232→Skop Projek
+   233→4.1 Dalam Skop (In-Scope) — Fasa 1
+   234→Modul Pentadbir
+   235→Log masuk berperanan (Super Admin, Admin,
+   236→Penyelaras Program)
+   237→CRUD Kategori Program
+   238→CRUD Kursus / Program
+   239→CRUD Peserta & import pukal CSV/XLSX
+   240→Muat naik templat sijil (PNG/JPG/PDF/SVG)
+   241→Editor pemetaan medan (drag & drop
+   242→placeholder)
+   243→Penetapan templat kepada kategori/kursus
+   244→Pratonton sijil sebelum pengaktifan
+   245→Jana pukal (bulk) semua sijil satu kursus
+   246→Papan pemuka statistik & laporan
+   247→Log audit tindakan pentadbir
+   248→Modul Pengguna Akhir
+   249→Halaman utama dengan satu medan input
+   250→MyKad
+   251→Pengesahan format & kewujudan nombor
+   252→MyKad
+   253→Paparan senarai sijil yang layak
+   254→Penjanaan PDF sijil atas permintaan (on-
+   255→demand)
+   256→Muat turun PDF
+   257→Cetak terus dari pelayar
+   258→Halaman pengesahan sijil melalui kod QR / no.
+   259→siri
+   260→Antara muka responsif (telefon, tablet, desktop)
+   261→Dwibahasa: Bahasa Melayu & English
+   262→4.2 Luar Skop (Out-of-Scope) — Fasa 1
+   263→Integrasi JPN untuk sahkan MyKad
+   264→ 
+   265→Pembayaran dalam talian
+   266→ 
+   267→Modul pendaftaran kursus awam
+   268→Aplikasi mudah alih asli (Android/iOS)
+   269→ 
+   270→Tandatangan digital PKI berdaftar
+   271→ 
+   272→Integrasi Sistem Pengurusan Pelajar (SPP) JTM
+   273→Penghantaran sijil melalui pos
+   274→ 
+   275→Modul peperiksaan / markah
+   276→ 
+   277→Pengurusan kehadiran harian
+   278→ 
+   279→Blockchain credential
+   280→Item luar skop di atas tidak dibatalkan sepenuhnya — sebahagiannya dicadangkan untuk Fasa 2 dan Fasa 3 seperti dinyatakan dalam
+   281→Seksyen 20 (Roadmap).
+   282→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+   283→6
+   284→
+   285→7
+   286→4.3 Andaian & Kebergantungan
+   287→Kod
+   288→Jenis
+   289→Butiran
+   290→AS-01
+   291→Andaian
+   292→Data peserta (nama penuh & no. MyKad) telah dikumpul semasa pendaftaran kursus dan
+   293→disahkan ketepatannya oleh penyelaras program.
+   294→AS-02
+   295→Andaian
+   296→Nombor MyKad adalah unik bagi setiap individu dan digunakan sebagai kunci carian utama.
+   297→AS-03
+   298→Andaian
+   299→Peserta mempunyai capaian internet asas dan pelayar web moden.
+   300→AS-04
+   301→Andaian
+   302→Kelulusan reka bentuk sijil (logo, tandatangan, susun atur) diperoleh daripada Pengarah ADTEC
+   303→sebelum templat diaktifkan.
+   304→DP-01
+   305→Kebergantungan
+   306→Ketersediaan pelayan / perkhidmatan hos yang diluluskan oleh Unit ICT JTM.
+   307→DP-02
+   308→Kebergantungan
+   309→Fail imej tandatangan digital Pengarah & logo rasmi ADTEC/JTM dalam resolusi tinggi (≥ 300 DPI).
+   310→DP-03
+   311→Kebergantungan
+   312→Peruntukan nama domain sub-laman rasmi (contoh: esijil.adtecsandakan.gov.my).
+   313→DP-04
+   314→Kebergantungan
+   315→Kelulusan Pegawai Keselamatan ICT bagi pengendalian nombor MyKad dalam sistem awam.
+   316→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+   317→7
+   318→
+   319→8
+   320→5
+   321→Persona Pengguna & Matriks Peranan
+   322→5.1 Persona
+   323→PERSONA 01 · PENTADBIR SISTEM
+   324→Encik Hafiz — Pegawai Teknologi Maklumat, Unit ICT ADTEC Sandakan
+   325→MATLAMAT
+   326→Memastikan sistem sentiasa beroperasi dan data selamat
+   327→Mengurus akaun pengguna staf dan hak akses
+   328→Memuat naik templat sijil baharu apabila reka bentuk dikemas kini
+   329→KEKECEWAAN SEMASA
+   330→Sering diminta membetulkan fail Word yang rosak susun aturnya
+   331→Tiada rekod pusat untuk menjawab pertanyaan "siapa dapat sijil bila"
+   332→PERSONA 02 · PENYELARAS PROGRAM
+   333→Puan Norliza — Pegawai Latihan, Bahagian Latihan & Kerjasama Industri
+   334→MATLAMAT
+   335→Memuat naik senarai peserta selepas kursus tamat
+   336→Menetapkan templat yang betul untuk programnya
+   337→Menjana sijil pukal untuk majlis penyampaian
+   338→KEKECEWAAN SEMASA
+   339→Proses mail merge rumit dan mudah tersasar apabila senarai panjang
+   340→Terpaksa mengulang kerja apabila seorang peserta tersalah eja
+   341→PERSONA 03 · PENGGUNA AKHIR (PESERTA)
+   342→Saudara Amirul — Peserta Kursus Pendek Pendawaian Elektrik Domestik
+   343→MATLAMAT
+   344→Mendapatkan sijil dengan cepat untuk dilampirkan pada permohonan kerja
+   345→Mencetak semula sijil yang hilang tanpa perlu ke kampus
+   346→KEKECEWAAN SEMASA
+   347→Perlu menelefon pejabat berkali-kali dan menunggu berhari-hari
+   348→Tinggal jauh di Beluran — perjalanan ke kampus memakan kos
+   349→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+   350→8
+   351→
+   352→9
+   353→5.2 Matriks Peranan & Kebenaran (RBAC)
+   354→Fungsi Sistem
+   355→Super Admin
+   356→Admin
+   357→Penyelaras Program
+   358→Pengguna Akhir
+   359→Urus akaun pengguna staf
+   360→✔ Penuh
+   361→✖
+   362→✖
+   363→✖
+   364→Urus kategori program
+   365→✔ Penuh
+   366→✔ Penuh
+   367→Lihat sahaja
+   368→✖
+   369→Urus kursus / program
+   370→✔ Penuh
+   371→✔ Penuh
+   372→✔ Program sendiri
+   373→✖
+   374→Urus senarai peserta
+   375→✔ Penuh
+   376→✔ Penuh
+   377→✔ Program sendiri
+   378→✖
+   379→Muat naik templat sijil
+   380→✔ Penuh
+   381→✔ Penuh
+   382→✖
+   383→✖
+   384→Petakan medan pada templat
+   385→✔ Penuh
+   386→✔ Penuh
+   387→✖
+   388→✖
+   389→Tetapkan templat kepada kursus
+   390→✔ Penuh
+   391→✔ Penuh
+   392→✔ Program sendiri
+   393→✖
+   394→Jana sijil pukal
+   395→✔
+   396→✔
+   397→✔ Program sendiri
+   398→✖
+   399→Batal / tarik balik sijil
+   400→✔
+   401→✔
+   402→✖
+   403→✖
+   404→Lihat log audit
+   405→✔
+   406→Lihat sahaja
+   407→✖
+   408→✖
+   409→Jana sijil sendiri melalui MyKad
+   410→✔
+   411→✔
+   412→✔
+   413→✔
+   414→Sahkan kesahihan sijil (QR)
+   415→✔
+   416→✔
+   417→✔
+   418→✔ Awam
+   419→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+   420→9
+   421→
+   422→10
+   423→6
+   424→Kisah Pengguna & Kriteria Penerimaan
+   425→Empat kisah pengguna teras (US-01 hingga US-04) merupakan asas permintaan projek ini. Kisah sokongan (US-05 hingga US-
+   426→10) diperoleh daripada analisis proses kerja semasa.
+   427→6.1 Kisah Pengguna Teras
+   428→US-01 · KEUTAMAAN: MESTI ADA
+   429→"Sebagai Pentadbir Sistem, saya mahu memuat naik dan menetapkan templat sijil mengikut kategori
+   430→program, supaya reka bentuk sijil boleh diuruskan secara fleksibel."
+   431→KRITERIA PENERIMAAN
+   432→DIBERI saya telah log masuk sebagai Admin, BILA saya membuka menu Pengurusan Templat dan memuat naik fail imej/PDF
+   433→bersaiz ≤ 10 MB, MAKA sistem menyimpan fail tersebut dan memaparkan pratonton templat.
+   434→Sistem menerima format .png, .jpg, .jpeg, .pdf dan .svg sahaja; format lain ditolak dengan mesej ralat yang jelas.
+   435→Saya boleh menetapkan orientasi templat (Landskap / Potret) dan saiz kertas (A4 / A5 / Letter).
+   436→Saya boleh menyeret (drag) medan dinamik seperti {{nama_penuh}}, {{no_mykad}}, {{nama_kursus}},
+   437→{{tarikh_tamat}}, {{no_siri}} ke kedudukan X-Y di atas templat, serta menetapkan fon, saiz, warna dan penjajaran
+   438→teks.
+   439→Saya boleh mengaitkan satu templat kepada satu atau lebih KATEGORI PROGRAM (contoh: Kursus Pendek, Program Industri,
+   440→Bengkel Kemahiran).
+   441→Apabila templat baharu ditetapkan sebagai aktif untuk sesuatu kategori, templat lama secara automatik berubah status
+   442→kepada arkib, tetapi sijil yang telah dikeluarkan sebelum ini kekal menggunakan templat asalnya.
+   443→Sistem menghalang pengaktifan templat yang belum mempunyai sekurang-kurangnya medan {{nama_penuh}} dan
+   444→{{nama_kursus}} dipetakan.
+   445→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+   446→10
+   447→
+   448→11
+   449→US-02 · KEUTAMAAN: MESTI ADA
+   450→"Sebagai Pengguna Akhir, saya mahu memuat turun atau mencetak sijil dengan hanya memasukkan nombor
+   451→MyKad saya, supaya proses pengesahan menjadi pantas dan mesra pengguna."
+   452→KRITERIA PENERIMAAN
+   453→DIBERI saya berada di halaman utama portal awam, BILA saya memasukkan nombor MyKad 12 digit yang sah dan menekan
+   454→butang Semak Sijil Saya, MAKA sistem memaparkan senarai semua sijil yang layak saya miliki dalam masa < 3 saat.
+   455→Medan input menerima format bergaris (901231-12-5678) mahupun tanpa garis (901231125678) dan menormalkannya
+   456→secara automatik.
+   457→Jika nombor MyKad tidak wujud dalam rekod, sistem memaparkan mesej mesra: "Maaf, tiada rekod sijil ditemui untuk nombor
+   458→MyKad ini." tanpa mendedahkan sama ada nombor tersebut wujud dalam sistem bagi tujuan lain.
+   459→Setiap sijil dalam senarai memaparkan nama kursus, tarikh program, kategori dan status pengeluaran.
+   460→Butang MUAT TURUN PDF menjana fail PDF resolusi cetak (300 DPI) dengan nama fail berformat
+   461→Sijil_[NamaKursus]_[NoSiri].pdf.
+   462→Butang CETAK membuka dialog cetakan pelayar terus dengan susun atur sijil yang betul (tanpa pengepala/pengaki pelayar).
+   463→Untuk melindungi privasi, nama pada senarai dipaparkan separa-tersembunyi (contoh: AMIRUL BIN A•••••) sehingga
+   464→pengguna mengesahkan tarikh lahir atau 4 digit terakhir MyKad — kawalan ini boleh dihidup/matikan oleh Admin.
+   465→Keseluruhan proses boleh diselesaikan tanpa mendaftar akaun atau memasukkan kata laluan.
+   466→US-03 · KEUTAMAAN: MESTI ADA
+   467→"Sebagai Penyelaras Program, saya mahu menyelenggara senarai nama peserta bagi setiap kursus atau
+   468→program, supaya hanya peserta yang sah sahaja layak menjana sijil."
+   469→KRITERIA PENERIMAAN
+   470→Saya boleh menambah peserta seorang demi seorang melalui borang (Nama Penuh, No. MyKad, No. Telefon, E-mel, Jantina,
+   471→Status Kehadiran).
+   472→Saya boleh mengimport senarai peserta secara pukal daripada fail .csv atau .xlsx menggunakan templat yang boleh dimuat
+   473→turun dari sistem.
+   474→Semasa import, sistem memaparkan pratonton baris-baris data dan menandakan ralat (MyKad tidak sah, medan kosong,
+   475→pendua) sebelum data disimpan.
+   476→Sistem menghalang kemasukan peserta yang sama dua kali dalam kursus yang sama (kunci unik: id_kursus + no_mykad).
+   477→Saya boleh menanda status peserta sebagai Layak, Tidak Layak atau Ditangguh; hanya status Layak membolehkan penjanaan
+   478→sijil.
+   479→Saya boleh menyunting atau memadam rekod peserta, dan setiap perubahan direkod dalam log audit.
+   480→Saya boleh mengeksport senarai peserta beserta status pengeluaran sijil ke dalam fail Excel.
+   481→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+   482→11
+   483→
+   484→12
+   485→US-04 · KEUTAMAAN: MESTI ADA
+   486→"Sebagai Pentadbir, saya mahu menyelenggara senarai kursus atau program yang ditawarkan, supaya setiap
+   487→sijil terikat kepada program yang tepat dan berautoriti."
+   488→KRITERIA PENERIMAAN
+   489→Saya boleh mencipta kursus dengan medan: Kod Kursus, Nama Kursus (BM), Nama Kursus (BI), Kategori Program, Tarikh Mula,
+   490→Tarikh Tamat, Tempoh (jam/hari), Penyelaras, Tempat, Status.
+   491→Kod Kursus mestilah unik dan sistem mencadangkan format piawai ADTEC-SDK/[KATEGORI]/[TAHUN]/[NOMBOR].
+   492→Setiap kursus mesti tergolong dalam satu Kategori Program yang telah ditakrifkan.
+   493→Sistem memaparkan bilangan peserta dan bilangan sijil dikeluarkan bagi setiap kursus dalam senarai.
+   494→Kursus berstatus Draf tidak boleh menjana sijil; hanya status Aktif atau Tamat yang dibenarkan.
+   495→Saya boleh menapis dan mencari senarai kursus mengikut kategori, tahun, status dan penyelaras.
+   496→Kursus yang telah mempunyai sijil dikeluarkan tidak boleh dipadam — hanya boleh diarkibkan.
+   497→6.2 Kisah Pengguna Sokongan
+   498→Kod
+   499→Peranan
+   500→Kisah
+   501→Keutamaan
+   502→US-05
+   503→Penyelaras
+   504→Saya mahu menjana semua sijil satu kursus secara pukal
+   505→dalam satu fail PDF gabungan untuk dicetak bagi majlis
+   506→penyampaian.
+   507→Sepatutnya
+   508→US-06
+   509→Awam / Majikan
+   510→Saya mahu mengimbas kod QR pada sijil untuk
+   511→mengesahkan kesahihannya tanpa perlu menghubungi
+   512→ADTEC.
+   513→Mesti Ada
+   514→US-07
+   515→Admin
+   516→Saya mahu membatalkan (revoke) sijil yang tersilap
+   517→dikeluarkan supaya pengesahan QR memaparkan status
+   518→"Dibatalkan".
+   519→Sepatutnya
+   520→US-08
+   521→Pengurusan
+   522→Saya mahu melihat papan pemuka bilangan sijil
+   523→dikeluarkan mengikut bulan, kategori dan program untuk
+   524→laporan prestasi.
+   525→Sepatutnya
+   526→US-09
+   527→Super Admin
+   528→Saya mahu melihat log audit lengkap setiap tindakan
+   529→pentadbir bagi tujuan siasatan dan pengauditan.
+   530→Sepatutnya
+   531→US-10
+   532→Peserta
+   533→Saya mahu menerima pautan sijil melalui e-mel automatik
+   534→selepas kursus tamat.
+   535→Boleh Ada
+   536→US-11
+   537→Admin
+   538→Saya mahu memuat naik imej tandatangan dan logo yang
+   539→boleh digunakan semula merentas pelbagai templat.
+   540→Boleh Ada
+   541→US-12
+   542→Peserta
+   543→Saya mahu menukar bahasa antara muka kepada Bahasa
+   544→Inggeris.
+   545→Boleh Ada
+   546→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+   547→12
+   548→
+   549→13
+   550→7
+   551→Keperluan Fungsian
+   552→Keperluan dikelompokkan kepada sepuluh modul. Setiap keperluan diberi kod unik FR-[Modul]-[Nombor] dan tahap
+   553→keutamaan mengikut kaedah MoSCoW.
+   554→7.1 Modul M1 — Autentikasi & Pengurusan Pengguna
+   555→Kod
+   556→Keperluan
+   557→Keutamaan
+   558→FR-M1-01
+   559→Sistem menyediakan halaman log masuk pentadbir menggunakan e-mel rasmi dan
+   560→kata laluan.
+   561→Mesti
+   562→FR-M1-02
+   563→Kata laluan disimpan dalam bentuk cincangan (hash) bcrypt/argon2 dengan salt;
+   564→tidak pernah disimpan sebagai teks biasa.
+   565→Mesti
+   566→FR-M1-03
+   567→Sistem mengunci akaun selama 15 minit selepas 5 percubaan log masuk gagal
+   568→berturut-turut.
+   569→Mesti
+   570→FR-M1-04
+   571→Sesi log masuk tamat secara automatik selepas 30 minit tanpa aktiviti.
+   572→Mesti
+   573→FR-M1-05
+   574→Super Admin boleh mencipta, menyunting, menyahaktifkan dan menetapkan
+   575→semula kata laluan akaun staf.
+   576→Mesti
+   577→FR-M1-06
+   578→Sistem menguatkuasakan kawalan capaian berasaskan peranan (RBAC) mengikut
+   579→matriks Seksyen 5.2.
+   580→Mesti
+   581→FR-M1-07
+   582→Pengguna boleh menukar kata laluan sendiri; kata laluan minimum 12 aksara
+   583→dengan campuran huruf besar, kecil, nombor dan simbol.
+   584→Sepatutnya
+   585→FR-M1-08
+   586→Sistem menyokong pengesahan dua faktor (2FA) melalui TOTP untuk akaun Super
+   587→Admin.
+   588→Boleh
+   589→7.2 Modul M2 — Pengurusan Kategori Program
+   590→Kod
+   591→Keperluan
+   592→Keutamaan
+   593→FR-M2-01
+   594→Admin boleh mencipta kategori program dengan medan: Kod Kategori, Nama
+   595→Kategori, Keterangan, Warna Label, Status.
+   596→Mesti
+   597→FR-M2-02
+   598→Sistem menyediakan kategori lalai: Kursus Pendek, Program Industri, Bengkel
+   599→Kemahiran, Latihan Dalaman Staf, Program Kerjasama, Latihan Industri Pelajar.
+   600→Mesti
+   601→FR-M2-03
+   602→Setiap kategori boleh dikaitkan dengan satu templat sijil aktif sebagai templat lalai.
+   603→Mesti
+   604→FR-M2-04
+   605→Kategori yang masih mempunyai kursus aktif tidak boleh dipadam; sistem
+   606→memaparkan amaran dan menawarkan pilihan arkib.
+   607→Mesti
+   608→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+   609→13
+   610→
+   611→14
+   612→7.3 Modul M3 — Pengurusan Kursus / Program (rujuk US-04)
+   613→Kod
+   614→Keperluan
+   615→Keutamaan
+   616→FR-M3-01
+   617→Admin/Penyelaras boleh mencipta kursus dengan medan wajib: Kod Kursus (unik),
+   618→Nama Kursus BM, Kategori, Tarikh Mula, Tarikh Tamat.
+   619→Mesti
+   620→FR-M3-02
+   621→Medan pilihan: Nama Kursus BI, Tempoh, Jumlah Jam Kredit, Nama Penyelaras,
+   622→Tempat, Penganjur Bersama, Catatan.
+   623→Mesti
+   624→FR-M3-03
+   625→Sistem mengesahkan Tarikh Tamat tidak boleh lebih awal daripada Tarikh Mula.
+   626→Mesti
+   627→FR-M3-04
+   628→Senarai kursus boleh ditapis mengikut kategori, tahun, status dan penyelaras, serta
+   629→dicari melalui kata kunci nama/kod.
+   630→Mesti
+   631→FR-M3-05
+   632→Setiap baris kursus memaparkan kiraan langsung: Jumlah Peserta, Sijil Dijana,
+   633→Peratus Selesai.
+   634→Sepatutnya
+   635→FR-M3-06
+   636→Kursus boleh ditetapkan menggunakan templat khusus yang mengatasi (override)
+   637→templat lalai kategori.
+   638→Mesti
+   639→FR-M3-07
+   640→Kursus berstatus Draf tidak muncul dalam carian pengguna akhir dan tidak boleh
+   641→menjana sijil.
+   642→Mesti
+   643→FR-M3-08
+   644→Admin boleh menggandakan (duplicate) kursus sedia ada sebagai templat kursus
+   645→baharu bagi sesi berikutnya.
+   646→Boleh
+   647→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+   648→14
+   649→
+   650→15
+   651→7.4 Modul M4 — Pengurusan Peserta (rujuk US-03)
+   652→Kod
+   653→Keperluan
+   654→Keutamaan
+   655→FR-M4-01
+   656→Sistem membolehkan penambahan peserta secara individu melalui borang dalam
+   657→talian.
+   658→Mesti
+   659→FR-M4-02
+   660→Sistem membolehkan import pukal daripada fail CSV/XLSX dengan templat piawai
+   661→yang boleh dimuat turun.
+   662→Mesti
+   663→FR-M4-03
+   664→Semasa import, sistem memaparkan pratonton dan laporan pengesahan (rekod sah
+   665→/ ralat / pendua) sebelum pengesahan simpan.
+   666→Mesti
+   667→FR-M4-04
+   668→Sistem mengesahkan format nombor MyKad: 12 digit angka, dengan 6 digit pertama
+   669→membentuk tarikh yang sah (YYMMDD).
+   670→Mesti
+   671→FR-M4-05
+   672→Nombor MyKad dinormalkan (garis dibuang) sebelum disimpan; paparan pula
+   673→dikembalikan kepada format bergaris.
+   674→Mesti
+   675→FR-M4-06
+   676→Sistem menghalang pendaftaran pendua bagi kombinasi id_kursus + no_mykad.
+   677→Mesti
+   678→FR-M4-07
+   679→Nama peserta ditukar kepada huruf besar (UPPERCASE) secara automatik agar
+   680→seragam pada sijil.
+   681→Sepatutnya
+   682→FR-M4-08
+   683→Peserta boleh ditanda status: Layak, Tidak Layak, Ditangguh. Hanya "Layak" boleh
+   684→menjana sijil.
+   685→Mesti
+   686→FR-M4-09
+   687→Sistem menyokong warganegara asing menggunakan nombor pasport sebagai
+   688→pengecam alternatif.
+   689→Sepatutnya
+   690→FR-M4-10
+   691→Senarai peserta boleh dieksport ke Excel berserta status pengeluaran sijil dan tarikh
+   692→muat turun terakhir.
+   693→Sepatutnya
+   694→FR-M4-11
+   695→Sistem menyediakan carian pantas peserta merentas semua kursus menggunakan
+   696→nama atau nombor MyKad.
+   697→Sepatutnya
+   698→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+   699→15
+   700→
+   701→16
+   702→7.5 Modul M5 — Pengurusan Templat Sijil (rujuk US-01)
+   703→Kod
+   704→Keperluan
+   705→Keutamaan
+   706→FR-M5-01
+   707→Admin boleh memuat naik fail templat berformat PNG, JPG, JPEG, PDF atau SVG
+   708→bersaiz maksimum 10 MB.
+   709→Mesti
+   710→FR-M5-02
+   711→Sistem menolak fail yang bukan format dibenarkan dan mengesahkan jenis MIME
+   712→sebenar, bukan sekadar sambungan nama fail.
+   713→Mesti
+   714→FR-M5-03
+   715→Admin menetapkan metadata templat: Nama Templat, Keterangan, Orientasi
+   716→(Landskap/Potret), Saiz Kertas (A4/A5/Letter), Kategori Berkaitan.
+   717→Mesti
+   718→FR-M5-04
+   719→Sistem menyediakan Editor Pemetaan Medan visual: templat dipaparkan sebagai
+   720→kanvas, dan Admin menyeret medan dinamik ke kedudukan dikehendaki.
+   721→Mesti
+   722→FR-M5-05
+   723→Bagi setiap medan yang diletakkan, Admin boleh menetapkan: keluarga fon, saiz fon
+   724→(pt), warna (HEX), tebal/condong, penjajaran (kiri/tengah/kanan), lebar kotak, dan
+   725→putaran.
+   726→Mesti
+   727→FR-M5-06
+   728→Kedudukan medan disimpan sebagai peratusan relatif (0–100%) terhadap dimensi
+   729→templat supaya kekal tepat pada sebarang resolusi output.
+   730→Mesti
+   731→FR-M5-07
+   732→Sistem menyokong medan dinamik minimum seperti disenaraikan dalam Seksyen
+   733→11.2.
+   734→Mesti
+   735→FR-M5-08
+   736→Admin boleh menjana pratonton menggunakan data contoh atau data peserta
+   737→sebenar sebelum templat diaktifkan.
+   738→Mesti
+   739→FR-M5-09
+   740→Templat mempunyai status: Draf, Aktif, Arkib. Hanya satu templat Aktif dibenarkan
+   741→bagi setiap kategori pada satu-satu masa.
+   742→Mesti
+   743→FR-M5-10
+   744→Sistem menyimpan versi templat; sijil yang telah dijana kekal terikat kepada versi
+   745→templat yang digunakan semasa penjanaan asal.
+   746→Mesti
+   747→FR-M5-11
+   748→Admin boleh menyalin (clone) templat sedia ada sebagai titik permulaan templat
+   749→baharu.
+   750→Sepatutnya
+   751→FR-M5-12
+   752→Sistem menyokong penempatan elemen statik tambahan: imej tandatangan, logo,
+   753→dan kod QR pengesahan.
+   754→Mesti
+   755→FR-M5-13
+   756→Templat yang telah digunakan untuk menjana sijil tidak boleh dipadam — hanya
+   757→boleh diarkibkan.
+   758→Mesti
+   759→FR-M5-14
+   760→Sistem menyediakan fungsi "auto-muat" fon tersuai (TTF/OTF) untuk digunakan
+   761→pada templat.
+   762→Boleh
+   763→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+   764→16
+   765→
+   766→17
+   767→7.6 Modul M6 — Enjin Penjanaan Sijil Dinamik
+   768→Kod
+   769→Keperluan
+   770→Keutamaan
+   771→FR-M6-01
+   772→Enjin menggabungkan data peserta + data kursus + templat aktif untuk
+   773→menghasilkan fail PDF sijil.
+   774→Mesti
+   775→FR-M6-02
+   776→Setiap sijil dijana dengan nombor siri unik berformat ADTEC/SDK/[TAHUN]/[KOD-
+   777→KATEGORI]/[NOMBOR-URUTAN].
+   778→Mesti
+   779→FR-M6-03
+   780→Enjin menjana kod QR yang memaut ke halaman pengesahan awam bagi sijil
+   781→berkenaan.
+   782→Mesti
+   783→FR-M6-04
+   784→Teks nama yang terlalu panjang dikecilkan secara automatik (auto-shrink) supaya
+   785→muat dalam lebar kotak yang ditetapkan tanpa bertindih.
+   786→Mesti
+   787→FR-M6-05
+   788→PDF dijana pada resolusi cetak 300 DPI dengan ruang warna yang sesuai untuk
+   789→pencetak pejabat.
+   790→Mesti
+   791→FR-M6-06
+   792→PDF yang dijana bersifat "flatten" — teks tidak boleh disunting oleh penerima
+   793→menggunakan pembaca PDF biasa.
+   794→Mesti
+   795→FR-M6-07
+   796→Rekod sijil disimpan dalam pangkalan data dengan cap masa penjanaan pertama
+   797→dan kiraan muat turun.
+   798→Mesti
+   799→FR-M6-08
+   800→Penjanaan semula sijil yang sama tidak menjana nombor siri baharu — nombor siri
+   801→asal dikekalkan.
+   802→Mesti
+   803→FR-M6-09
+   804→Enjin menyokong penjanaan pukal (bulk) bagi semua peserta berstatus Layak dalam
+   805→satu kursus, dihasilkan sebagai satu fail PDF berbilang halaman atau arkib ZIP.
+   806→Sepatutnya
+   807→FR-M6-10
+   808→Penjanaan pukal dilaksanakan sebagai tugasan latar (background job) dengan
+   809→penunjuk kemajuan, bagi kursus melebihi 50 peserta.
+   810→Sepatutnya
+   811→FR-M6-11
+   812→Sistem menyokong metadata PDF (Tajuk, Pengarang: ADTEC JTM Sandakan, Subjek,
+   813→Kata Kunci).
+   814→Boleh
+   815→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+   816→17
+   817→
+   818→18
+   819→7.7 Modul M7 — Portal Pengguna Akhir (rujuk US-02)
+   820→Kod
+   821→Keperluan
+   822→Keutamaan
+   823→FR-M7-01
+   824→Halaman utama memaparkan satu medan input tunggal untuk nombor MyKad,
+   825→dengan panduan format yang jelas.
+   826→Mesti
+   827→FR-M7-02
+   828→Medan input menerima input bergaris atau tanpa garis dan menormalkannya secara
+   829→automatik.
+   830→Mesti
+   831→FR-M7-03
+   832→Pengesahan sisi klien memberi maklum balas segera jika bilangan digit tidak
+   833→mencukupi.
+   834→Mesti
+   835→FR-M7-04
+   836→Selepas carian berjaya, sistem memaparkan kad senarai sijil yang layak beserta
+   837→nama kursus, tarikh, kategori dan status.
+   838→Mesti
+   839→FR-M7-05
+   840→Jika tiada rekod, sistem memaparkan mesej mesra beserta pautan hubungi pejabat,
+   841→tanpa membocorkan maklumat sistem.
+   842→Mesti
+   843→FR-M7-06
+   844→Setiap kad sijil mempunyai butang Pratonton, Muat Turun PDF dan Cetak.
+   845→Mesti
+   846→FR-M7-07
+   847→Sistem mengehadkan carian kepada 10 percubaan setiap 15 minit bagi setiap
+   848→alamat IP (rate limiting).
+   849→Mesti
+   850→FR-M7-08
+   851→Sistem melaksanakan CAPTCHA selepas 3 carian gagal berturut-turut daripada IP
+   852→yang sama.
+   853→Sepatutnya
+   854→FR-M7-09
+   855→Langkah pengesahan kedua (4 digit terakhir MyKad atau tarikh lahir) boleh
+   856→diaktifkan oleh Admin melalui tetapan sistem.
+   857→Sepatutnya
+   858→FR-M7-10
+   859→Antara muka responsif dan berfungsi penuh pada skrin selebar 320px.
+   860→Mesti
+   861→FR-M7-11
+   862→Antara muka menyokong dwibahasa (BM/BI) melalui penukar bahasa di pengepala.
+   863→Boleh
+   864→7.8 Modul M8 — Pengesahan Sijil Awam
+   865→Kod
+   866→Keperluan
+   867→Keutamaan
+   868→FR-M8-01
+   869→Sistem menyediakan halaman awam /sahkan/[no_siri] yang boleh diakses
+   870→tanpa log masuk.
+   871→Mesti
+   872→FR-M8-02
+   873→Halaman pengesahan memaparkan: Status Sah/Batal, Nama Penerima (separa
+   874→tersembunyi), Nama Kursus, Tarikh Program, Tarikh Keluaran.
+   875→Mesti
+   876→FR-M8-03
+   877→Halaman pengesahan tidak memaparkan nombor MyKad penuh atau maklumat
+   878→hubungan peserta.
+   879→Mesti
+   880→FR-M8-04
+   881→Nombor siri yang tidak wujud memaparkan status "Sijil Tidak Ditemui / Tidak Sah".
+   882→Mesti
+   883→FR-M8-05
+   884→Admin boleh membatalkan sijil dengan menyatakan sebab; halaman pengesahan
+   885→kemudiannya memaparkan status "Dibatalkan" beserta tarikh pembatalan.
+   886→Sepatutnya
+   887→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+   888→18
+   889→
+   890→19
+   891→7.9 Modul M9 — Papan Pemuka & Laporan
+   892→Kod
+   893→Keperluan
+   894→Keutamaan
+   895→FR-M9-01
+   896→Papan pemuka memaparkan kad statistik: Jumlah Kursus Aktif, Jumlah Peserta,
+   897→Jumlah Sijil Dijana, Sijil Dijana Bulan Ini.
+   898→Sepatutnya
+   899→FR-M9-02
+   900→Carta bar bilangan sijil dijana mengikut bulan bagi 12 bulan terakhir.
+   901→Sepatutnya
+   902→FR-M9-03
+   903→Carta donat pecahan sijil mengikut kategori program.
+   904→Sepatutnya
+   905→FR-M9-04
+   906→Jadual "Kursus dengan sijil belum dituntut" untuk tindakan susulan penyelaras.
+   907→Boleh
+   908→FR-M9-05
+   909→Laporan boleh dieksport ke format Excel dan PDF mengikut julat tarikh yang
+   910→ditetapkan.
+   911→Sepatutnya
+   912→7.10 Modul M10 — Log Audit & Tetapan Sistem
+   913→Kod
+   914→Keperluan
+   915→Keutamaan
+   916→FR-M10-01
+   917→Sistem merekod setiap tindakan cipta, sunting, padam dan jana oleh pentadbir:
+   918→siapa, apa, bila, dari IP mana.
+   919→Mesti
+   920→FR-M10-02
+   921→Sistem merekod setiap carian MyKad oleh pengguna awam (nombor MyKad
+   922→dicincang), cap masa dan IP, untuk pengesanan penyalahgunaan.
+   923→Mesti
+   924→FR-M10-03
+   925→Log audit tidak boleh disunting atau dipadam oleh mana-mana peranan pengguna.
+   926→Mesti
+   927→FR-M10-04
+   928→Admin boleh mengemas kini tetapan global: nama institusi, logo, alamat,
+   929→tandatangan lalai, e-mel hubungan, teks pengaki sijil.
+   930→Sepatutnya
+   931→FR-M10-05
+   932→Admin boleh menghidup/mematikan ciri: pengesahan kedua, CAPTCHA, notifikasi e-
+   933→mel, mod penyelenggaraan.
+   934→Sepatutnya
+   935→FR-M10-06
+   936→Sistem menyediakan fungsi sandaran (backup) data secara berjadual dan muat
+   937→turun sandaran manual.
+   938→Sepatutnya
+   939→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+   940→19
+   941→
+   942→20
+   943→8
+   944→Keperluan Bukan Fungsian
+   945→8.1 Prestasi
+   946→Kod
+   947→Keperluan
+   948→Sasaran
+   949→NFR-P-01
+   950→Masa muat halaman utama portal awam
+   951→< 2 saat pada 3G
+   952→NFR-P-02
+   953→Masa tindak balas carian MyKad
+   954→< 1.5 saat
+   955→NFR-P-03
+   956→Masa penjanaan satu sijil PDF
+   957→< 5 saat
+   958→NFR-P-04
+   959→Penjanaan pukal 100 sijil
+   960→< 3 minit
+   961→NFR-P-05
+   962→Sokongan pengguna serentak
+   963→≥ 200 sesi
+   964→NFR-P-06
+   965→Saiz fail PDF sijil tunggal
+   966→≤ 2 MB
+   967→8.2 Keselamatan
+   968→Kod
+   969→Keperluan
+   970→NFR-S-01
+   971→Semua komunikasi disulitkan menggunakan HTTPS/TLS 1.2 ke atas; HTTP dialihkan secara automatik ke HTTPS.
+   972→NFR-S-02
+   973→Nombor MyKad disulitkan semasa rehat (encryption at rest) di peringkat lajur pangkalan data.
+   974→NFR-S-03
+   975→Sistem kalis suntikan SQL melalui penggunaan pertanyaan berparameter (prepared statements) secara menyeluruh.
+   976→NFR-S-04
+   977→Semua input pengguna ditapis dan dilepaskan (escaped) bagi mencegah XSS.
+   978→NFR-S-05
+   979→Token CSRF digunakan pada semua borang yang mengubah keadaan sistem.
+   980→NFR-S-06
+   981→Fail templat yang dimuat naik disimpan di luar direktori awam dan dihidangkan melalui laluan terkawal.
+   982→NFR-S-07
+   983→Pengehadan kadar (rate limiting) dikuatkuasakan pada semua endpoint awam.
+   984→NFR-S-08
+   985→Sistem mematuhi garis panduan OWASP Top 10 (edisi terkini) dan disemak sebelum pelancaran.
+   986→8.3 Kebolehgunaan & Kebolehcapaian
+   987→Kod
+   988→Keperluan
+   989→NFR-U-01
+   990→Pengguna akhir mampu menjana sijil tanpa sebarang latihan atau manual — maksimum 3 klik dari halaman utama.
+   991→NFR-U-02
+   992→Nisbah kontras warna teks memenuhi WCAG 2.1 Tahap AA (minimum 4.5:1 untuk teks biasa).
+   993→NFR-U-03
+   994→Semua elemen interaktif boleh dicapai dan dikendalikan menggunakan papan kekunci sahaja.
+   995→NFR-U-04
+   996→Semua imej mempunyai teks alternatif (alt text) yang bermakna.
+   997→NFR-U-05
+   998→Saiz sasaran sentuh minimum 44 × 44 piksel pada peranti mudah alih.
+   999→NFR-U-06
+  1000→Mesej ralat ditulis dalam Bahasa Melayu yang mudah difahami, bukan kod teknikal.
+  1001→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+  1002→20
+  1003→
+  1004→21
+  1005→8.4 Keserasian
+  1006→Chrome 100+
+  1007→ 
+  1008→Microsoft Edge 100+
+  1009→ 
+  1010→Mozilla Firefox 100+
+  1011→ 
+  1012→Safari 15+
+  1013→ 
+  1014→Android 9+
+  1015→ 
+  1016→iOS 14+
+  1017→Windows 10/11
+  1018→ 
+  1019→Skrin 320px – 2560px
+  1020→8.5 Ketersediaan, Sandaran & Penyelenggaraan
+  1021→Kod
+  1022→Keperluan
+  1023→NFR-A-01
+  1024→Ketersediaan sistem sekurang-kurangnya 99% setiap bulan, tidak termasuk tetingkap penyelenggaraan terjadual.
+  1025→NFR-A-02
+  1026→Sandaran automatik pangkalan data setiap hari, disimpan selama 30 hari.
+  1027→NFR-A-03
+  1028→Sandaran fail templat dan sijil dilaksanakan mingguan ke storan berasingan.
+  1029→NFR-A-04
+  1030→Objektif Masa Pemulihan (RTO) ≤ 4 jam; Objektif Titik Pemulihan (RPO) ≤ 24 jam.
+  1031→NFR-A-05
+  1032→Kod sumber diurus menggunakan Git dengan sekurang-kurangnya dua cabang: main (produksi) dan dev.
+  1033→NFR-A-06
+  1034→Kod ditulis dengan ulasan yang mencukupi dalam Bahasa Melayu/Inggeris dan mengikut konvensyen penamaan
+  1035→yang konsisten.
+  1036→NFR-A-07
+  1037→Dokumentasi teknikal, manual pengguna dan manual pentadbir diserahkan bersama sistem.
+  1038→8.6 Kebolehskalaan
+  1039→Sistem direka bentuk untuk menampung pertumbuhan sekurang-kurangnya 5 tahun operasi: anggaran 60 program
+  1040→setahun × 25 peserta purata = 1,500 sijil setahun, atau ~7,500 rekod sijil menjelang tahun kelima. Reka bentuk skema
+  1041→pangkalan data dan strategi pengindeksan hendaklah menyokong isipadu ini tanpa penurunan prestasi ketara.
+  1042→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+  1043→21
+  1044→
+  1045→22
+  1046→9
+  1047→Reka Bentuk Data & Skema Pangkalan Data
+  1048→9.1 Gambaran Hubungan Entiti
+  1049→kategori_program ──1:N──► kursus ──1:N──► peserta ──1:N──► sijil
+  1050→       │                    │                                 ▲
+  1051→       │ 1:N                │ N:1                             │ N:1
+  1052→       ▼                    ▼                                 │
+  1053→  templat_sijil ◄───────────┘                                 │
+  1054→       │ 1:N                                                  │
+  1055→       ▼                                                      │
+  1056→ medan_templat                                                │
+  1057→                                                              │
+  1058→   pengguna ──1:N──► log_audit                                │
+  1059→   pengguna ──────────────1:N───────────────────────► (dijana_oleh)
+  1060→9.2 Jadual pengguna
+  1061→Medan
+  1062→Jenis
+  1063→Keterangan
+  1064→id
+  1065→UUID / BIGINT PK
+  1066→Kunci utama
+  1067→nama_penuh
+  1068→VARCHAR(150)
+  1069→Nama staf
+  1070→emel
+  1071→VARCHAR(150) UNIQUE
+  1072→E-mel rasmi, digunakan untuk log masuk
+  1073→kata_laluan_hash
+  1074→VARCHAR(255)
+  1075→Cincangan bcrypt/argon2
+  1076→peranan
+  1077→ENUM
+  1078→super_admin / admin / penyelaras
+  1079→no_telefon
+  1080→VARCHAR(20)
+  1081→Nombor hubungan
+  1082→status
+  1083→ENUM
+  1084→aktif / tidak_aktif / dikunci
+  1085→percubaan_gagal
+  1086→SMALLINT
+  1087→Kiraan log masuk gagal
+  1088→log_masuk_terakhir
+  1089→TIMESTAMP
+  1090→Cap masa log masuk terakhir
+  1091→dicipta_pada
+  1092→TIMESTAMP
+  1093→Cap masa cipta rekod
+  1094→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+  1095→22
+  1096→
+  1097→23
+  1098→9.3 Jadual kategori_program
+  1099→Medan
+  1100→Jenis
+  1101→Keterangan
+  1102→id
+  1103→BIGINT PK
+  1104→Kunci utama
+  1105→kod_kategori
+  1106→VARCHAR(20) UNIQUE
+  1107→Contoh: KP, PI, BK, LDS
+  1108→nama_kategori
+  1109→VARCHAR(150)
+  1110→Contoh: Kursus Pendek
+  1111→keterangan
+  1112→TEXT
+  1113→Penerangan ringkas kategori
+  1114→id_templat_lalai
+  1115→BIGINT FK
+  1116→Rujukan ke templat_sijil.id
+  1117→warna_label
+  1118→VARCHAR(9)
+  1119→Kod warna HEX untuk label UI
+  1120→status
+  1121→ENUM
+  1122→aktif / arkib
+  1123→9.4 Jadual kursus
+  1124→Medan
+  1125→Jenis
+  1126→Keterangan
+  1127→id
+  1128→BIGINT PK
+  1129→Kunci utama
+  1130→kod_kursus
+  1131→VARCHAR(60) UNIQUE
+  1132→Contoh: ADTEC-SDK/KP/2026/017
+  1133→nama_kursus_bm
+  1134→VARCHAR(255)
+  1135→Nama kursus dalam Bahasa Melayu
+  1136→nama_kursus_bi
+  1137→VARCHAR(255)
+  1138→Nama kursus dalam Bahasa Inggeris (pilihan)
+  1139→id_kategori
+  1140→BIGINT FK
+  1141→Rujukan ke kategori_program.id
+  1142→id_templat_khusus
+  1143→BIGINT FK NULL
+  1144→Templat khusus; jika NULL guna templat lalai kategori
+  1145→tarikh_mula
+  1146→DATE
+  1147→Tarikh mula program
+  1148→tarikh_tamat
+  1149→DATE
+  1150→Tarikh tamat program
+  1151→tempoh_jam
+  1152→SMALLINT
+  1153→Jumlah jam latihan
+  1154→nama_penyelaras
+  1155→VARCHAR(150)
+  1156→Nama penyelaras program
+  1157→tempat
+  1158→VARCHAR(255)
+  1159→Lokasi program dijalankan
+  1160→penganjur_bersama
+  1161→VARCHAR(255)
+  1162→Rakan industri / agensi (pilihan)
+  1163→status
+  1164→ENUM
+  1165→draf / aktif / tamat / arkib
+  1166→dicipta_oleh
+  1167→BIGINT FK
+  1168→Rujukan ke pengguna.id
+  1169→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+  1170→23
+  1171→
+  1172→24
+  1173→9.5 Jadual peserta
+  1174→Medan
+  1175→Jenis
+  1176→Keterangan
+  1177→id
+  1178→BIGINT PK
+  1179→Kunci utama
+  1180→id_kursus
+  1181→BIGINT FK
+  1182→Rujukan ke kursus.id
+  1183→nama_penuh
+  1184→VARCHAR(255)
+  1185→Nama penuh seperti dalam MyKad (huruf besar)
+  1186→no_mykad
+  1187→VARCHAR(20) ENCRYPTED
+  1188→12 digit tanpa garis; disulitkan pada peringkat lajur
+  1189→no_mykad_hash
+  1190→VARCHAR(64) INDEX
+  1191→Cincangan SHA-256 untuk carian pantas tanpa nyahsulit
+  1192→jenis_pengecam
+  1193→ENUM
+  1194→mykad / pasport
+  1195→no_telefon
+  1196→VARCHAR(20)
+  1197→Nombor hubungan peserta
+  1198→emel
+  1199→VARCHAR(150)
+  1200→E-mel peserta (pilihan)
+  1201→jantina
+  1202→ENUM
+  1203→lelaki / perempuan
+  1204→status_kelayakan
+  1205→ENUM
+  1206→layak / tidak_layak / ditangguh
+  1207→catatan
+  1208→TEXT
+  1209→Nota penyelaras
+  1210→Kekangan unik: UNIQUE(id_kursus, no_mykad_hash) — menghalang pendaftaran pendua peserta dalam kursus yang
+  1211→sama.
+  1212→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+  1213→24
+  1214→
+  1215→25
+  1216→9.6 Jadual templat_sijil
+  1217→Medan
+  1218→Jenis
+  1219→Keterangan
+  1220→id
+  1221→BIGINT PK
+  1222→Kunci utama
+  1223→nama_templat
+  1224→VARCHAR(150)
+  1225→Nama rujukan templat
+  1226→keterangan
+  1227→TEXT
+  1228→Penerangan ringkas
+  1229→laluan_fail
+  1230→VARCHAR(500)
+  1231→Laluan storan fail templat
+  1232→jenis_fail
+  1233→ENUM
+  1234→png / jpg / pdf / svg
+  1235→orientasi
+  1236→ENUM
+  1237→landskap / potret
+  1238→saiz_kertas
+  1239→ENUM
+  1240→a4 / a5 / letter
+  1241→lebar_px
+  1242→INT
+  1243→Lebar asal templat dalam piksel
+  1244→tinggi_px
+  1245→INT
+  1246→Tinggi asal templat dalam piksel
+  1247→versi
+  1248→SMALLINT
+  1249→Nombor versi templat
+  1250→status
+  1251→ENUM
+  1252→draf / aktif / arkib
+  1253→dimuat_naik_oleh
+  1254→BIGINT FK
+  1255→Rujukan ke pengguna.id
+  1256→dicipta_pada
+  1257→TIMESTAMP
+  1258→Cap masa muat naik
+  1259→9.7 Jadual medan_templat
+  1260→Medan
+  1261→Jenis
+  1262→Keterangan
+  1263→id
+  1264→BIGINT PK
+  1265→Kunci utama
+  1266→id_templat
+  1267→BIGINT FK
+  1268→Rujukan ke templat_sijil.id
+  1269→kunci_medan
+  1270→VARCHAR(60)
+  1271→Contoh: nama_penuh, no_mykad, nama_kursus
+  1272→jenis_elemen
+  1273→ENUM
+  1274→teks / imej / qr
+  1275→pos_x_peratus
+  1276→DECIMAL(5,2)
+  1277→Kedudukan mendatar (0–100%)
+  1278→pos_y_peratus
+  1279→DECIMAL(5,2)
+  1280→Kedudukan menegak (0–100%)
+  1281→lebar_peratus
+  1282→DECIMAL(5,2)
+  1283→Lebar kotak teks (0–100%)
+  1284→keluarga_fon
+  1285→VARCHAR(80)
+  1286→Contoh: Times New Roman, Poppins
+  1287→saiz_fon
+  1288→DECIMAL(5,2)
+  1289→Saiz fon dalam pt
+  1290→warna_fon
+  1291→VARCHAR(9)
+  1292→Kod HEX warna teks
+  1293→gaya_fon
+  1294→VARCHAR(30)
+  1295→normal / tebal / condong / tebal_condong
+  1296→penjajaran
+  1297→ENUM
+  1298→kiri / tengah / kanan
+  1299→auto_kecil
+  1300→BOOLEAN
+  1301→Kecilkan fon automatik jika teks melimpah
+  1302→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+  1303→25
+  1304→
+  1305→26
+  1306→9.8 Jadual sijil
+  1307→Medan
+  1308→Jenis
+  1309→Keterangan
+  1310→id
+  1311→UUID PK
+  1312→Kunci utama
+  1313→no_siri
+  1314→VARCHAR(80) UNIQUE
+  1315→Nombor siri unik sijil
+  1316→id_peserta
+  1317→BIGINT FK
+  1318→Rujukan ke peserta.id
+  1319→id_kursus
+  1320→BIGINT FK
+  1321→Rujukan ke kursus.id
+  1322→id_templat
+  1323→BIGINT FK
+  1324→Templat yang digunakan semasa penjanaan asal
+  1325→versi_templat
+  1326→SMALLINT
+  1327→Versi templat semasa penjanaan
+  1328→laluan_pdf
+  1329→VARCHAR(500)
+  1330→Laluan cache fail PDF (jika disimpan)
+  1331→kod_qr
+  1332→VARCHAR(255)
+  1333→URL pengesahan yang dikodkan
+  1334→status
+  1335→ENUM
+  1336→sah / dibatalkan
+  1337→sebab_batal
+  1338→TEXT
+  1339→Sebab pembatalan (jika ada)
+  1340→bil_muat_turun
+  1341→INT
+  1342→Kiraan bilangan muat turun
+  1343→dijana_pada
+  1344→TIMESTAMP
+  1345→Cap masa penjanaan pertama
+  1346→muat_turun_terakhir
+  1347→TIMESTAMP
+  1348→Cap masa muat turun terakhir
+  1349→9.9 Jadual log_audit
+  1350→Medan
+  1351→Jenis
+  1352→Keterangan
+  1353→id
+  1354→BIGINT PK
+  1355→Kunci utama
+  1356→id_pengguna
+  1357→BIGINT FK NULL
+  1358→NULL jika tindakan oleh pengguna awam
+  1359→tindakan
+  1360→VARCHAR(80)
+  1361→cipta / sunting / padam / jana / log_masuk / carian
+  1362→entiti
+  1363→VARCHAR(60)
+  1364→Nama jadual yang terlibat
+  1365→id_entiti
+  1366→VARCHAR(80)
+  1367→Kunci rekod yang terlibat
+  1368→butiran
+  1369→JSON
+  1370→Nilai sebelum & selepas perubahan
+  1371→alamat_ip
+  1372→VARCHAR(45)
+  1373→Alamat IP pengguna
+  1374→agen_pengguna
+  1375→VARCHAR(255)
+  1376→Maklumat pelayar
+  1377→dicipta_pada
+  1378→TIMESTAMP
+  1379→Cap masa tindakan
+  1380→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+  1381→26
+  1382→
+  1383→27
+  1384→10
+  1385→Aliran Proses Sistem
+  1386→10.1 Aliran Pentadbir — Penyediaan Program & Templat
+  1387→1
+  1388→Log Masuk
+  1389→Admin log masuk ke portal
+  1390→pentadbir
+  1391→2
+  1392→Kategori
+  1393→Cipta / pilih kategori program
+  1394→3
+  1395→Templat
+  1396→Muat naik fail reka bentuk sijil
+  1397→4
+  1398→Petakan
+  1399→Seret medan dinamik ke
+  1400→kanvas
+  1401→5
+  1402→Pratonton
+  1403→Semak hasil dengan data
+  1404→contoh
+  1405→6
+  1406→Aktifkan
+  1407→Tetapkan templat sebagai
+  1408→aktif
+  1409→7
+  1410→Kursus
+  1411→Cipta rekod kursus & kaitkan
+  1412→kategori
+  1413→8
+  1414→Peserta
+  1415→Import senarai peserta &
+  1416→sahkan data
+  1417→10.2 Aliran Pengguna Akhir — Penjanaan Sijil
+  1418→1
+  1419→Buka Portal
+  1420→Layari laman e-Sijil ADTEC
+  1421→2
+  1422→Masuk MyKad
+  1423→Taip 12 digit nombor MyKad
+  1424→3
+  1425→Sahkan
+  1426→Sistem padankan rekod
+  1427→peserta
+  1428→4
+  1429→Senarai
+  1430→Paparan sijil yang layak
+  1431→5
+  1432→Pilih
+  1433→Tekan sijil yang dikehendaki
+  1434→6
+  1435→Jana
+  1436→Enjin gabung data + templat
+  1437→7
+  1438→Pratonton
+  1439→Sijil dipaparkan pada skrin
+  1440→8
+  1441→Muat Turun / Cetak
+  1442→PDF disimpan atau dicetak
+  1443→10.3 Logik Pemilihan Templat
+  1444→MULA
+  1445→ │
+  1446→ ├─► Adakah kursus mempunyai id_templat_khusus?
+  1447→ │      ├─ YA  ──► Gunakan templat khusus kursus
+  1448→ │      └─ TIDAK ─► Teruskan
+  1449→ │
+  1450→ ├─► Adakah kategori program mempunyai id_templat_lalai berstatus AKTIF?
+  1451→ │      ├─ YA  ──► Gunakan templat lalai kategori
+  1452→ │      └─ TIDAK ─► Teruskan
+  1453→ │
+  1454→ └─► Paparkan ralat: "Templat sijil belum ditetapkan bagi program ini.
+  1455→     Sila hubungi pentadbir sistem."  →  Rekod ke log_audit
+  1456→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+  1457→27
+  1458→
+  1459→28
+  1460→10.4 Logik Pengendalian Ralat Carian MyKad
+  1461→Keadaan
+  1462→Tindakan Sistem
+  1463→Mesej kepada Pengguna
+  1464→Kurang daripada 12 digit
+  1465→Halang penghantaran borang
+  1466→"Nombor MyKad mesti mengandungi 12
+  1467→digit."
+  1468→Mengandungi aksara bukan angka
+  1469→Tapis secara automatik
+  1470→"Sila masukkan angka sahaja."
+  1471→Tiada rekod padanan
+  1472→Rekod percubaan ke log audit
+  1473→"Maaf, tiada rekod sijil ditemui untuk
+  1474→nombor MyKad ini."
+  1475→Ada rekod, status Tidak Layak
+  1476→Sembunyikan sijil berkenaan
+  1477→"Sijil anda belum tersedia. Sila hubungi
+  1478→penyelaras program."
+  1479→Ada rekod, templat belum ditetapkan
+  1480→Maklum kepada Admin
+  1481→"Sijil sedang dalam proses penyediaan."
+  1482→Melebihi had kadar carian
+  1483→Sekat sementara IP
+  1484→"Terlalu banyak percubaan. Sila cuba
+  1485→sebentar lagi."
+  1486→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+  1487→28
+  1488→
+  1489→29
+  1490→11
+  1491→Spesifikasi Templat Sijil & Enjin Penjanaan
+  1492→11.1 Piawaian Fail Templat
+  1493→Perkara
+  1494→Spesifikasi
+  1495→Format diterima
+  1496→PNG, JPG/JPEG, PDF (1 halaman), SVG
+  1497→Saiz fail maksimum
+  1498→10 MB
+  1499→Resolusi disyorkan
+  1500→300 DPI (A4 landskap = 3508 × 2480 px)
+  1501→Nisbah aspek
+  1502→Mesti sepadan dengan saiz kertas yang dipilih
+  1503→Ruang lapang (bleed margin)
+  1504→Minimum 5 mm dari tepi untuk keselamatan cetakan
+  1505→Elemen yang perlu dikekalkan
+  1506→Logo Jata Negara, logo JTM, logo ADTEC, ruang tandatangan Pengarah
+  1507→Kawasan kod QR
+  1508→Ruang kosong minimum 25 × 25 mm, biasanya di sudut bawah kanan
+  1509→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+  1510→29
+  1511→
+  1512→30
+  1513→11.2 Senarai Medan Dinamik Yang Disokong
+  1514→Kunci Medan
+  1515→Jenis
+  1516→Sumber Data
+  1517→Contoh Output
+  1518→{{nama_penuh}}
+  1519→Teks
+  1520→peserta.nama_penuh
+  1521→AMIRUL BIN ABDULLAH
+  1522→{{no_mykad}}
+  1523→Teks
+  1524→peserta.no_mykad
+  1525→901231-12-5678
+  1526→{{no_mykad_topeng}}
+  1527→Teks
+  1528→Dijana
+  1529→901231-12-****
+  1530→{{nama_kursus}}
+  1531→Teks
+  1532→kursus.nama_kursus_bm
+  1533→PENDAWAIAN ELEKTRIK DOMESTIK
+  1534→{{nama_kursus_bi}}
+  1535→Teks
+  1536→kursus.nama_kursus_bi
+  1537→DOMESTIC ELECTRICAL WIRING
+  1538→{{kod_kursus}}
+  1539→Teks
+  1540→kursus.kod_kursus
+  1541→ADTEC-SDK/KP/2026/017
+  1542→{{kategori_program}}
+  1543→Teks
+  1544→kategori_program.nama_kategori
+  1545→Kursus Pendek
+  1546→{{tarikh_mula}}
+  1547→Tarikh
+  1548→kursus.tarikh_mula
+  1549→3 Mac 2026
+  1550→{{tarikh_tamat}}
+  1551→Tarikh
+  1552→kursus.tarikh_tamat
+  1553→7 Mac 2026
+  1554→{{julat_tarikh}}
+  1555→Teks
+  1556→Dijana
+  1557→3 – 7 Mac 2026
+  1558→{{tempoh_jam}}
+  1559→Nombor
+  1560→kursus.tempoh_jam
+  1561→40
+  1562→{{tempat}}
+  1563→Teks
+  1564→kursus.tempat
+  1565→ADTEC JTM Kampus Sandakan
+  1566→{{no_siri}}
+  1567→Teks
+  1568→sijil.no_siri
+  1569→ADTEC/SDK/2026/KP/00142
+  1570→{{tarikh_keluar}}
+  1571→Tarikh
+  1572→sijil.dijana_pada
+  1573→13 Ogos 2026
+  1574→{{qr_pengesahan}}
+  1575→Imej QR
+  1576→Dijana
+  1577→[imej kod QR]
+  1578→{{tandatangan_pengarah}}
+  1579→Imej
+  1580→tetapan_sistem
+  1581→[imej tandatangan]
+  1582→{{nama_pengarah}}
+  1583→Teks
+  1584→tetapan_sistem
+  1585→Nama Pengarah ADTEC
+  1586→{{logo_institusi}}
+  1587→Imej
+  1588→tetapan_sistem
+  1589→[logo ADTEC]
+  1590→11.3 Format Nombor Siri
+  1591→ADTEC / SDK / [TAHUN] / [KOD-KATEGORI] / [NOMBOR-URUTAN 5 DIGIT]
+  1592→Contoh:  ADTEC/SDK/2026/KP/00142
+  1593→         │      │    │    │    └─► Urutan berjujukan, ditetapkan semula setiap tahun
+  1594→         │      │    │    └──────► Kod kategori program
+  1595→         │      │    └───────────► Tahun penjanaan sijil
+  1596→         │      └────────────────► Kod kampus (Sandakan)
+  1597→         └───────────────────────► Kod institusi
+  1598→Nombor urutan dijana menggunakan transaksi terkunci (atomic increment)
+  1599→bagi mengelakkan pertindihan semasa penjanaan pukal serentak.
+  1600→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+  1601→30
+  1602→
+  1603→31
+  1604→11.4 Kaedah Teknikal Penjanaan PDF
+  1605→1. Muat templat — fail imej/PDF dibaca dari storan dan dijadikan lapisan latar belakang kanvas.
+  1606→2. Kira kedudukan sebenar — kedudukan peratusan setiap medan ditukar kepada koordinat mutlak berdasarkan
+  1607→dimensi output (mm/pt).
+  1608→3. Ambil data — pertanyaan tunggal (JOIN) mengumpul data peserta, kursus, kategori dan tetapan sistem.
+  1609→4. Format data — tarikh ditukar ke format Bahasa Melayu; nama ditukar kepada huruf besar; nombor MyKad
+  1610→ditambah garis.
+  1611→5. Ukur & laras teks — jika lebar teks melebihi lebar kotak, saiz fon dikecilkan secara berulang (langkah 0.5pt)
+  1612→sehingga muat.
+  1613→6. Lukis elemen — teks, imej tandatangan/logo dan kod QR dilukis mengikut susunan lapisan yang ditetapkan.
+  1614→7. Rata (flatten) & eksport — kanvas dieksport sebagai PDF 300 DPI tanpa lapisan teks boleh sunting.
+  1615→8. Rekod & hantar — rekod sijil dikemas kini (kiraan muat turun, cap masa), kemudian fail dihantar kepada pelayar.
+  1616→Nota reka bentuk: Fail PDF tidak disimpan secara kekal untuk setiap muat turun. Sistem menyimpan hanya rekod sijil dalam
+  1617→pangkalan data dan menjana semula PDF atas permintaan. Pendekatan ini menjimatkan storan secara ketara dan memastikan sijil
+  1618→sentiasa menggunakan data terkini — kecuali bagi sijil yang templatnya telah diarkibkan, di mana versi templat asal digunakan
+  1619→semula demi ketekalan rekod.
+  1620→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+  1621→31
+  1622→
+  1623→32
+  1624→12
+  1625→Reka Bentuk UI/UX — Gaya Claymorphism
+  1626→12.1 Falsafah Reka Bentuk
+  1627→Claymorphism ialah gaya visual yang menampilkan permukaan lembut menyerupai tanah liat (clay). Ia dicirikan oleh
+  1628→sudut membulat yang besar, bayang berganda (bayang luar gelap yang lembut serta sorotan dalam yang cerah),
+  1629→serta palet warna pastel bertenaga rendah. Berbanding gaya rata (flat) yang boleh terasa dingin, atau
+  1630→glassmorphism yang boleh menjejaskan kebolehbacaan, claymorphism memberikan rasa "boleh disentuh" yang
+  1631→mesra tetapi kekal jelas dan mudah dibaca — sesuai untuk sistem yang digunakan oleh peserta pelbagai latar
+  1632→belakang dan lingkungan umur.
+  1633→12.2 Palet Warna
+  1634→#7C6CF0
+  1635→Utama
+  1636→#5B4BD6
+  1637→Utama Gelap
+  1638→#4FC4A1
+  1639→Berjaya
+  1640→#E8A33D
+  1641→Amaran
+  1642→#E26D8E
+  1643→Ralat
+  1644→#EEF0FA
+  1645→Latar
+  1646→#F7F8FD
+  1647→Permukaan Clay
+  1648→#2F3150
+  1649→Teks Utama
+  1650→#5C5F80
+  1651→Teks Sekunder
+  1652→#8A8DAA
+  1653→Teks Lembut
+  1654→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+  1655→32
+  1656→
+  1657→33
+  1658→12.3 Token Reka Bentuk
+  1659→:root {
+  1660→  /* Warna */
+  1661→  --bg:          #EEF0FA;   /* latar halaman */
+  1662→  --clay:        #F7F8FD;   /* permukaan kad */
+  1663→  --primary:     #7C6CF0;
+  1664→  --primary-dark:#5B4BD6;
+  1665→  --success:     #4FC4A1;
+  1666→  --warning:     #E8A33D;
+  1667→  --danger:      #E26D8E;
+  1668→  --ink:         #2F3150;
+  1669→  /* Jejari sudut */
+  1670→  --r-sm: 16px;   --r-md: 24px;   --r-lg: 32px;   --r-pill: 999px;
+  1671→  /* Bayang claymorphism */
+  1672→  --clay-shadow:
+  1673→      8px  8px 20px rgba(120,124,170,.32),
+  1674→     -6px -6px 16px rgba(255,255,255,.95),
+  1675→     inset  4px  4px  8px rgba(255,255,255,.85),
+  1676→     inset -5px -5px 10px rgba(120,124,170,.16);
+  1677→  --clay-pressed:
+  1678→     inset  6px  6px 12px rgba(120,124,170,.28),
+  1679→     inset -6px -6px 12px rgba(255,255,255,.94);
+  1680→  /* Tipografi */
+  1681→  --font: 'Poppins', 'Nunito', 'Segoe UI', sans-serif;
+  1682→  /* Peralihan */
+  1683→  --ease: cubic-bezier(.34,1.56,.64,1);   /* sedikit melantun */
+  1684→}
+  1685→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+  1686→33
+  1687→
+  1688→34
+  1689→12.4 Panduan Komponen
+  1690→Komponen
+  1691→Spesifikasi Visual & Tingkah Laku
+  1692→Butang Utama
+  1693→Latar --primary, teks putih, jejari 24px, padding 14×32px, bayang clay. Semasa hover: naik 2px + bayang
+  1694→lebih dalam. Semasa aktif: bertukar kepada --clay-pressed (kesan ditekan).
+  1695→Butang Sekunder
+  1696→Latar --clay, teks --primary-dark, bayang clay yang sama tanpa isian warna.
+  1697→Medan Input MyKad
+  1698→Kotak besar (tinggi 64px), jejari 24px, bayang inset supaya kelihatan "tenggelam" ke dalam permukaan. Fon
+  1699→monospace saiz 20px dengan jarak huruf lebar. Sempadan bertukar --primary semasa fokus.
+  1700→Kad Sijil
+  1701→Permukaan clay, jejari 32px, padding 24px. Jalur warna kategori di tepi kiri selebar 8px. Mengandungi
+  1702→nama kursus, tarikh, lencana status, dan tiga butang tindakan.
+  1703→Lencana Status
+  1704→Bentuk pil penuh, latar clay, teks berwarna mengikut status (hijau = Sedia, jingga = Diproses, merah =
+  1705→Dibatalkan).
+  1706→Kad Statistik
+  1707→Nombor besar (32px, tebal 800) dalam warna utama, label kecil huruf besar di bawah, ikon bulat di sudut
+  1708→atas kanan.
+  1709→Bar Sisi Pentadbir
+  1710→Permukaan clay melayang dengan margin 16px dari tepi skrin. Item aktif bertukar kepada gaya "ditekan"
+  1711→(inset), bukan sekadar berubah warna.
+  1712→Jadual Data
+  1713→Dibalut dalam bekas clay berjejari 32px. Kepala jadual berwarna utama dengan sudut membulat. Baris
+  1714→berselang-seli menggunakan warna utama pada kelegapan 4%.
+  1715→Modal / Dialog
+  1716→Jejari 32px, bayang clay yang lebih kuat, latar belakang halaman dikaburkan sedikit. Animasi masuk: skala
+  1717→0.94 → 1 dengan pelonggaran melantun.
+  1718→Penunjuk Kemajuan
+  1719→Alur berjejari penuh dengan bayang inset; bar kemajuan berkecerunan --primary ke --success.
+  1720→Toast Notifikasi
+  1721→Muncul di sudut atas kanan, permukaan clay, jejari 24px, hilang automatik selepas 4 saat.
+  1722→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+  1723→34
+  1724→
+  1725→35
+  1726→12.5 Senarai Skrin
+  1727→Kod
+  1728→Skrin
+  1729→Akses
+  1730→Elemen Utama
+  1731→SC-01
+  1732→Halaman Utama Awam
+  1733→Awam
+  1734→Hero, medan MyKad, butang semak, panduan
+  1735→ringkas
+  1736→SC-02
+  1737→Keputusan Carian Sijil
+  1738→Awam
+  1739→Senarai kad sijil, butang pratonton/muat
+  1740→turun/cetak
+  1741→SC-03
+  1742→Pratonton Sijil
+  1743→Awam
+  1744→Paparan PDF, butang muat turun & cetak
+  1745→SC-04
+  1746→Pengesahan Sijil (QR)
+  1747→Awam
+  1748→Status kesahihan, butiran ringkas sijil
+  1749→SC-05
+  1750→Log Masuk Pentadbir
+  1751→Staf
+  1752→Borang e-mel & kata laluan
+  1753→SC-06
+  1754→Papan Pemuka
+  1755→Staf
+  1756→Kad statistik, carta bulanan, carta kategori
+  1757→SC-07
+  1758→Senarai Kategori Program
+  1759→Admin
+  1760→Jadual kategori, butang cipta/sunting
+  1761→SC-08
+  1762→Senarai Kursus
+  1763→Staf
+  1764→Jadual kursus, penapis, kiraan peserta/sijil
+  1765→SC-09
+  1766→Borang Kursus
+  1767→Staf
+  1768→Borang butiran kursus, pemilih templat
+  1769→SC-10
+  1770→Senarai Peserta Kursus
+  1771→Staf
+  1772→Jadual peserta, status kelayakan, tindakan pukal
+  1773→SC-11
+  1774→Import Peserta
+  1775→Staf
+  1776→Muat naik fail, pratonton pengesahan, ringkasan
+  1777→ralat
+  1778→SC-12
+  1779→Galeri Templat Sijil
+  1780→Admin
+  1781→Grid kad templat dengan lakaran kecil & status
+  1782→SC-13
+  1783→Editor Pemetaan Medan
+  1784→Admin
+  1785→Kanvas templat, panel medan, panel sifat teks
+  1786→SC-14
+  1787→Penjanaan Pukal
+  1788→Staf
+  1789→Pemilih kursus, penunjuk kemajuan, pautan muat
+  1790→turun
+  1791→SC-15
+  1792→Log Audit
+  1793→Super Admin
+  1794→Jadual log, penapis tarikh/pengguna/tindakan
+  1795→SC-16
+  1796→Tetapan Sistem
+  1797→Admin
+  1798→Maklumat institusi, logo, tandatangan, suis ciri
+  1799→SC-17
+  1800→Pengurusan Pengguna
+  1801→Super Admin
+  1802→Senarai akaun staf, peranan, status
+  1803→12.6 Prinsip Kebolehcapaian dalam Claymorphism
+  1804→Bayang lembut yang menjadi ciri claymorphism tidak boleh menjadi satu-satunya penanda keadaan sesuatu elemen. Setiap
+  1805→keadaan interaktif (fokus, ralat, terpilih, dilumpuhkan) mesti turut disokong oleh perubahan warna, ikon atau teks. Cincin fokus
+  1806→(focus ring) setebal 3px berwarna --primary hendaklah kekal kelihatan bagi navigasi papan kekunci — jangan dibuang demi
+  1807→estetika.
+  1808→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+  1809→35
+  1810→
+  1811→36
+  1812→13
+  1813→Seni Bina Sistem & Timbunan Teknologi
+  1814→13.1 Seni Bina Peringkat Tinggi
+  1815→┌──────────────────────────────────────────────────────────────┐
+  1816→│                     LAPISAN PELANGGAN                         │
+  1817→│   Pelayar Web (Desktop / Tablet / Telefon)                    │
+  1818→│   ┌────────────────────┐      ┌────────────────────────────┐  │
+  1819→│   │  Portal Awam       │      │  Portal Pentadbir          │  │
+  1820→│   │  (tanpa log masuk) │      │  (dilindungi log masuk)    │  │
+  1821→│   └────────────────────┘      └────────────────────────────┘  │
+  1822→└────────────────────────────┬─────────────────────────────────┘
+  1823→                             │ HTTPS / REST
+  1824→┌────────────────────────────▼─────────────────────────────────┐
+  1825→│                     LAPISAN APLIKASI                          │
+  1826→│  Autentikasi & RBAC  │  Pengurusan Data  │  Enjin Sijil       │
+  1827→│  Rate Limiter        │  Pengesahan Input │  Penjana QR        │
+  1828→└────────────────────────────┬─────────────────────────────────┘
+  1829→                             │
+  1830→┌────────────────────────────▼─────────────────────────────────┐
+  1831→│                       LAPISAN DATA                            │
+  1832→│  Pangkalan Data (PostgreSQL)   │   Storan Objek (templat/aset)│
+  1833→│  Log Audit                     │   Sandaran Berjadual         │
+  1834→└──────────────────────────────────────────────────────────────┘
+  1835→13.2 Cadangan Timbunan Teknologi
+  1836→Lapisan
+  1837→Cadangan Utama
+  1838→Justifikasi
+  1839→Antara muka
+  1840→HTML5, CSS3, JavaScript (ES6+)
+  1841→Selaras dengan sistem sedia ada di kampus; tiada kos lesen;
+  1842→mudah diselenggara oleh staf ICT dalaman
+  1843→Rangka kerja CSS
+  1844→CSS tersuai (custom properties) atau
+  1845→Tailwind CSS
+  1846→Claymorphism memerlukan kawalan penuh ke atas bayang
+  1847→berlapis
+  1848→Backend / BaaS
+  1849→Supabase (PostgreSQL + Auth +
+  1850→Storage)
+  1851→Konsisten dengan pilihan seni bina Sistem Paparan Aktiviti
+  1852→ADTEC; menyediakan RLS, storan fail dan autentikasi dalam satu
+  1853→platform
+  1854→Penjanaan PDF
+  1855→pdf-lib atau jsPDF (klien) / Puppeteer
+  1856→(pelayan)
+  1857→Penjanaan sisi klien mengurangkan beban pelayan; sisi pelayan
+  1858→digunakan untuk penjanaan pukal
+  1859→Penjanaan QR
+  1860→qrcode.js
+  1861→Ringan, tiada kebergantungan luaran
+  1862→Import Excel/CSV
+  1863→SheetJS (xlsx) / PapaParse
+  1864→Menyokong kedua-dua format tanpa muat naik ke pihak ketiga
+  1865→Carta laporan
+  1866→Chart.js
+  1867→Ringan dan mudah digayakan mengikut tema claymorphism
+  1868→Hos
+  1869→Pelayan dalaman JTM atau hos awan
+  1870→yang diluluskan
+  1871→Tertakluk kepada kelulusan Unit ICT dan Dasar Keselamatan ICT
+  1872→Sektor Awam
+  1873→Kawalan versi
+  1874→Git (repositori dalaman JTM)
+  1875→Kebolehjejakan perubahan kod dan pemulihan versi
+  1876→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+  1877→36
+  1878→
+  1879→37
+  1880→13.3 Struktur Direktori Cadangan
+  1881→sistem-cetak-sijil/
+  1882→├── awam/                       # Portal pengguna akhir
+  1883→│   ├── index.html              # SC-01 Halaman utama (input MyKad)
+  1884→│   ├── keputusan.html          # SC-02 Senarai sijil
+  1885→│   ├── sahkan.html             # SC-04 Pengesahan QR
+  1886→│   └── js/
+  1887→│       ├── carian-mykad.js
+  1888→│       └── jana-sijil.js
+  1889→├── pentadbir/                  # Portal pentadbir
+  1890→│   ├── login.html              # SC-05
+  1891→│   ├── dashboard.html          # SC-06
+  1892→│   ├── kategori.html           # SC-07
+  1893→│   ├── kursus.html             # SC-08, SC-09
+  1894→│   ├── peserta.html            # SC-10, SC-11
+  1895→│   ├── templat.html            # SC-12
+  1896→│   ├── editor-templat.html     # SC-13
+  1897→│   ├── log-audit.html          # SC-15
+  1898→│   └── tetapan.html            # SC-16
+  1899→├── aset/
+  1900→│   ├── css/
+  1901→│   │   ├── clay-token.css      # Pembolehubah reka bentuk
+  1902→│   │   ├── clay-komponen.css   # Butang, kad, input, jadual
+  1903→│   │   └── utama.css
+  1904→│   ├── img/                    # Logo, ikon, ilustrasi
+  1905→│   └── fon/                    # Fail fon tersuai
+  1906→├── teras/
+  1907→│   ├── supabase-klien.js       # Konfigurasi sambungan
+  1908→│   ├── auth.js                 # Log masuk, sesi, RBAC
+  1909→│   ├── enjin-sijil.js          # Logik penjanaan PDF
+  1910→│   ├── pengesah.js             # Pengesahan MyKad & input
+  1911→│   └── audit.js                # Perakam log audit
+  1912→├── docs/
+  1913→│   ├── PRD-Sistem-Cetak-Sijil-v1.0.pdf
+  1914→│   ├── manual-pentadbir.md
+  1915→│   └── manual-pengguna.md
+  1916→└── README.md
+  1917→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+  1918→37
+  1919→
+  1920→38
+  1921→14
+  1922→Spesifikasi API
+  1923→14.1 Endpoint Awam
+  1924→Kaedah
+  1925→Laluan
+  1926→Fungsi
+  1927→Had Kadar
+  1928→POST
+  1929→/api/awam/carian
+  1930→Cari sijil melalui nombor MyKad
+  1931→10 / 15 min / IP
+  1932→POST
+  1933→/api/awam/jana-sijil
+  1934→Jana PDF sijil tunggal
+  1935→20 / 15 min / IP
+  1936→GET
+  1937→/api/awam/sahkan/:no_siri
+  1938→Sahkan kesahihan sijil
+  1939→60 / 15 min / IP
+  1940→14.2 Endpoint Pentadbir (memerlukan token sesi)
+  1941→Kaedah
+  1942→Laluan
+  1943→Fungsi
+  1944→POST
+  1945→/api/auth/login
+  1946→Log masuk pentadbir
+  1947→POST
+  1948→/api/auth/logout
+  1949→Tamatkan sesi
+  1950→GET|POST|PUT|DELETE
+  1951→/api/kategori
+  1952→CRUD kategori program
+  1953→GET|POST|PUT|DELETE
+  1954→/api/kursus
+  1955→CRUD kursus / program
+  1956→GET|POST|PUT|DELETE
+  1957→/api/peserta
+  1958→CRUD peserta
+  1959→POST
+  1960→/api/peserta/import
+  1961→Import pukal CSV/XLSX
+  1962→POST
+  1963→/api/templat/muat-naik
+  1964→Muat naik fail templat
+  1965→PUT
+  1966→/api/templat/:id/medan
+  1967→Simpan pemetaan medan
+  1968→POST
+  1969→/api/templat/:id/pratonton
+  1970→Jana pratonton dengan data contoh
+  1971→PUT
+  1972→/api/templat/:id/status
+  1973→Aktifkan / arkibkan templat
+  1974→POST
+  1975→/api/sijil/jana-pukal
+  1976→Jana semua sijil satu kursus
+  1977→PUT
+  1978→/api/sijil/:id/batal
+  1979→Batalkan sijil
+  1980→GET
+  1981→/api/laporan/statistik
+  1982→Data papan pemuka
+  1983→GET
+  1984→/api/log-audit
+  1985→Senarai log audit
+  1986→PRD Sistem Cetak Sijil v1.0 — ADTEC JTM Kampus Sandakan
+  1987→38
+  1988→
+  1989→39
+  1990→14.3 Contoh Permintaan & Respons
+  1991→POST /api/awam/carian
+  1992→Content-Type: application/json
+  1993→{ "no_mykad": "901231125678" }
+  1994→── Respons 200 OK ──────────────────────────────────────────────
+  1995→{
+  1996→  "berjaya": true,
+  1997→  "bilangan": 2,
+  1998→  "nama_dipaparkan": "AMIRUL BIN A•••••",
+  1999→  "sijil": [
+  2000→    {
+
+[showing lines 1-2000 of 2645; use offset=2001 with limit to continue reading]
