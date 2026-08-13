@@ -1,0 +1,1915 @@
+     1→'use client'
+     2→
+     3→import React, { useState, useEffect, useCallback, useRef } from 'react'
+     4→import { Button } from '@/components/ui/button'
+     5→import { Input } from '@/components/ui/input'
+     6→import { Card, CardContent } from '@/components/ui/card'
+     7→import { Badge } from '@/components/ui/badge'
+     8→import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+     9→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    10→import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+    11→import { Separator } from '@/components/ui/separator'
+    12→import { ScrollArea } from '@/components/ui/scroll-area'
+    13→import { Switch } from '@/components/ui/switch'
+    14→import { useToast } from '@/hooks/use-toast'
+    15→import {
+    16→  Search, Download, Printer, Eye, Shield, LogOut, LayoutDashboard,
+    17→  FolderOpen, GraduationCap, Users, FileText, Activity, Settings,
+    18→  ChevronRight, Calendar, Clock, Award, QrCode, CheckCircle2,
+    19→  XCircle, AlertCircle, Loader2, BarChart3, FileBadge, LogIn,
+    20→  Plus, Edit2, Trash2, RefreshCw, ArrowLeft, Info, Save,
+    21→  GripVertical, Type, AlignLeft, AlignCenter, AlignRight,
+    22→  Bold, Italic, Move, X, ZoomIn, ZoomOut
+    23→} from 'lucide-react'
+    24→
+    25→// ============================================================
+    26→// Types
+    27→// ============================================================
+    28→interface SijilItem {
+    29→  id: string | null
+    30→  noSiri: string | null
+    31→  status: string
+    32→  namaKursus: string
+    33→  namaKursusBi: string | null
+    34→  kodKursus: string
+    35→  kategori: string
+    36→  kategoriKod: string
+    37→  kategoriWarna: string
+    38→  tarikhMula: string
+    39→  tarikhTamat: string
+    40→  dijanaPada: string | null
+    41→}
+    42→
+    43→interface AdminUser {
+    44→  id: string
+    45→  namaPenuh: string
+    46→  emel: string
+    47→  peranan: string
+    48→}
+    49→
+    50→interface StatsData {
+    51→  jumlahKursusAktif: number
+    52→  jumlahPeserta: number
+    53→  jumlahSijilDijana: number
+    54→  sijilBulanIni: number
+    55→  categoryBreakdown: { nama: string; warna: string; bil: number }[]
+    56→  monthlyStats: { bulan: string; bil: number }[]
+    57→  kursusRecent: any[]
+    58→}
+    59→
+    60→// ============================================================
+    61→// Utility: Format date to BM
+    62→// ============================================================
+    63→function formatDateBM(date: Date | string): string {
+    64→  const d = typeof date === 'string' ? new Date(date) : date
+    65→  const months = ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember']
+    66→  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`
+    67→}
+    68→
+    69→function formatDateShort(date: Date | string): string {
+    70→  const d = typeof date === 'string' ? new Date(date) : date
+    71→  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    72→}
+    73→
+    74→// ============================================================
+    75→// Main Page Component
+    76→// ============================================================
+    77→export default function Home() {
+    78→  const [view, setView] = useState<'public' | 'admin'>('public')
+    79→  const [adminUser, setAdminUser] = useState<AdminUser | null>(null)
+    80→  const [adminTab, setAdminTab] = useState('dashboard')
+    81→
+    82→  return (
+    83→    <div className="min-h-screen flex flex-col" style={{ background: 'var(--clay-bg)' }}>
+    84→      {/* Header */}
+    85→      <header className="clay-card-sm mx-4 mt-4 px-6 py-3 flex items-center justify-between">
+    86→        <div className="flex items-center gap-3">
+    87→          <img src="/logo-adtec.png" alt="Logo ADTEC JTM Kampus Sandakan" className="h-10 sm:h-12 object-contain" />
+    88→          <div className="hidden sm:block">
+    89→            <h1 className="text-sm font-bold" style={{ color: 'var(--clay-ink)' }}>e-Sijil ADTEC Sandakan</h1>
+    90→            <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>Sistem Cetak Sijil Digital Dinamik</p>
+    91→          </div>
+    92→        </div>
+    93→        <div className="flex items-center gap-2">
+    94→          {view === 'public' ? (
+    95→            <Button
+    96→              onClick={() => setView('admin')}
+    97→              className="clay-btn-secondary text-sm px-4 py-2 flex items-center gap-2"
+    98→              variant="outline"
+    99→              style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '20px', boxShadow: 'var(--clay-shadow-sm)' }}
+   100→            >
+   101→              <Shield className="w-4 h-4" />
+   102→              <span className="hidden sm:inline">Portal Pentadbir</span>
+   103→            </Button>
+   104→          ) : (
+   105→            <div className="flex items-center gap-2">
+   106→              {adminUser && (
+   107→                <span className="text-xs px-3 py-1 rounded-full" style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)' }}>
+   108→                  {adminUser.namaPenuh}
+   109→                </span>
+   110→              )}
+   111→              <Button
+   112→                onClick={() => { setView('public'); setAdminUser(null) }}
+   113→                variant="outline"
+   114→                className="text-sm px-4 py-2 flex items-center gap-2"
+   115→                style={{ background: 'var(--clay)', color: 'var(--clay-ink-secondary)', borderRadius: '20px', boxShadow: 'var(--clay-shadow-sm)' }}
+   116→              >
+   117→                <ArrowLeft className="w-4 h-4" />
+   118→                <span className="hidden sm:inline">Portal Awam</span>
+   119→              </Button>
+   120→            </div>
+   121→          )}
+   122→        </div>
+   123→      </header>
+   124→
+   125→      {/* Main Content */}
+   126→      <main className="flex-1 px-4 py-6">
+   127→        {view === 'public' ? (
+   128→          <PublicPortal />
+   129→        ) : adminUser ? (
+   130→          <AdminPortal user={adminUser} activeTab={adminTab} onTabChange={setAdminTab} onLogout={() => { setAdminUser(null); setView('public') }} />
+   131→        ) : (
+   132→          <AdminLogin onLogin={(user) => { setAdminUser(user); setAdminTab('dashboard') }} />
+   133→        )}
+   134→      </main>
+   135→
+   136→      {/* Footer */}
+   137→      <footer className="mt-auto px-4 pb-4">
+   138→        <div className="clay-card-sm px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-2">
+   139→          <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+   140→            © 2026 ADTEC JTM Kampus Sandakan — Jabatan Tenaga Manusia, Kementerian Sumber Manusia
+   141→          </p>
+   142→          <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+   143→            e-Sijil v1.0 · SCS-ADTEC-SDK
+   144→          </p>
+   145→        </div>
+   146→      </footer>
+   147→    </div>
+   148→  )
+   149→}
+   150→
+   151→// ============================================================
+   152→// PUBLIC PORTAL
+   153→// ============================================================
+   154→function PublicPortal() {
+   155→  const [mykadInput, setMykadInput] = useState('')
+   156→  const [loading, setLoading] = useState(false)
+   157→  const [results, setResults] = useState<{ bilangan: number; namaDipaparkan: string; noMykadFormat: string; sijil: SijilItem[] } | null>(null)
+   158→  const [error, setError] = useState('')
+   159→  const [previewSijil, setPreviewSijil] = useState<SijilItem | null>(null)
+   160→  const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+   161→  const [pdfLoading, setPdfLoading] = useState(false)
+   162→  const { toast } = useToast()
+   163→
+   164→  // Format MyKad with dashes as user types
+   165→  const handleMyKadChange = (value: string) => {
+   166→    const digits = value.replace(/[^0-9]/g, '')
+   167→    if (digits.length > 12) return
+   168→    let formatted = digits
+   169→    if (digits.length > 6) formatted = `${digits.slice(0, 6)}-${digits.slice(6)}`
+   170→    if (digits.length > 8) formatted = `${digits.slice(0, 6)}-${digits.slice(6, 8)}-${digits.slice(8)}`
+   171→    setMykadInput(formatted)
+   172→  }
+   173→
+   174→  const handleSearch = async () => {
+   175→    const digits = mykadInput.replace(/[^0-9]/g, '')
+   176→    if (digits.length !== 12) {
+   177→      setError('Nombor MyKad mesti mengandungi 12 digit.')
+   178→      return
+   179→    }
+   180→    setLoading(true)
+   181→    setError('')
+   182→    setResults(null)
+   183→    try {
+   184→      const res = await fetch('/api/awam/carian', {
+   185→        method: 'POST',
+   186→        headers: { 'Content-Type': 'application/json' },
+   187→        body: JSON.stringify({ no_mykad: digits }),
+   188→      })
+   189→      const data = await res.json()
+   190→      if (data.berjaya) {
+   191→        setResults(data)
+   192→      } else {
+   193→        setError(data.mesej || 'Tiada rekod ditemui.')
+   194→      }
+   195→    } catch {
+   196→      setError('Ralat sambungan. Sila cuba sebentar lagi.')
+   197→    } finally {
+   198→      setLoading(false)
+   199→    }
+   200→  }
+   201→
+   202→  const handleDownload = async (sijilId: string) => {
+   203→    setPdfLoading(true)
+   204→    try {
+   205→      const res = await fetch('/api/awam/jana-sijil', {
+   206→        method: 'POST',
+   207→        headers: { 'Content-Type': 'application/json' },
+   208→        body: JSON.stringify({ sijilId }),
+   209→      })
+   210→      if (!res.ok) throw new Error('Gagal menjana sijil')
+   211→      const blob = await res.blob()
+   212→      const url = URL.createObjectURL(blob)
+   213→      setPdfUrl(url)
+   214→      const a = document.createElement('a')
+   215→      a.href = url
+   216→      a.download = 'Sijil_ADTEC_Sandakan.pdf'
+   217→      a.click()
+   218→      toast({ title: 'Sijil Dimuat Turun', description: 'Fail PDF sijil telah dimuat turun.' })
+   219→    } catch {
+   220→      toast({ title: 'Ralat', description: 'Gagal menjana sijil. Sila cuba lagi.', variant: 'destructive' })
+   221→    } finally {
+   222→      setPdfLoading(false)
+   223→    }
+   224→  }
+   225→
+   226→  const handlePreview = async (sijil: SijilItem) => {
+   227→    if (!sijil.id) return
+   228→    setPreviewSijil(sijil)
+   229→    setPdfLoading(true)
+   230→    try {
+   231→      const res = await fetch('/api/awam/jana-sijil', {
+   232→        method: 'POST',
+   233→        headers: { 'Content-Type': 'application/json' },
+   234→        body: JSON.stringify({ sijilId: sijil.id }),
+   235→      })
+   236→      if (!res.ok) throw new Error('Gagal')
+   237→      const blob = await res.blob()
+   238→      const url = URL.createObjectURL(blob)
+   239→      setPdfUrl(url)
+   240→    } catch {
+   241→      toast({ title: 'Ralat', description: 'Gagal pratonton sijil.', variant: 'destructive' })
+   242→    } finally {
+   243→      setPdfLoading(false)
+   244→    }
+   245→  }
+   246→
+   247→  const handlePrint = async (sijilId: string) => {
+   248→    setPdfLoading(true)
+   249→    try {
+   250→      const res = await fetch('/api/awam/jana-sijil', {
+   251→        method: 'POST',
+   252→        headers: { 'Content-Type': 'application/json' },
+   253→        body: JSON.stringify({ sijilId }),
+   254→      })
+   255→      if (!res.ok) throw new Error('Gagal')
+   256→      const blob = await res.blob()
+   257→      const url = URL.createObjectURL(blob)
+   258→      const printWindow = window.open(url, '_blank')
+   259→      if (printWindow) {
+   260→        printWindow.onload = () => { printWindow.print() }
+   261→      }
+   262→    } catch {
+   263→      toast({ title: 'Ralat', description: 'Gagal mencetak sijil.', variant: 'destructive' })
+   264→    } finally {
+   265→      setPdfLoading(false)
+   266→    }
+   267→  }
+   268→
+   269→  return (
+   270→    <div className="max-w-4xl mx-auto space-y-6">
+   271→      {/* Hero Section */}
+   272→      <div className="clay-card-lg p-8 sm:p-12 text-center hero-gradient relative overflow-hidden">
+   273→        <div className="absolute inset-0 opacity-5" style={{ background: 'radial-gradient(circle at 30% 40%, var(--clay-primary), transparent 50%)' }} />
+   274→        <div className="relative z-10">
+   275→          <img src="/logo-adtec.png" alt="Logo ADTEC" className="h-16 sm:h-20 mx-auto mb-4 object-contain clay-float" />
+   276→          <h1 className="text-2xl sm:text-4xl font-bold mb-2" style={{ color: 'var(--clay-ink)' }}>
+   277→            e-Sijil ADTEC Sandakan
+   278→          </h1>
+   279→          <p className="text-lg sm:text-xl mb-1" style={{ color: 'var(--clay-primary-dark)' }}>
+   280→            Sistem Cetak Sijil Digital Dinamik
+   281→          </p>
+   282→          <p className="text-sm max-w-lg mx-auto" style={{ color: 'var(--clay-ink-secondary)' }}>
+   283→            Dapatkan sijil rasmi anda dalam masa kurang 1 minit — hanya dengan memasukkan nombor MyKad.
+   284→          </p>
+   285→        </div>
+   286→      </div>
+   287→
+   288→      {/* Search Section */}
+   289→      <div className="clay-card p-6 sm:p-8">
+   290→        <div className="text-center mb-4">
+   291→          <h2 className="text-lg font-semibold mb-1" style={{ color: 'var(--clay-ink)' }}>
+   292→            Semak Sijil Anda
+   293→          </h2>
+   294→          <p className="text-sm" style={{ color: 'var(--clay-ink-soft)' }}>
+   295→            Masukkan nombor MyKad 12 digit untuk mencari sijil yang layak
+   296→          </p>
+   297→        </div>
+   298→        <div className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto">
+   299→          <div className="flex-1 relative">
+   300→            <input
+   301→              type="text"
+   302→              value={mykadInput}
+   303→              onChange={(e) => handleMyKadChange(e.target.value)}
+   304→              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+   305→              placeholder="901231-12-5678"
+   306→              className="w-full clay-input mykad-input px-6 text-center"
+   307→              style={{ background: 'var(--clay)', color: 'var(--clay-ink)', fontSize: '20px', letterSpacing: '2px' }}
+   308→              maxLength={14}
+   309→            />
+   310→            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+   311→              {mykadInput.replace(/[^0-9]/g, '').length}/12
+   312→            </span>
+   313→          </div>
+   314→          <button
+   315→            onClick={handleSearch}
+   316→            disabled={loading || mykadInput.replace(/[^0-9]/g, '').length !== 12}
+   317→            className="clay-btn flex items-center justify-center gap-2 px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+   318→          >
+   319→            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+   320→            Semak
+   321→          </button>
+   322→        </div>
+   323→        {error && (
+   324→          <div className="mt-4 text-center">
+   325→            <p className="text-sm px-4 py-2 inline-block rounded-full" style={{ background: 'var(--clay-danger-bg)', color: 'var(--clay-danger)' }}>
+   326→              {error}
+   327→            </p>
+   328→          </div>
+   329→        )}
+   330→      </div>
+   331→
+   332→      {/* Results */}
+   333→      {results && (
+   334→        <div className="space-y-4">
+   335→          <div className="flex items-center justify-between px-2">
+   336→            <div>
+   337→              <h3 className="font-semibold" style={{ color: 'var(--clay-ink)' }}>
+   338→                {results.namaDipaparkan}
+   339→              </h3>
+   340→              <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+   341→                MyKad: {results.noMykadFormat} · {results.bilangan} sijil ditemui
+   342→              </p>
+   343→            </div>
+   344→            <Badge variant="secondary" className="clay-badge" style={{ color: 'var(--clay-success)' }}>
+   345→              <CheckCircle2 className="w-3 h-3 mr-1" /> Rekod Ditemui
+   346→            </Badge>
+   347→          </div>
+   348→
+   349→          {results.sijil.map((s, idx) => (
+   350→            <div key={idx} className="clay-card p-5 relative overflow-hidden">
+   351→              {/* Category color strip */}
+   352→              <div className="absolute left-0 top-3 bottom-3 w-2 rounded-r" style={{ background: s.kategoriWarna }} />
+   353→              
+   354→              <div className="pl-4">
+   355→                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+   356→                  <div className="flex-1">
+   357→                    <h4 className="font-semibold text-base mb-1" style={{ color: 'var(--clay-ink)' }}>
+   358→                      {s.namaKursus}
+   359→                    </h4>
+   360→                    {s.namaKursusBi && (
+   361→                      <p className="text-sm italic mb-2" style={{ color: 'var(--clay-ink-secondary)' }}>
+   362→                        {s.namaKursusBi}
+   363→                      </p>
+   364→                    )}
+   365→                    <div className="flex flex-wrap items-center gap-2 mb-2">
+   366→                      <Badge className="text-xs" style={{ background: s.kategoriWarna + '20', color: s.kategoriWarna, borderRadius: '12px' }}>
+   367→                        {s.kategori}
+   368→                      </Badge>
+   369→                      {s.status === 'sah' && (
+   370→                        <Badge className="text-xs" style={{ background: 'var(--clay-success-bg)', color: 'var(--clay-success)', borderRadius: '12px' }}>
+   371→                          <CheckCircle2 className="w-3 h-3 mr-1" /> Sedia
+   372→                        </Badge>
+   373→                      )}
+   374→                      {s.status === 'dibatalkan' && (
+   375→                        <Badge className="text-xs" style={{ background: 'var(--clay-danger-bg)', color: 'var(--clay-danger)', borderRadius: '12px' }}>
+   376→                          <XCircle className="w-3 h-3 mr-1" /> Dibatalkan
+   377→                        </Badge>
+   378→                      )}
+   379→                      {s.status === 'menunggu' && (
+   380→                        <Badge className="text-xs" style={{ background: 'var(--clay-warning-bg)', color: 'var(--clay-warning)', borderRadius: '12px' }}>
+   381→                          <Clock className="w-3 h-3 mr-1" /> Menunggu
+   382→                        </Badge>
+   383→                      )}
+   384→                    </div>
+   385→                    <div className="flex flex-wrap gap-3 text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+   386→                      <span className="flex items-center gap-1">
+   387→                        <Calendar className="w-3 h-3" />
+   388→                        {formatDateShort(s.tarikhMula)} – {formatDateShort(s.tarikhTamat)}
+   389→                      </span>
+   390→                      {s.noSiri && (
+   391→                        <span className="flex items-center gap-1">
+   392→                          <QrCode className="w-3 h-3" />
+   393→                          {s.noSiri}
+   394→                        </span>
+   395→                      )}
+   396→                    </div>
+   397→                  </div>
+   398→
+   399→                  {/* Action Buttons */}
+   400→                  {s.id && s.status === 'sah' && (
+   401→                    <div className="flex gap-2 self-start">
+   402→                      <button
+   403→                        onClick={() => handlePreview(s)}
+   404→                        className="clay-btn-secondary text-xs px-3 py-2 flex items-center gap-1"
+   405→                        style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)', fontSize: '12px' }}
+   406→                      >
+   407→                        <Eye className="w-3.5 h-3.5" /> Pratonton
+   408→                      </button>
+   409→                      <button
+   410→                        onClick={() => handleDownload(s.id!)}
+   411→                        disabled={pdfLoading}
+   412→                        className="clay-btn text-xs px-3 py-2 flex items-center gap-1"
+   413→                        style={{ borderRadius: '16px', fontSize: '12px' }}
+   414→                      >
+   415→                        {pdfLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+   416→                        Muat Turun
+   417→                      </button>
+   418→                      <button
+   419→                        onClick={() => handlePrint(s.id!)}
+   420→                        className="clay-btn-secondary text-xs px-3 py-2 flex items-center gap-1"
+   421→                        style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)', fontSize: '12px' }}
+   422→                      >
+   423→                        <Printer className="w-3.5 h-3.5" /> Cetak
+   424→                      </button>
+   425→                    </div>
+   426→                  )}
+   427→                </div>
+   428→              </div>
+   429→            </div>
+   430→          ))}
+   431→        </div>
+   432→      )}
+   433→
+   434→      {/* Info Section */}
+   435→      {!results && !loading && (
+   436→        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+   437→          {[
+   438→            { icon: Search, title: 'Cari', desc: 'Masukkan nombor MyKad 12 digit' },
+   439→            { icon: FileBadge, title: 'Semak', desc: 'Sistem papar senarai sijil layak' },
+   440→            { icon: Download, title: 'Muat Turun', desc: 'Jana PDF sijil sedia cetak' },
+   441→          ].map((step, i) => (
+   442→            <div key={i} className="clay-card p-5 text-center">
+   443→              <div className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center"
+   444→                style={{ background: 'var(--clay-primary)', color: 'white', boxShadow: 'var(--clay-shadow-sm)' }}>
+   445→                <step.icon className="w-6 h-6" />
+   446→              </div>
+   447→              <h3 className="font-semibold text-sm mb-1" style={{ color: 'var(--clay-ink)' }}>{step.title}</h3>
+   448→              <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>{step.desc}</p>
+   449→            </div>
+   450→          ))}
+   451→        </div>
+   452→      )}
+   453→
+   454→      {/* Preview Dialog */}
+   455→      <Dialog open={!!previewSijil} onOpenChange={() => { setPreviewSijil(null); if (pdfUrl) URL.revokeObjectURL(pdfUrl); setPdfUrl(null) }}>
+   456→        <DialogContent className="max-w-4xl" style={{ borderRadius: '32px', boxShadow: 'var(--clay-shadow-lg)' }}>
+   457→          <DialogHeader>
+   458→            <DialogTitle className="flex items-center gap-2">
+   459→              <Eye className="w-5 h-5" style={{ color: 'var(--clay-primary)' }} />
+   460→              Pratonton Sijil
+   461→            </DialogTitle>
+   462→          </DialogHeader>
+   463→          <div className="mt-2" style={{ minHeight: '400px' }}>
+   464→            {pdfLoading ? (
+   465→              <div className="flex items-center justify-center h-64">
+   466→                <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--clay-primary)' }} />
+   467→              </div>
+   468→            ) : pdfUrl ? (
+   469→              <iframe src={pdfUrl} className="w-full border-0 rounded-2xl" style={{ height: '500px', background: 'white' }} />
+   470→            ) : null}
+   471→          </div>
+   472→          {previewSijil && previewSijil.id && (
+   473→            <div className="flex justify-end gap-2 mt-2">
+   474→              <button
+   475→                onClick={() => handleDownload(previewSijil.id!)}
+   476→                className="clay-btn flex items-center gap-2 text-sm"
+   477→              >
+   478→                <Download className="w-4 h-4" /> Muat Turun PDF
+   479→              </button>
+   480→              <button
+   481→                onClick={() => handlePrint(previewSijil.id!)}
+   482→                className="clay-btn-secondary flex items-center gap-2 text-sm"
+   483→                style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)' }}
+   484→              >
+   485→                <Printer className="w-4 h-4" /> Cetak
+   486→              </button>
+   487→            </div>
+   488→          )}
+   489→        </DialogContent>
+   490→      </Dialog>
+   491→    </div>
+   492→  )
+   493→}
+   494→
+   495→// ============================================================
+   496→// ADMIN LOGIN
+   497→// ============================================================
+   498→function AdminLogin({ onLogin }: { onLogin: (user: AdminUser) => void }) {
+   499→  const [emel, setEmel] = useState('')
+   500→  const [kataLaluan, setKataLaluan] = useState('')
+   501→  const [loading, setLoading] = useState(false)
+   502→  const [error, setError] = useState('')
+   503→  const { toast } = useToast()
+   504→
+   505→  const handleLogin = async () => {
+   506→    setLoading(true)
+   507→    setError('')
+   508→    try {
+   509→      const res = await fetch('/api/auth/login', {
+   510→        method: 'POST',
+   511→        headers: { 'Content-Type': 'application/json' },
+   512→        body: JSON.stringify({ emel, kataLaluan }),
+   513→      })
+   514→      const data = await res.json()
+   515→      if (data.berjaya) {
+   516→        onLogin(data.pengguna)
+   517→        toast({ title: 'Log Masuk Berjaya', description: `Selamat datang, ${data.pengguna.namaPenuh}` })
+   518→      } else {
+   519→        setError(data.mesej)
+   520→      }
+   521→    } catch {
+   522→      setError('Ralat sambungan.')
+   523→    } finally {
+   524→      setLoading(false)
+   525→    }
+   526→  }
+   527→
+   528→  return (
+   529→    <div className="max-w-md mx-auto">
+   530→      <div className="clay-card-lg p-8">
+   531→        <div className="text-center mb-6">
+   532→          <img src="/logo-adtec.png" alt="ADTEC" className="h-16 mx-auto mb-4" />
+   533→          <h2 className="text-xl font-bold" style={{ color: 'var(--clay-ink)' }}>Log Masuk Pentadbir</h2>
+   534→          <p className="text-sm" style={{ color: 'var(--clay-ink-soft)' }}>Portal Pengurusan e-Sijil</p>
+   535→        </div>
+   536→        <div className="space-y-4">
+   537→          <div>
+   538→            <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--clay-ink-secondary)' }}>E-mel Rasmi</label>
+   539→            <input
+   540→              type="email"
+   541→              value={emel}
+   542→              onChange={(e) => setEmel(e.target.value)}
+   543→              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+   544→              placeholder="admin@adtec.gov.my"
+   545→              className="w-full clay-input px-4 py-3"
+   546→              style={{ background: 'var(--clay)', color: 'var(--clay-ink)' }}
+   547→            />
+   548→          </div>
+   549→          <div>
+   550→            <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--clay-ink-secondary)' }}>Kata Laluan</label>
+   551→            <input
+   552→              type="password"
+   553→              value={kataLaluan}
+   554→              onChange={(e) => setKataLaluan(e.target.value)}
+   555→              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+   556→              placeholder="••••••••••••"
+   557→              className="w-full clay-input px-4 py-3"
+   558→              style={{ background: 'var(--clay)', color: 'var(--clay-ink)' }}
+   559→            />
+   560→          </div>
+   561→          {error && <p className="text-sm text-center" style={{ color: 'var(--clay-danger)' }}>{error}</p>}
+   562→          <button
+   563→            onClick={handleLogin}
+   564→            disabled={loading || !emel || !kataLaluan}
+   565→            className="clay-btn w-full flex items-center justify-center gap-2"
+   566→          >
+   567→            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />}
+   568→            Log Masuk
+   569→          </button>
+   570→          <p className="text-xs text-center mt-2" style={{ color: 'var(--clay-ink-soft)' }}>
+   571→            Demo: admin@adtec.gov.my / Admin@2026
+   572→          </p>
+   573→        </div>
+   574→      </div>
+   575→    </div>
+   576→  )
+   577→}
+   578→
+   579→// ============================================================
+   580→// ADMIN PORTAL
+   581→// ============================================================
+   582→function AdminPortal({ user, activeTab, onTabChange, onLogout }: {
+   583→  user: AdminUser
+   584→  activeTab: string
+   585→  onTabChange: (tab: string) => void
+   586→  onLogout: () => void
+   587→}) {
+   588→  const tabs = [
+   589→    { id: 'dashboard', label: 'Papan Pemuka', icon: LayoutDashboard },
+   590→    { id: 'kategori', label: 'Kategori', icon: FolderOpen },
+   591→    { id: 'kursus', label: 'Kursus', icon: GraduationCap },
+   592→    { id: 'peserta', label: 'Peserta', icon: Users },
+   593→    { id: 'templat', label: 'Templat', icon: FileText },
+   594→    { id: 'sijil', label: 'Sijil', icon: Award },
+   595→    { id: 'audit', label: 'Log Audit', icon: Activity },
+   596→    { id: 'tetapan', label: 'Tetapan', icon: Settings },
+   597→  ]
+   598→
+   599→  return (
+   600→    <div className="max-w-6xl mx-auto">
+   601→      {/* Admin Tabs */}
+   602→      <div className="clay-card-sm p-2 mb-6 overflow-x-auto">
+   603→        <div className="flex gap-1 min-w-max">
+   604→          {tabs.map((tab) => {
+   605→            const isActive = activeTab === tab.id
+   606→            return (
+   607→              <button
+   608→                key={tab.id}
+   609→                onClick={() => onTabChange(tab.id)}
+   610→                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap"
+   611→                style={{
+   612→                  background: isActive ? 'var(--clay-primary)' : 'transparent',
+   613→                  color: isActive ? 'white' : 'var(--clay-ink-secondary)',
+   614→                  boxShadow: isActive ? 'var(--clay-shadow-sm)' : 'none',
+   615→                }}
+   616→              >
+   617→                <tab.icon className="w-4 h-4" />
+   618→                {tab.label}
+   619→              </button>
+   620→            )
+   621→          })}
+   622→        </div>
+   623→      </div>
+   624→
+   625→      {/* Tab Content */}
+   626→      {activeTab === 'dashboard' && <DashboardTab />}
+   627→      {activeTab === 'kategori' && <KategoriTab />}
+   628→      {activeTab === 'kursus' && <KursusTab />}
+   629→      {activeTab === 'peserta' && <PesertaTab />}
+   630→      {activeTab === 'templat' && <TemplatTab user={user} />}
+   631→      {activeTab === 'sijil' && <SijilTab />}
+   632→      {activeTab === 'audit' && <AuditTab />}
+   633→      {activeTab === 'tetapan' && <TetapanTab />}
+   634→    </div>
+   635→  )
+   636→}
+   637→
+   638→// ============================================================
+   639→// DASHBOARD TAB
+   640→// ============================================================
+   641→function DashboardTab() {
+   642→  const [stats, setStats] = useState<StatsData | null>(null)
+   643→  const [loading, setLoading] = useState(true)
+   644→
+   645→  useEffect(() => {
+   646→    fetch('/api/laporan/statistik')
+   647→      .then(r => r.json())
+   648→      .then(d => { if (d.berjaya) setStats(d.data) })
+   649→      .finally(() => setLoading(false))
+   650→  }, [])
+   651→
+   652→  if (loading) return <LoadingSpinner />
+   653→
+   654→  const statCards = stats ? [
+   655→    { label: 'KURSUS AKTIF', value: stats.jumlahKursusAktif, color: 'var(--clay-primary)' },
+   656→    { label: 'JUMLAH PESERTA', value: stats.jumlahPeserta, color: 'var(--clay-success)' },
+   657→    { label: 'SIJIL DIJANA', value: stats.jumlahSijilDijana, color: 'var(--clay-primary-dark)' },
+   658→    { label: 'SIJIL BULAN INI', value: stats.sijilBulanIni, color: 'var(--clay-warning)' },
+   659→  ] : []
+   660→
+   661→  return (
+   662→    <div className="space-y-6">
+   663→      {/* Stats Cards */}
+   664→      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+   665→        {statCards.map((s, i) => (
+   666→          <div key={i} className="clay-card p-5 text-center">
+   667→            <p className="text-3xl font-extrabold" style={{ color: s.color }}>{s.value}</p>
+   668→            <p className="text-xs font-semibold mt-1 uppercase tracking-wider" style={{ color: 'var(--clay-ink-soft)' }}>{s.label}</p>
+   669→          </div>
+   670→        ))}
+   671→      </div>
+   672→
+   673→      {/* Charts Area */}
+   674→      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   675→        {/* Monthly Chart */}
+   676→        <div className="clay-card p-5">
+   677→          <h3 className="font-semibold text-sm mb-3" style={{ color: 'var(--clay-ink)' }}>Sijil Mengikut Bulan</h3>
+   678→          <div className="flex items-end gap-1 h-40">
+   679→            {stats?.monthlyStats.map((m, i) => {
+   680→              const max = Math.max(...(stats?.monthlyStats.map(x => x.bil) || [1]), 1)
+   681→              const h = Math.max((m.bil / max) * 100, 2)
+   682→              return (
+   683→                <div key={i} className="flex-1 flex flex-col items-center gap-1">
+   684→                  <span className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>{m.bil || ''}</span>
+   685→                  <div className="w-full rounded-t-lg transition-all" style={{ height: `${h}%`, background: 'var(--clay-primary)', minHeight: '4px', opacity: 0.7 + (i / 12) * 0.3 }} />
+   686→                  <span className="text-[9px] -rotate-45 origin-top-left" style={{ color: 'var(--clay-ink-soft)' }}>{m.bulan}</span>
+   687→                </div>
+   688→              )
+   689→            })}
+   690→          </div>
+   691→        </div>
+   692→
+   693→        {/* Category Breakdown */}
+   694→        <div className="clay-card p-5">
+   695→          <h3 className="font-semibold text-sm mb-3" style={{ color: 'var(--clay-ink)' }}>Sijil Mengikut Kategori</h3>
+   696→          <div className="space-y-3">
+   697→            {stats?.categoryBreakdown.map((c, i) => {
+   698→              const max = Math.max(...(stats?.categoryBreakdown.map(x => x.bil) || [1]), 1)
+   699→              return (
+   700→                <div key={i}>
+   701→                  <div className="flex justify-between text-xs mb-1">
+   702→                    <span style={{ color: 'var(--clay-ink-secondary)' }}>{c.nama}</span>
+   703→                    <span className="font-semibold" style={{ color: c.warna }}>{c.bil}</span>
+   704→                  </div>
+   705→                  <div className="h-2 rounded-full" style={{ background: 'var(--clay)' }}>
+   706→                    <div className="h-full rounded-full transition-all" style={{ width: `${(c.bil / max) * 100}%`, background: c.warna }} />
+   707→                  </div>
+   708→                </div>
+   709→              )
+   710→            })}
+   711→            {(!stats?.categoryBreakdown.length) && (
+   712→              <p className="text-sm text-center py-4" style={{ color: 'var(--clay-ink-soft)' }}>Tiada data lagi</p>
+   713→            )}
+   714→          </div>
+   715→        </div>
+   716→      </div>
+   717→
+   718→      {/* Recent Courses */}
+   719→      <div className="clay-card p-5">
+   720→        <h3 className="font-semibold text-sm mb-3" style={{ color: 'var(--clay-ink)' }}>Kursus Terkini</h3>
+   721→        <div className="space-y-2">
+   722→          {stats?.kursusRecent.map((k: any) => (
+   723→            <div key={k.id} className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(124,108,240,0.04)' }}>
+   724→              <div>
+   725→                <p className="text-sm font-medium" style={{ color: 'var(--clay-ink)' }}>{k.namaKursusBm}</p>
+   726→                <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>{k.kodKursus} · {k.kategori?.namaKategori}</p>
+   727→              </div>
+   728→              <div className="flex gap-3 text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+   729→                <span>{k._count?.peserta || 0} peserta</span>
+   730→                <span>{k._count?.sijil || 0} sijil</span>
+   731→              </div>
+   732→            </div>
+   733→          ))}
+   734→        </div>
+   735→      </div>
+   736→    </div>
+   737→  )
+   738→}
+   739→
+   740→// ============================================================
+   741→// KATEGORI TAB
+   742→// ============================================================
+   743→function KategoriTab() {
+   744→  const [data, setData] = useState<any[]>([])
+   745→  const [loading, setLoading] = useState(true)
+   746→
+   747→  useEffect(() => {
+   748→    fetch('/api/kategori').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
+   749→  }, [])
+   750→
+   751→  if (loading) return <LoadingSpinner />
+   752→
+   753→  return (
+   754→    <div className="clay-card p-5">
+   755→      <h3 className="font-semibold mb-4" style={{ color: 'var(--clay-ink)' }}>Pengurusan Kategori Program</h3>
+   756→      <div className="overflow-x-auto">
+   757→        <table className="w-full text-sm">
+   758→          <thead>
+   759→            <tr style={{ background: 'var(--clay-primary)', color: 'white' }}>
+   760→              <th className="px-4 py-3 text-left rounded-tl-xl">Kod</th>
+   761→              <th className="px-4 py-3 text-left">Nama Kategori</th>
+   762→              <th className="px-4 py-3 text-left">Keterangan</th>
+   763→              <th className="px-4 py-3 text-center">Kursus</th>
+   764→              <th className="px-4 py-3 text-center">Status</th>
+   765→              <th className="px-4 py-3 text-center rounded-tr-xl">Warna</th>
+   766→            </tr>
+   767→          </thead>
+   768→          <tbody>
+   769→            {data.map((k, i) => (
+   770→              <tr key={k.id} className={i % 2 === 0 ? '' : ''} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(124,108,240,0.04)' }}>
+   771→                <td className="px-4 py-3 font-mono font-semibold" style={{ color: 'var(--clay-primary)' }}>{k.kodKategori}</td>
+   772→                <td className="px-4 py-3" style={{ color: 'var(--clay-ink)' }}>{k.namaKategori}</td>
+   773→                <td className="px-4 py-3 text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>{k.keterangan || '-'}</td>
+   774→                <td className="px-4 py-3 text-center" style={{ color: 'var(--clay-ink-secondary)' }}>{k._count?.kursus || 0}</td>
+   775→                <td className="px-4 py-3 text-center">
+   776→                  <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+   777→                    style={{ background: k.status === 'aktif' ? 'var(--clay-success-bg)' : 'var(--clay-warning-bg)', color: k.status === 'aktif' ? 'var(--clay-success)' : 'var(--clay-warning)' }}>
+   778→                    {k.status === 'aktif' ? 'Aktif' : 'Arkib'}
+   779→                  </span>
+   780→                </td>
+   781→                <td className="px-4 py-3 text-center">
+   782→                  <span className="inline-block w-5 h-5 rounded-full" style={{ background: k.warnaLabel }} />
+   783→                </td>
+   784→              </tr>
+   785→            ))}
+   786→          </tbody>
+   787→        </table>
+   788→      </div>
+   789→    </div>
+   790→  )
+   791→}
+   792→
+   793→// ============================================================
+   794→// KURSUS TAB
+   795→// ============================================================
+   796→function KursusTab() {
+   797→  const [data, setData] = useState<any[]>([])
+   798→  const [loading, setLoading] = useState(true)
+   799→
+   800→  useEffect(() => {
+   801→    fetch('/api/kursus').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
+   802→  }, [])
+   803→
+   804→  if (loading) return <LoadingSpinner />
+   805→
+   806→  return (
+   807→    <div className="clay-card p-5">
+   808→      <h3 className="font-semibold mb-4" style={{ color: 'var(--clay-ink)' }}>Pengurusan Kursus / Program</h3>
+   809→      <div className="overflow-x-auto">
+   810→        <table className="w-full text-sm">
+   811→          <thead>
+   812→            <tr style={{ background: 'var(--clay-primary)', color: 'white' }}>
+   813→              <th className="px-3 py-3 text-left rounded-tl-xl">Kod</th>
+   814→              <th className="px-3 py-3 text-left">Nama Kursus</th>
+   815→              <th className="px-3 py-3 text-left">Kategori</th>
+   816→              <th className="px-3 py-3 text-center">Peserta</th>
+   817→              <th className="px-3 py-3 text-center">Sijil</th>
+   818→              <th className="px-3 py-3 text-center">Status</th>
+   819→              <th className="px-3 py-3 text-center rounded-tr-xl">Tarikh</th>
+   820→            </tr>
+   821→          </thead>
+   822→          <tbody>
+   823→            {data.map((k, i) => (
+   824→              <tr key={k.id} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(124,108,240,0.04)' }}>
+   825→                <td className="px-3 py-3 font-mono text-xs" style={{ color: 'var(--clay-primary)' }}>{k.kodKursus}</td>
+   826→                <td className="px-3 py-3" style={{ color: 'var(--clay-ink)' }}>
+   827→                  <p className="font-medium">{k.namaKursusBm}</p>
+   828→                  {k.namaKursusBi && <p className="text-xs italic" style={{ color: 'var(--clay-ink-soft)' }}>{k.namaKursusBi}</p>}
+   829→                </td>
+   830→                <td className="px-3 py-3">
+   831→                  <span className="inline-block px-2 py-0.5 rounded-full text-xs" style={{ background: (k.kategori?.warnaLabel || '#7C6CF0') + '20', color: k.kategori?.warnaLabel || '#7C6CF0' }}>
+   832→                    {k.kategori?.namaKategori || '-'}
+   833→                  </span>
+   834→                </td>
+   835→                <td className="px-3 py-3 text-center" style={{ color: 'var(--clay-ink-secondary)' }}>{k._count?.peserta || 0}</td>
+   836→                <td className="px-3 py-3 text-center" style={{ color: 'var(--clay-ink-secondary)' }}>{k._count?.sijil || 0}</td>
+   837→                <td className="px-3 py-3 text-center">
+   838→                  <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+   839→                    style={{
+   840→                      background: k.status === 'aktif' ? 'var(--clay-success-bg)' : k.status === 'tamat' ? 'var(--clay-warning-bg)' : 'rgba(124,108,240,0.08)',
+   841→                      color: k.status === 'aktif' ? 'var(--clay-success)' : k.status === 'tamat' ? 'var(--clay-warning)' : 'var(--clay-primary)'
+   842→                    }}>
+   843→                    {k.status === 'aktif' ? 'Aktif' : k.status === 'tamat' ? 'Tamat' : k.status === 'draf' ? 'Draf' : 'Arkib'}
+   844→                  </span>
+   845→                </td>
+   846→                <td className="px-3 py-3 text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+   847→                  {formatDateShort(k.tarikhMula)}<br />– {formatDateShort(k.tarikhTamat)}
+   848→                </td>
+   849→              </tr>
+   850→            ))}
+   851→          </tbody>
+   852→        </table>
+   853→      </div>
+   854→    </div>
+   855→  )
+   856→}
+   857→
+   858→// ============================================================
+   859→// PESERTA TAB
+   860→// ============================================================
+   861→function PesertaTab() {
+   862→  const [kursusList, setKursusList] = useState<any[]>([])
+   863→  const [selectedKursus, setSelectedKursus] = useState<string>('')
+   864→  const [pesertaList, setPesertaList] = useState<any[]>([])
+   865→  const [loading, setLoading] = useState(true)
+   866→
+   867→  // Load kursus list and first set of peserta on mount
+   868→  useEffect(() => {
+   869→    fetch('/api/kursus').then(r => r.json()).then(d => {
+   870→      if (d.berjaya) {
+   871→        setKursusList(d.data)
+   872→        if (d.data.length > 0) {
+   873→          const firstId = d.data[0].id
+   874→          setSelectedKursus(firstId)
+   875→          fetch(`/api/peserta?kursusId=${firstId}`).then(r2 => r2.json()).then(d2 => {
+   876→            if (d2.berjaya) setPesertaList(d2.data)
+   877→          }).finally(() => setLoading(false))
+   878→        }
+   879→      }
+   880→    })
+   881→  }, [])
+   882→
+   883→  const handleKursusChange = (id: string) => {
+   884→    setSelectedKursus(id)
+   885→    setLoading(true)
+   886→    fetch(`/api/peserta?kursusId=${id}`).then(r => r.json()).then(d => {
+   887→      if (d.berjaya) setPesertaList(d.data)
+   888→    }).finally(() => setLoading(false))
+   889→  }
+   890→
+   891→  return (
+   892→    <div className="space-y-4">
+   893→      {/* Kursus selector */}
+   894→      <div className="clay-card p-5">
+   895→        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+   896→          <h3 className="font-semibold" style={{ color: 'var(--clay-ink)' }}>Senarai Peserta</h3>
+   897→          <select
+   898→            value={selectedKursus}
+   899→            onChange={(e) => handleKursusChange(e.target.value)}
+   900→            className="clay-input px-4 py-2 text-sm flex-1 sm:max-w-md"
+   901→            style={{ background: 'var(--clay)', color: 'var(--clay-ink)' }}
+   902→          >
+   903→            {kursusList.map((k: any) => (
+   904→              <option key={k.id} value={k.id}>{k.namaKursusBm} ({k.kodKursus})</option>
+   905→            ))}
+   906→          </select>
+   907→        </div>
+   908→      </div>
+   909→
+   910→      {/* Participant table */}
+   911→      {loading ? <LoadingSpinner /> : (
+   912→        <div className="clay-card p-5">
+   913→          <div className="overflow-x-auto">
+   914→            <table className="w-full text-sm">
+   915→              <thead>
+   916→                <tr style={{ background: 'var(--clay-primary)', color: 'white' }}>
+   917→                  <th className="px-3 py-3 text-left rounded-tl-xl">#</th>
+   918→                  <th className="px-3 py-3 text-left">Nama Penuh</th>
+   919→                  <th className="px-3 py-3 text-left">No. MyKad</th>
+   920→                  <th className="px-3 py-3 text-center">Jantina</th>
+   921→                  <th className="px-3 py-3 text-center">Kelayakan</th>
+   922→                  <th className="px-3 py-3 text-center rounded-tr-xl">Sijil</th>
+   923→                </tr>
+   924→              </thead>
+   925→              <tbody>
+   926→                {pesertaList.map((p: any, i: number) => (
+   927→                  <tr key={p.id} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(124,108,240,0.04)' }}>
+   928→                    <td className="px-3 py-3 text-center" style={{ color: 'var(--clay-ink-soft)' }}>{i + 1}</td>
+   929→                    <td className="px-3 py-3 font-medium" style={{ color: 'var(--clay-ink)' }}>{p.namaPenuh}</td>
+   930→                    <td className="px-3 py-3 font-mono text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>
+   931→                      {p.noMykad.length === 12 ? `${p.noMykad.slice(0,6)}-${p.noMykad.slice(6,8)}-${p.noMykad.slice(8)}` : p.noMykad}
+   932→                    </td>
+   933→                    <td className="px-3 py-3 text-center text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>{p.jantina === 'lelaki' ? '♂' : '♀'}</td>
+   934→                    <td className="px-3 py-3 text-center">
+   935→                      <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+   936→                        style={{
+   937→                          background: p.statusKelayakan === 'layak' ? 'var(--clay-success-bg)' : p.statusKelayakan === 'tidak_layak' ? 'var(--clay-danger-bg)' : 'var(--clay-warning-bg)',
+   938→                          color: p.statusKelayakan === 'layak' ? 'var(--clay-success)' : p.statusKelayakan === 'tidak_layak' ? 'var(--clay-danger)' : 'var(--clay-warning)'
+   939→                        }}>
+   940→                        {p.statusKelayakan === 'layak' ? 'Layak' : p.statusKelayakan === 'tidak_layak' ? 'Tidak Layak' : 'Ditangguh'}
+   941→                      </span>
+   942→                    </td>
+   943→                    <td className="px-3 py-3 text-center" style={{ color: 'var(--clay-ink-soft)' }}>
+   944→                      {p.sijil?.length > 0 ? <CheckCircle2 className="w-4 h-4 inline" style={{ color: 'var(--clay-success)' }} /> : '—'}
+   945→                    </td>
+   946→                  </tr>
+   947→                ))}
+   948→              </tbody>
+   949→            </table>
+   950→          </div>
+   951→        </div>
+   952→      )}
+   953→    </div>
+   954→  )
+   955→}
+   956→
+   957→// ============================================================
+   958→// TEMPLAT TAB - with full editor
+   959→// ============================================================
+   960→
+   961→// Available dynamic fields for certificate templates
+   962→const MEDAN_SENARAI = [
+   963→  { kunci: 'nama_penuh', label: 'Nama Penuh', contoh: 'AMIRUL BIN ABDULLAH' },
+   964→  { kunci: 'no_mykad', label: 'No. MyKad', contoh: '901231-12-5678' },
+   965→  { kunci: 'nama_kursus', label: 'Nama Kursus (BM)', contoh: 'Pendawaian Elektrik Domestik' },
+   966→  { kunci: 'nama_kursus_bi', label: 'Nama Kursus (BI)', contoh: 'Domestic Electrical Wiring' },
+   967→  { kunci: 'kategori_program', label: 'Kategori Program', contoh: 'Kursus Pendek' },
+   968→  { kunci: 'julat_tarikh', label: 'Julat Tarikh', contoh: '6 Januari – 10 Januari 2026' },
+   969→  { kunci: 'tempoh_jam', label: 'Tempoh (jam)', contoh: '40 jam' },
+   970→  { kunci: 'no_siri', label: 'No. Siri', contoh: 'ADTEC/SDK/2026/KP/00001' },
+   971→  { kunci: 'qr_pengesahan', label: 'QR Pengesahan', contoh: '[QR CODE]' },
+   972→  { kunci: 'tarikh_dijana', label: 'Tarikh Dijana', contoh: '10 Ogos 2026' },
+   973→  { kunci: 'nama_institusi', label: 'Nama Institusi', contoh: 'ADTEC JTM Kampus Sandakan' },
+   974→  { kunci: 'tempat', label: 'Tempat', contoh: 'ADTEC JTM Kampus Sandakan' },
+   975→]
+   976→
+   977→const FON_SENARAI = ['Times New Roman', 'Arial', 'Helvetica', 'Courier New', 'Georgia', 'Verdana', 'Poppins']
+   978→const GAYA_FON_SENARAI = [
+   979→  { nilai: 'normal', label: 'Biasa' },
+   980→  { nilai: 'tebal', label: 'Tebal' },
+   981→  { nilai: 'condong', label: 'Condong' },
+   982→  { nilai: 'tebal_condong', label: 'Tebal Condong' },
+   983→]
+   984→const PENJAJARAN_SENARAI = [
+   985→  { nilai: 'kiri', label: 'Kiri', icon: AlignLeft },
+   986→  { nilai: 'tengah', label: 'Tengah', icon: AlignCenter },
+   987→  { nilai: 'kanan', label: 'Kanan', icon: AlignRight },
+   988→]
+   989→
+   990→function TemplatTab({ user }: { user: AdminUser }) {
+   991→  const [data, setData] = useState<any[]>([])
+   992→  const [loading, setLoading] = useState(true)
+   993→  const [editingTemplate, setEditingTemplate] = useState<any>(null)
+   994→  const { toast } = useToast()
+   995→
+   996→  useEffect(() => {
+   997→    fetch('/api/templat').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
+   998→  }, [])
+   999→
+  1000→  if (loading) return <LoadingSpinner />
+  1001→
+  1002→  // If editing a template, show the editor
+  1003→  if (editingTemplate) {
+  1004→    return (
+  1005→      <TemplateEditor
+  1006→        template={editingTemplate}
+  1007→        onSave={async (updatedMedan: any[]) => {
+  1008→          try {
+  1009→            const isNew = editingTemplate.id === 'new'
+  1010→            let templatId = editingTemplate.id
+  1011→
+  1012→            if (isNew) {
+  1013→              // Create template first via POST
+  1014→              const createRes = await fetch('/api/templat', {
+  1015→                method: 'POST',
+  1016→                headers: { 'Content-Type': 'application/json' },
+  1017→                body: JSON.stringify({
+  1018→                  namaTemplat: editingTemplate.namaTemplat,
+  1019→                  keterangan: editingTemplate.keterangan,
+  1020→                  orientasi: editingTemplate.orientasi,
+  1021→                  saizKertas: editingTemplate.saizKertas,
+  1022→                  dimuatNaikOlehId: user.id,
+  1023→                  medan: updatedMedan,
+  1024→                }),
+  1025→              })
+  1026→              const createResult = await createRes.json()
+  1027→              if (createResult.berjaya) {
+  1028→                templatId = createResult.data.id
+  1029→              } else {
+  1030→                toast({ title: 'Ralat', description: createResult.mesej || 'Gagal mencipta templat.', variant: 'destructive' })
+  1031→                return
+  1032→              }
+  1033→            } else {
+  1034→              // Update existing template fields via PUT
+  1035→              const res = await fetch('/api/templat', {
+  1036→                method: 'PUT',
+  1037→                headers: { 'Content-Type': 'application/json' },
+  1038→                body: JSON.stringify({ templatId, medan: updatedMedan }),
+  1039→              })
+  1040→              const result = await res.json()
+  1041→              if (!result.berjaya) {
+  1042→                toast({ title: 'Ralat', description: result.mesej, variant: 'destructive' })
+  1043→                return
+  1044→              }
+  1045→            }
+  1046→
+  1047→            toast({ title: 'Templat Disimpan', description: isNew ? 'Templat baharu berjaya dicipta.' : 'Medan templat berjaya dikemaskini.' })
+  1048→            setEditingTemplate(null)
+  1049→            setLoading(true)
+  1050→            fetch('/api/templat').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
+  1051→          } catch {
+  1052→            toast({ title: 'Ralat', description: 'Gagal menyimpan templat.', variant: 'destructive' })
+  1053→          }
+  1054→        }}
+  1055→        onClose={() => setEditingTemplate(null)}
+  1056→      />
+  1057→    )
+  1058→  }
+  1059→
+  1060→  return (
+  1061→    <div className="space-y-4">
+  1062→      <div className="flex items-center justify-between">
+  1063→        <h3 className="font-semibold" style={{ color: 'var(--clay-ink)' }}>Galeri Templat Sijil</h3>
+  1064→        <Button
+  1065→          onClick={() => {
+  1066→            setEditingTemplate({
+  1067→              id: 'new',
+  1068→              namaTemplat: 'Templat Baharu',
+  1069→              keterangan: '',
+  1070→              orientasi: 'landskap',
+  1071→              saizKertas: 'a4',
+  1072→              medanTemplat: [],
+  1073→              status: 'draf',
+  1074→              versi: 1,
+  1075→            })
+  1076→          }}
+  1077→          className="clay-btn text-sm px-4 py-2 flex items-center gap-2"
+  1078→          style={{ background: 'var(--clay-primary)', color: 'white', borderRadius: '20px', boxShadow: 'var(--clay-shadow-sm)' }}
+  1079→        >
+  1080→          <Plus className="w-4 h-4" /> Templat Baharu
+  1081→        </Button>
+  1082→      </div>
+  1083→      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  1084→        {data.map((t: any) => (
+  1085→          <div key={t.id} className="clay-card p-5 cursor-pointer group" onClick={() => setEditingTemplate(t)}>
+  1086→            {/* Template preview with field positions */}
+  1087→            <div className="rounded-xl mb-4 relative overflow-hidden"
+  1088→              style={{
+  1089→                background: 'linear-gradient(135deg, #f8f9ff, #eef0fa)',
+  1090→                aspectRatio: t.orientasi === 'landskap' ? '297/210' : '210/297',
+  1091→                border: '2px dashed var(--border)',
+  1092→              }}>
+  1093→              {/* Render field positions as dots */}
+  1094→              {(t.medanTemplat || []).map((m: any, i: number) => (
+  1095→                <div key={i}
+  1096→                  className="absolute flex items-center justify-center"
+  1097→                  style={{
+  1098→                    left: `${m.posXPeratus}%`,
+  1099→                    top: `${m.posYPeratus}%`,
+  1100→                    transform: 'translate(-50%, -50%)',
+  1101→                  }}
+  1102→                >
+  1103→                  <div className="px-1.5 py-0.5 rounded text-[6px] font-medium whitespace-nowrap"
+  1104→                    style={{
+  1105→                      background: m.jenisElemen === 'qr' ? 'rgba(226,109,142,0.15)' : 'rgba(124,108,240,0.12)',
+  1106→                      color: m.jenisElemen === 'qr' ? 'var(--clay-danger)' : 'var(--clay-primary)',
+  1107→                      border: `1px solid ${m.jenisElemen === 'qr' ? 'rgba(226,109,142,0.3)' : 'rgba(124,108,240,0.25)'}`,
+  1108→                    }}
+  1109→                  >
+  1110→                    {m.kunciMedan.replace(/_/g, ' ')}
+  1111→                  </div>
+  1112→                </div>
+  1113→              ))}
+  1114→              {/* Edit overlay */}
+  1115→              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+  1116→                style={{ background: 'rgba(124,108,240,0.08)' }}
+  1117→              >
+  1118→                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
+  1119→                  style={{ background: 'var(--clay-primary)', color: 'white' }}
+  1120→                >
+  1121→                  <Edit2 className="w-3 h-3" /> <span className="text-xs font-medium">Edit Templat</span>
+  1122→                </div>
+  1123→              </div>
+  1124→            </div>
+  1125→            <h4 className="font-semibold text-sm mb-1" style={{ color: 'var(--clay-ink)' }}>{t.namaTemplat}</h4>
+  1126→            <p className="text-xs mb-2" style={{ color: 'var(--clay-ink-soft)' }}>{t.keterangan || 'Tiada keterangan'}</p>
+  1127→            <div className="flex items-center justify-between">
+  1128→              <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+  1129→                style={{
+  1130→                  background: t.status === 'aktif' ? 'var(--clay-success-bg)' : t.status === 'draf' ? 'var(--clay-warning-bg)' : 'rgba(124,108,240,0.08)',
+  1131→                  color: t.status === 'aktif' ? 'var(--clay-success)' : t.status === 'draf' ? 'var(--clay-warning)' : 'var(--clay-primary)'
+  1132→                }}>
+  1133→                {t.status === 'aktif' ? 'Aktif' : t.status === 'draf' ? 'Draf' : 'Arkib'}
+  1134→              </span>
+  1135→              <span className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+  1136→                {t.orientasi === 'landskap' ? 'Landskap' : 'Potret'} · v{t.versi} · {t.medanTemplat?.length || 0} medan
+  1137→              </span>
+  1138→            </div>
+  1139→          </div>
+  1140→        ))}
+  1141→      </div>
+  1142→    </div>
+  1143→  )
+  1144→}
+  1145→
+  1146→// ============================================================
+  1147→// TEMPLATE EDITOR - Drag & Drop Field Mapping
+  1148→// ============================================================
+  1149→function TemplateEditor({ template, onSave, onClose }: {
+  1150→  template: any
+  1151→  onSave: (medan: any[]) => void
+  1152→  onClose: () => void
+  1153→}) {
+  1154→  const [medan, setMedan] = useState<any[]>(template.medanTemplat || [])
+  1155→  const [selectedField, setSelectedField] = useState<number | null>(null)
+  1156→  const [dragging, setDragging] = useState<number | null>(null)
+  1157→  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  1158→  const canvasRef = useRef<HTMLDivElement>(null)
+  1159→  const [saving, setSaving] = useState(false)
+  1160→  const { toast } = useToast()
+  1161→
+  1162→  const isLandscape = template.orientasi === 'landskap'
+  1163→
+  1164→  // Add a new field
+  1165→  const addField = (kunci: string) => {
+  1166→    const def = MEDAN_SENARAI.find(m => m.kunci === kunci)
+  1167→    if (!def) return
+  1168→    const newField = {
+  1169→      kunciMedan: kunci,
+  1170→      jenisElemen: kunci === 'qr_pengesahan' ? 'qr' : 'teks',
+  1171→      posXPeratus: 50,
+  1172→      posYPeratus: 50,
+  1173→      lebarPeratus: kunci === 'qr_pengesahan' ? 10 : 40,
+  1174→      keluargaFon: 'Times New Roman',
+  1175→      saizFon: kunci === 'nama_penuh' ? 36 : kunci === 'nama_kursus' ? 24 : 18,
+  1176→      warnaFon: '#1a1a2e',
+  1177→      gayaFon: kunci === 'nama_penuh' || kunci === 'nama_kursus' ? 'tebal' : 'normal',
+  1178→      penjajaran: 'tengah',
+  1179→      autoKecil: true,
+  1180→    }
+  1181→    setMedan([...medan, newField])
+  1182→    setSelectedField(medan.length)
+  1183→  }
+  1184→
+  1185→  // Remove a field
+  1186→  const removeField = (index: number) => {
+  1187→    const newMedan = medan.filter((_: any, i: number) => i !== index)
+  1188→    setMedan(newMedan)
+  1189→    if (selectedField === index) setSelectedField(null)
+  1190→    else if (selectedField !== null && selectedField > index) setSelectedField(selectedField - 1)
+  1191→  }
+  1192→
+  1193→  // Update a field property
+  1194→  const updateField = (index: number, key: string, value: any) => {
+  1195→    const newMedan = [...medan]
+  1196→    newMedan[index] = { ...newMedan[index], [key]: value }
+  1197→    setMedan(newMedan)
+  1198→  }
+  1199→
+  1200→  // Mouse handlers for drag
+  1201→  const handleMouseDown = (e: React.MouseEvent, index: number) => {
+  1202→    e.preventDefault()
+  1203→    e.stopPropagation()
+  1204→    setDragging(index)
+  1205→    setSelectedField(index)
+  1206→    const rect = canvasRef.current?.getBoundingClientRect()
+  1207→    if (rect) {
+  1208→      const fieldEl = e.currentTarget as HTMLElement
+  1209→      const fieldRect = fieldEl.getBoundingClientRect()
+  1210→      setDragOffset({
+  1211→        x: e.clientX - fieldRect.left - fieldRect.width / 2,
+  1212→        y: e.clientY - fieldRect.top - fieldRect.height / 2,
+  1213→      })
+  1214→    }
+  1215→  }
+  1216→
+  1217→  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+  1218→    if (dragging === null || !canvasRef.current) return
+  1219→    const rect = canvasRef.current.getBoundingClientRect()
+  1220→    const x = ((e.clientX - rect.left) / rect.width) * 100
+  1221→    const y = ((e.clientY - rect.top) / rect.height) * 100
+  1222→    const clampedX = Math.max(5, Math.min(95, x))
+  1223→    const clampedY = Math.max(5, Math.min(95, y))
+  1224→    setMedan(prev => {
+  1225→      const newMedan = [...prev]
+  1226→      if (dragging !== null && newMedan[dragging]) {
+  1227→        newMedan[dragging] = { ...newMedan[dragging], posXPeratus: Math.round(clampedX * 10) / 10, posYPeratus: Math.round(clampedY * 10) / 10 }
+  1228→      }
+  1229→      return newMedan
+  1230→    })
+  1231→  }, [dragging])
+  1232→
+  1233→  const handleMouseUp = useCallback(() => {
+  1234→    setDragging(null)
+  1235→  }, [])
+  1236→
+  1237→  // Save handler
+  1238→  const handleSave = async () => {
+  1239→    // Validate: must have nama_penuh and nama_kursus
+  1240→    const hasNama = medan.some((m: any) => m.kunciMedan === 'nama_penuh')
+  1241→    const hasKursus = medan.some((m: any) => m.kunciMedan === 'nama_kursus')
+  1242→    if (!hasNama || !hasKursus) {
+  1243→      toast({
+  1244→        title: 'Medan Wajib Hilang',
+  1245→        description: 'Templat mesti mempunyai medan Nama Penuh dan Nama Kursus.',
+  1246→        variant: 'destructive',
+  1247→      })
+  1248→      return
+  1249→    }
+  1250→    setSaving(true)
+  1251→    await onSave(medan)
+  1252→    setSaving(false)
+  1253→  }
+  1254→
+  1255→  const selectedFieldData = selectedField !== null ? medan[selectedField] : null
+  1256→
+  1257→  return (
+  1258→    <div className="space-y-4">
+  1259→      {/* Header */}
+  1260→      <div className="flex items-center justify-between">
+  1261→        <div className="flex items-center gap-3">
+  1262→          <Button
+  1263→            onClick={onClose}
+  1264→            className="clay-btn-secondary text-sm px-3 py-2"
+  1265→            variant="outline"
+  1266→            style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}
+  1267→          >
+  1268→            <ArrowLeft className="w-4 h-4 mr-1" /> Kembali
+  1269→          </Button>
+  1270→          <div>
+  1271→            <h3 className="font-semibold" style={{ color: 'var(--clay-ink)' }}>Editor Templat Sijil</h3>
+  1272→            <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>{template.namaTemplat}</p>
+  1273→          </div>
+  1274→        </div>
+  1275→        <Button
+  1276→          onClick={handleSave}
+  1277→          disabled={saving}
+  1278→          className="clay-btn text-sm px-5 py-2 flex items-center gap-2"
+  1279→          style={{ background: 'var(--clay-primary)', color: 'white', borderRadius: '20px', boxShadow: 'var(--clay-shadow-sm)' }}
+  1280→        >
+  1281→          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+  1282→          {saving ? 'Menyimpan...' : 'Simpan Templat'}
+  1283→        </Button>
+  1284→      </div>
+  1285→
+  1286→      {/* Main Editor Area */}
+  1287→      <div className="flex flex-col lg:flex-row gap-4">
+  1288→        {/* Canvas */}
+  1289→        <div className="flex-1">
+  1290→          <div className="clay-card-lg p-4">
+  1291→            <div className="flex items-center justify-between mb-3">
+  1292→              <span className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>
+  1293→                Kanvas Templat — {isLandscape ? 'Landskap' : 'Potret'} {template.saizKertas?.toUpperCase()}
+  1294→              </span>
+  1295→              <span className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+  1296→                Seret medan untuk mengubah kedudukan
+  1297→              </span>
+  1298→            </div>
+  1299→            {/* Canvas */}
+  1300→            <div
+  1301→              ref={canvasRef}
+  1302→              className="relative mx-auto rounded-lg overflow-hidden cursor-crosshair"
+  1303→              style={{
+  1304→                width: '100%',
+  1305→                aspectRatio: isLandscape ? '297/210' : '210/297',
+  1306→                background: 'linear-gradient(135deg, #fafbff 0%, #f0f1f8 50%, #e8eaf4 100%)',
+  1307→                border: '2px solid var(--border)',
+  1308→                boxShadow: 'inset 0 2px 8px rgba(120,124,170,0.1)',
+  1309→              }}
+  1310→              onMouseMove={handleMouseMove}
+  1311→              onMouseUp={handleMouseUp}
+  1312→              onMouseLeave={handleMouseUp}
+  1313→            >
+  1314→              {/* Grid overlay */}
+  1315→              <div className="absolute inset-0" style={{
+  1316→                backgroundImage: 'linear-gradient(rgba(120,124,170,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(120,124,170,0.06) 1px, transparent 1px)',
+  1317→                backgroundSize: '10% 10%',
+  1318→              }} />
+  1319→
+  1320→              {/* Certificate header preview */}
+  1321→              <div className="absolute top-0 left-0 right-0 text-center pt-3">
+  1322→                <p className="text-[7px] font-bold tracking-wider" style={{ color: 'rgba(47,49,80,0.4)' }}>ADVANCED TECHNOLOGY TRAINING CENTRE (ADTEC)</p>
+  1323→                <p className="text-[5px]" style={{ color: 'rgba(47,49,80,0.25)' }}>JABATAN TENAGA MANUSIA, KEMENTERIAN SUMBER MANUSIA</p>
+  1324→                <div className="mx-auto mt-1" style={{ width: '60%', height: '1px', background: 'rgba(124,108,240,0.2)' }} />
+  1325→                <p className="text-[9px] font-bold mt-2" style={{ color: 'rgba(47,49,80,0.35)' }}>SIJIL PENYERTAAN</p>
+  1326→                <p className="text-[6px] italic" style={{ color: 'rgba(47,49,80,0.2)' }}>CERTIFICATE OF PARTICIPATION</p>
+  1327→              </div>
+  1328→
+  1329→              {/* Decorative border */}
+  1330→              <div className="absolute inset-2 rounded-md" style={{ border: '1px solid rgba(124,108,240,0.15)' }} />
+  1331→
+  1332→              {/* Field items */}
+  1333→              {medan.map((m: any, index: number) => {
+  1334→                const isSelected = selectedField === index
+  1335→                const isDraggingThis = dragging === index
+  1336→                const fieldDef = MEDAN_SENARAI.find(f => f.kunci === m.kunciMedan)
+  1337→                const displayText = m.jenisElemen === 'qr' ? 'QR' : (fieldDef?.contoh || m.kunciMedan)
+  1338→                const isBold = m.gayaFon === 'tebal' || m.gayaFon === 'tebal_condong'
+  1339→                const isItalic = m.gayaFon === 'condong' || m.gayaFon === 'tebal_condong'
+  1340→
+  1341→                return (
+  1342→                  <div
+  1343→                    key={index}
+  1344→                    className="absolute select-none"
+  1345→                    style={{
+  1346→                      left: `${m.posXPeratus}%`,
+  1347→                      top: `${m.posYPeratus}%`,
+  1348→                      transform: 'translate(-50%, -50%)',
+  1349→                      cursor: isDraggingThis ? 'grabbing' : 'grab',
+  1350→                      zIndex: isDraggingThis ? 100 : isSelected ? 50 : 10,
+  1351→                      transition: isDraggingThis ? 'none' : 'box-shadow 0.15s',
+  1352→                    }}
+  1353→                    onMouseDown={(e) => handleMouseDown(e, index)}
+  1354→                    onClick={(e) => { e.stopPropagation(); setSelectedField(index) }}
+  1355→                  >
+  1356→                    <div
+  1357→                      className="px-2 py-1 rounded-lg text-center whitespace-nowrap"
+  1358→                      style={{
+  1359→                        minWidth: m.jenisElemen === 'qr' ? '28px' : undefined,
+  1360→                        fontSize: `${Math.max(6, Math.min(12, m.saizFon / 3))}px`,
+  1361→                        fontFamily: m.keluargaFon,
+  1362→                        fontWeight: isBold ? 700 : 400,
+  1363→                        fontStyle: isItalic ? 'italic' : 'normal',
+  1364→                        color: m.warnaFon,
+  1365→                        background: isSelected
+  1366→                          ? 'rgba(124,108,240,0.12)'
+  1367→                          : m.jenisElemen === 'qr'
+  1368→                            ? 'rgba(226,109,142,0.08)'
+  1369→                            : 'rgba(255,255,255,0.7)',
+  1370→                        border: isSelected
+  1371→                          ? '2px solid var(--clay-primary)'
+  1372→                          : '1px dashed rgba(120,124,170,0.3)',
+  1373→                        boxShadow: isSelected ? '0 0 0 3px rgba(124,108,240,0.15)' : 'none',
+  1374→                        width: `${m.lebarPeratus * 3}px`,
+  1375→                      }}
+  1376→                    >
+  1377→                      {m.jenisElemen === 'qr' ? (
+  1378→                        <div className="flex items-center justify-center" style={{ width: '24px', height: '24px', margin: '0 auto' }}>
+  1379→                          <QrCode className="w-4 h-4" style={{ color: m.warnaFon }} />
+  1380→                        </div>
+  1381→                      ) : (
+  1382→                        <span className="block truncate">{displayText}</span>
+  1383→                      )}
+  1384→                    </div>
+  1385→                    {/* Field label */}
+  1386→                    <p className="text-[5px] mt-0.5 text-center font-medium" style={{ color: isSelected ? 'var(--clay-primary)' : 'rgba(120,124,170,0.6)' }}>
+  1387→                      {m.kunciMedan.replace(/_/g, ' ')}
+  1388→                    </p>
+  1389→                  </div>
+  1390→                )
+  1391→              })}
+  1392→
+  1393→              {/* Empty state */}
+  1394→              {medan.length === 0 && (
+  1395→                <div className="absolute inset-0 flex items-center justify-center">
+  1396→                  <div className="text-center">
+  1397→                    <Move className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--clay-ink-soft)', opacity: 0.4 }} />
+  1398→                    <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>Tambah medan dari panel sebelah kanan</p>
+  1399→                  </div>
+  1400→                </div>
+  1401→              )}
+  1402→            </div>
+  1403→          </div>
+  1404→        </div>
+  1405→
+  1406→        {/* Right Panel: Field List + Properties */}
+  1407→        <div className="w-full lg:w-80 space-y-4">
+  1408→          {/* Add Fields */}
+  1409→          <div className="clay-card p-4">
+  1410→            <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--clay-ink)' }}>Tambah Medan</h4>
+  1411→            <div className="space-y-1 max-h-48 overflow-y-auto clay-scroll">
+  1412→              {MEDAN_SENARAI.filter(m => !medan.some((f: any) => f.kunciMedan === m.kunci)).map(m => (
+  1413→                <button
+  1414→                  key={m.kunci}
+  1415→                  onClick={() => addField(m.kunci)}
+  1416→                  className="w-full text-left px-3 py-1.5 rounded-xl text-xs flex items-center gap-2 transition-all hover:scale-[1.02]"
+  1417→                  style={{
+  1418→                    background: 'var(--clay-bg)',
+  1419→                    color: 'var(--clay-ink-secondary)',
+  1420→                    border: '1px dashed var(--border)',
+  1421→                  }}
+  1422→                >
+  1423→                  <Plus className="w-3 h-3" style={{ color: 'var(--clay-primary)' }} />
+  1424→                  <span className="font-medium">{m.label}</span>
+  1425→                </button>
+  1426→              ))}
+  1427→            </div>
+  1428→          </div>
+  1429→
+  1430→          {/* Current Fields List */}
+  1431→          <div className="clay-card p-4">
+  1432→            <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--clay-ink)' }}>
+  1433→              Medan Templat ({medan.length})
+  1434→            </h4>
+  1435→            <div className="space-y-1 max-h-60 overflow-y-auto clay-scroll">
+  1436→              {medan.map((m: any, index: number) => {
+  1437→                const fieldDef = MEDAN_SENARAI.find(f => f.kunci === m.kunciMedan)
+  1438→                const isSelected = selectedField === index
+  1439→                return (
+  1440→                  <div
+  1441→                    key={index}
+  1442→                    className={`flex items-center gap-2 px-2 py-1.5 rounded-xl text-xs cursor-pointer transition-all ${isSelected ? '' : ''}`}
+  1443→                    style={{
+  1444→                      background: isSelected ? 'rgba(124,108,240,0.1)' : 'transparent',
+  1445→                      border: isSelected ? '1px solid rgba(124,108,240,0.3)' : '1px solid transparent',
+  1446→                      color: isSelected ? 'var(--clay-primary-dark)' : 'var(--clay-ink-secondary)',
+  1447→                    }}
+  1448→                    onClick={() => setSelectedField(index)}
+  1449→                  >
+  1450→                    <GripVertical className="w-3 h-3 opacity-40" />
+  1451→                    <span className="flex-1 font-medium truncate">{fieldDef?.label || m.kunciMedan}</span>
+  1452→                    <button
+  1453→                      onClick={(e) => { e.stopPropagation(); removeField(index) }}
+  1454→                      className="p-0.5 rounded hover:bg-red-50 transition-colors"
+  1455→                      style={{ color: 'var(--clay-danger)' }}
+  1456→                    >
+  1457→                      <X className="w-3 h-3" />
+  1458→                    </button>
+  1459→                  </div>
+  1460→                )
+  1461→              })}
+  1462→              {medan.length === 0 && (
+  1463→                <p className="text-xs text-center py-2" style={{ color: 'var(--clay-ink-soft)' }}>Tiada medan lagi</p>
+  1464→              )}
+  1465→            </div>
+  1466→          </div>
+  1467→
+  1468→          {/* Field Properties Editor */}
+  1469→          {selectedFieldData && (
+  1470→            <div className="clay-card p-4">
+  1471→              <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--clay-ink)' }}>Sifat Medan</h4>
+  1472→              <div className="space-y-3">
+  1473→                {/* Field name */}
+  1474→                <div>
+  1475→                  <label className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>Medan</label>
+  1476→                  <p className="text-sm font-semibold" style={{ color: 'var(--clay-ink)' }}>
+  1477→                    {MEDAN_SENARAI.find(f => f.kunci === selectedFieldData.kunciMedan)?.label || selectedFieldData.kunciMedan}
+  1478→                  </p>
+  1479→                </div>
+  1480→
+  1481→                {/* Position */}
+  1482→                <div className="grid grid-cols-2 gap-2">
+  1483→                  <div>
+  1484→                    <label className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>X (%)</label>
+  1485→                    <input
+  1486→                      type="number" min={0} max={100} step={0.5}
+  1487→                      value={Math.round(selectedFieldData.posXPeratus * 10) / 10}
+  1488→                      onChange={(e) => updateField(selectedField!, 'posXPeratus', parseFloat(e.target.value) || 0)}
+  1489→                      className="w-full mt-1 px-2 py-1 rounded-lg text-xs"
+  1490→                      style={{
+  1491→                        background: 'var(--clay-bg)',
+  1492→                        border: '1px solid var(--border)',
+  1493→                        color: 'var(--clay-ink)',
+  1494→                        boxShadow: 'var(--clay-inset)',
+  1495→                      }}
+  1496→                    />
+  1497→                  </div>
+  1498→                  <div>
+  1499→                    <label className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>Y (%)</label>
+  1500→                    <input
+  1501→                      type="number" min={0} max={100} step={0.5}
+  1502→                      value={Math.round(selectedFieldData.posYPeratus * 10) / 10}
+  1503→                      onChange={(e) => updateField(selectedField!, 'posYPeratus', parseFloat(e.target.value) || 0)}
+  1504→                      className="w-full mt-1 px-2 py-1 rounded-lg text-xs"
+  1505→                      style={{
+  1506→                        background: 'var(--clay-bg)',
+  1507→                        border: '1px solid var(--border)',
+  1508→                        color: 'var(--clay-ink)',
+  1509→                        boxShadow: 'var(--clay-inset)',
+  1510→                      }}
+  1511→                    />
+  1512→                  </div>
+  1513→                </div>
+  1514→
+  1515→                {/* Width */}
+  1516→                <div>
+  1517→                  <label className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>Lebar (%)</label>
+  1518→                  <input
+  1519→                    type="range" min={5} max={90} step={1}
+  1520→                    value={selectedFieldData.lebarPeratus}
+  1521→                    onChange={(e) => updateField(selectedField!, 'lebarPeratus', parseFloat(e.target.value))}
+  1522→                    className="w-full mt-1 accent-[#7C6CF0]"
+  1523→                  />
+  1524→                  <span className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>{selectedFieldData.lebarPeratus}%</span>
+  1525→                </div>
+  1526→
+  1527→                {/* Font family */}
+  1528→                {selectedFieldData.jenisElemen !== 'qr' && (
+  1529→                  <>
+  1530→                    <div>
+  1531→                      <label className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>Fon</label>
+  1532→                      <select
+  1533→                        value={selectedFieldData.keluargaFon}
+  1534→                        onChange={(e) => updateField(selectedField!, 'keluargaFon', e.target.value)}
+  1535→                        className="w-full mt-1 px-2 py-1 rounded-lg text-xs"
+  1536→                        style={{
+  1537→                          background: 'var(--clay-bg)',
+  1538→                          border: '1px solid var(--border)',
+  1539→                          color: 'var(--clay-ink)',
+  1540→                          boxShadow: 'var(--clay-inset)',
+  1541→                        }}
+  1542→                      >
+  1543→                        {FON_SENARAI.map(f => <option key={f} value={f}>{f}</option>)}
+  1544→                      </select>
+  1545→                    </div>
+  1546→
+  1547→                    {/* Font size */}
+  1548→                    <div>
+  1549→                      <label className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>Saiz Fon (pt)</label>
+  1550→                      <input
+  1551→                        type="number" min={8} max={72} step={1}
+  1552→                        value={selectedFieldData.saizFon}
+  1553→                        onChange={(e) => updateField(selectedField!, 'saizFon', parseFloat(e.target.value) || 12)}
+  1554→                        className="w-full mt-1 px-2 py-1 rounded-lg text-xs"
+  1555→                        style={{
+  1556→                          background: 'var(--clay-bg)',
+  1557→                          border: '1px solid var(--border)',
+  1558→                          color: 'var(--clay-ink)',
+  1559→                          boxShadow: 'var(--clay-inset)',
+  1560→                        }}
+  1561→                      />
+  1562→                    </div>
+  1563→
+  1564→                    {/* Font color */}
+  1565→                    <div>
+  1566→                      <label className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>Warna Fon</label>
+  1567→                      <div className="flex items-center gap-2 mt-1">
+  1568→                        <input
+  1569→                          type="color"
+  1570→                          value={selectedFieldData.warnaFon}
+  1571→                          onChange={(e) => updateField(selectedField!, 'warnaFon', e.target.value)}
+  1572→                          className="w-8 h-8 rounded-lg cursor-pointer"
+  1573→                          style={{ border: '1px solid var(--border)' }}
+  1574→                        />
+  1575→                        <input
+  1576→                          type="text"
+  1577→                          value={selectedFieldData.warnaFon}
+  1578→                          onChange={(e) => updateField(selectedField!, 'warnaFon', e.target.value)}
+  1579→                          className="flex-1 px-2 py-1 rounded-lg text-xs"
+  1580→                          style={{
+  1581→                            background: 'var(--clay-bg)',
+  1582→                            border: '1px solid var(--border)',
+  1583→                            color: 'var(--clay-ink)',
+  1584→                            fontFamily: 'monospace',
+  1585→                          }}
+  1586→                        />
+  1587→                      </div>
+  1588→                    </div>
+  1589→
+  1590→                    {/* Font style */}
+  1591→                    <div>
+  1592→                      <label className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>Gaya Fon</label>
+  1593→                      <div className="flex gap-1 mt-1">
+  1594→                        {GAYA_FON_SENARAI.map(g => (
+  1595→                          <button
+  1596→                            key={g.nilai}
+  1597→                            onClick={() => updateField(selectedField!, 'gayaFon', g.nilai)}
+  1598→                            className="px-2 py-1 rounded-lg text-xs font-medium transition-all"
+  1599→                            style={{
+  1600→                              background: selectedFieldData.gayaFon === g.nilai ? 'var(--clay-primary)' : 'var(--clay-bg)',
+  1601→                              color: selectedFieldData.gayaFon === g.nilai ? 'white' : 'var(--clay-ink-secondary)',
+  1602→                              border: `1px solid ${selectedFieldData.gayaFon === g.nilai ? 'var(--clay-primary)' : 'var(--border)'}`,
+  1603→                            }}
+  1604→                          >
+  1605→                            {g.label}
+  1606→                          </button>
+  1607→                        ))}
+  1608→                      </div>
+  1609→                    </div>
+  1610→
+  1611→                    {/* Alignment */}
+  1612→                    <div>
+  1613→                      <label className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>Penjajaran</label>
+  1614→                      <div className="flex gap-1 mt-1">
+  1615→                        {PENJAJARAN_SENARAI.map(p => (
+  1616→                          <button
+  1617→                            key={p.nilai}
+  1618→                            onClick={() => updateField(selectedField!, 'penjajaran', p.nilai)}
+  1619→                            className="p-1.5 rounded-lg transition-all"
+  1620→                            style={{
+  1621→                              background: selectedFieldData.penjajaran === p.nilai ? 'var(--clay-primary)' : 'var(--clay-bg)',
+  1622→                              color: selectedFieldData.penjajaran === p.nilai ? 'white' : 'var(--clay-ink-secondary)',
+  1623→                              border: `1px solid ${selectedFieldData.penjajaran === p.nilai ? 'var(--clay-primary)' : 'var(--border)'}`,
+  1624→                            }}
+  1625→                          >
+  1626→                            <p.icon className="w-3.5 h-3.5" />
+  1627→                          </button>
+  1628→                        ))}
+  1629→                      </div>
+  1630→                    </div>
+  1631→
+  1632→                    {/* Auto-shrink */}
+  1633→                    <div className="flex items-center justify-between">
+  1634→                      <label className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>Auto-Kecil</label>
+  1635→                      <Switch
+  1636→                        checked={selectedFieldData.autoKecil}
+  1637→                        onCheckedChange={(v) => updateField(selectedField!, 'autoKecil', v)}
+  1638→                      />
+  1639→                    </div>
+  1640→                  </>
+  1641→                )}
+  1642→              </div>
+  1643→            </div>
+  1644→          )}
+  1645→        </div>
+  1646→      </div>
+  1647→    </div>
+  1648→  )
+  1649→}
+  1650→
+  1651→// ============================================================
+  1652→// SIJIL TAB
+  1653→// ============================================================
+  1654→function SijilTab() {
+  1655→  const [kursusList, setKursusList] = useState<any[]>([])
+  1656→  const [selectedKursus, setSelectedKursus] = useState<string>('')
+  1657→  const [sijilList, setSijilList] = useState<any[]>([])
+  1658→  const [loading, setLoading] = useState(true)
+  1659→  const [generating, setGenerating] = useState(false)
+  1660→  const { toast } = useToast()
+  1661→
+  1662→  useEffect(() => {
+  1663→    fetch('/api/kursus').then(r => r.json()).then(d => {
+  1664→      if (d.berjaya) {
+  1665→        setKursusList(d.data)
+  1666→        if (d.data.length > 0) {
+  1667→          const firstId = d.data[0].id
+  1668→          setSelectedKursus(firstId)
+  1669→          fetch(`/api/sijil?kursusId=${firstId}`).then(r2 => r2.json()).then(d2 => {
+  1670→            if (d2.berjaya) setSijilList(d2.data)
+  1671→          }).finally(() => setLoading(false))
+  1672→        }
+  1673→      }
+  1674→    })
+  1675→  }, [])
+  1676→
+  1677→  const handleKursusChange = (id: string) => {
+  1678→    setSelectedKursus(id)
+  1679→    setLoading(true)
+  1680→    fetch(`/api/sijil?kursusId=${id}`).then(r => r.json()).then(d => {
+  1681→      if (d.berjaya) setSijilList(d.data)
+  1682→    }).finally(() => setLoading(false))
+  1683→  }
+  1684→
+  1685→  const handleBulkGenerate = async () => {
+  1686→    setGenerating(true)
+  1687→    try {
+  1688→      const res = await fetch('/api/sijil', {
+  1689→        method: 'POST',
+  1690→        headers: { 'Content-Type': 'application/json' },
+  1691→        body: JSON.stringify({ kursusId: selectedKursus, dimuatNaikOlehId: 'admin' }),
+  1692→      })
+  1693→      const data = await res.json()
+  1694→      if (data.berjaya) {
+  1695→        toast({ title: 'Sijil Dijana', description: `${data.bilDijana} sijil berjaya dijana.` })
+  1696→        // Refresh
+  1697→        fetch(`/api/sijil?kursusId=${selectedKursus}`).then(r => r.json()).then(d => {
+  1698→          if (d.berjaya) setSijilList(d.data)
+  1699→        })
+  1700→      }
+  1701→    } catch {
+  1702→      toast({ title: 'Ralat', description: 'Galah menjana sijil.', variant: 'destructive' })
+  1703→    } finally {
+  1704→      setGenerating(false)
+  1705→    }
+  1706→  }
+  1707→
+  1708→  return (
+  1709→    <div className="space-y-4">
+  1710→      <div className="clay-card p-5">
+  1711→        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+  1712→          <h3 className="font-semibold" style={{ color: 'var(--clay-ink)' }}>Senarai Sijil</h3>
+  1713→          <select value={selectedKursus} onChange={(e) => handleKursusChange(e.target.value)}
+  1714→            className="clay-input px-4 py-2 text-sm flex-1 sm:max-w-sm"
+  1715→            style={{ background: 'var(--clay)', color: 'var(--clay-ink)' }}>
+  1716→            {kursusList.map((k: any) => <option key={k.id} value={k.id}>{k.namaKursusBm}</option>)}
+  1717→          </select>
+  1718→          <button onClick={handleBulkGenerate} disabled={generating}
+  1719→            className="clay-btn text-sm flex items-center gap-2"
+  1720→            style={{ borderRadius: '16px' }}>
+  1721→            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+  1722→            Jana Semua Sijil
+  1723→          </button>
+  1724→        </div>
+  1725→      </div>
+  1726→
+  1727→      {loading ? <LoadingSpinner /> : (
+  1728→        <div className="clay-card p-5">
+  1729→          <div className="overflow-x-auto">
+  1730→            <table className="w-full text-sm">
+  1731→              <thead>
+  1732→                <tr style={{ background: 'var(--clay-primary)', color: 'white' }}>
+  1733→                  <th className="px-3 py-3 text-left rounded-tl-xl">No. Siri</th>
+  1734→                  <th className="px-3 py-3 text-left">Nama Peserta</th>
+  1735→                  <th className="px-3 py-3 text-left">No. MyKad</th>
+  1736→                  <th className="px-3 py-3 text-center">Status</th>
+  1737→                  <th className="px-3 py-3 text-center rounded-tr-xl">Muat Turun</th>
+  1738→                </tr>
+  1739→              </thead>
+  1740→              <tbody>
+  1741→                {sijilList.map((s: any, i: number) => (
+  1742→                  <tr key={s.id} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(124,108,240,0.04)' }}>
+  1743→                    <td className="px-3 py-3 font-mono text-xs" style={{ color: 'var(--clay-primary)' }}>{s.noSiri}</td>
+  1744→                    <td className="px-3 py-3" style={{ color: 'var(--clay-ink)' }}>{s.peserta?.namaPenuh}</td>
+  1745→                    <td className="px-3 py-3 font-mono text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>
+  1746→                      {s.peserta?.noMykad ? `${s.peserta.noMykad.slice(0,6)}-${s.peserta.noMykad.slice(6,8)}-${s.peserta.noMykad.slice(8)}` : '-'}
+  1747→                    </td>
+  1748→                    <td className="px-3 py-3 text-center">
+  1749→                      <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+  1750→                        style={{ background: s.status === 'sah' ? 'var(--clay-success-bg)' : 'var(--clay-danger-bg)', color: s.status === 'sah' ? 'var(--clay-success)' : 'var(--clay-danger)' }}>
+  1751→                        {s.status === 'sah' ? 'Sah' : 'Dibatalkan'}
+  1752→                      </span>
+  1753→                    </td>
+  1754→                    <td className="px-3 py-3 text-center" style={{ color: 'var(--clay-ink-soft)' }}>{s.bilMuatTurun}</td>
+  1755→                  </tr>
+  1756→                ))}
+  1757→                {sijilList.length === 0 && (
+  1758→                  <tr><td colSpan={5} className="px-3 py-8 text-center" style={{ color: 'var(--clay-ink-soft)' }}>
+  1759→                    Tiada sijil lagi. Klik &quot;Jana Semua Sijil&quot; untuk menjana sijil bagi peserta yang layak.
+  1760→                  </td></tr>
+  1761→                )}
+  1762→              </tbody>
+  1763→            </table>
+  1764→          </div>
+  1765→        </div>
+  1766→      )}
+  1767→    </div>
+  1768→  )
+  1769→}
+  1770→
+  1771→// ============================================================
+  1772→// AUDIT TAB
+  1773→// ============================================================
+  1774→function AuditTab() {
+  1775→  const [data, setData] = useState<any[]>([])
+  1776→  const [loading, setLoading] = useState(true)
+  1777→
+  1778→  useEffect(() => {
+  1779→    fetch('/api/log-audit').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
+  1780→  }, [])
+  1781→
+  1782→  if (loading) return <LoadingSpinner />
+  1783→
+  1784→  return (
+  1785→    <div className="clay-card p-5">
+  1786→      <h3 className="font-semibold mb-4" style={{ color: 'var(--clay-ink)' }}>Log Audit</h3>
+  1787→      <div className="overflow-x-auto">
+  1788→        <table className="w-full text-sm">
+  1789→          <thead>
+  1790→            <tr style={{ background: 'var(--clay-primary)', color: 'white' }}>
+  1791→              <th className="px-3 py-3 text-left rounded-tl-xl">Masa</th>
+  1792→              <th className="px-3 py-3 text-left">Pengguna</th>
+  1793→              <th className="px-3 py-3 text-left">Tindakan</th>
+  1794→              <th className="px-3 py-3 text-left">Entiti</th>
+  1795→              <th className="px-3 py-3 text-left rounded-tr-xl">IP</th>
+  1796→            </tr>
+  1797→          </thead>
+  1798→          <tbody>
+  1799→            {data.map((l: any, i: number) => (
+  1800→              <tr key={l.id} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(124,108,240,0.04)' }}>
+  1801→                <td className="px-3 py-3 text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>{new Date(l.diciptaPada).toLocaleString('ms-MY')}</td>
+  1802→                <td className="px-3 py-3 text-xs" style={{ color: 'var(--clay-ink)' }}>{l.pengguna?.namaPenuh || 'Awam'}</td>
+  1803→                <td className="px-3 py-3 text-xs font-mono" style={{ color: 'var(--clay-primary)' }}>{l.tindakan}</td>
+  1804→                <td className="px-3 py-3 text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>{l.entiti}</td>
+  1805→                <td className="px-3 py-3 text-xs font-mono" style={{ color: 'var(--clay-ink-soft)' }}>{l.alamatIp}</td>
+  1806→              </tr>
+  1807→            ))}
+  1808→          </tbody>
+  1809→        </table>
+  1810→      </div>
+  1811→    </div>
+  1812→  )
+  1813→}
+  1814→
+  1815→// ============================================================
+  1816→// TETAPAN TAB
+  1817→// ============================================================
+  1818→function TetapanTab() {
+  1819→  const [data, setData] = useState<any>(null)
+  1820→  const [loading, setLoading] = useState(true)
+  1821→  const [saving, setSaving] = useState(false)
+  1822→  const { toast } = useToast()
+  1823→
+  1824→  useEffect(() => {
+  1825→    fetch('/api/tetapan').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
+  1826→  }, [])
+  1827→
+  1828→  const handleSave = async () => {
+  1829→    setSaving(true)
+  1830→    try {
+  1831→      const res = await fetch('/api/tetapan', {
+  1832→        method: 'PUT',
+  1833→        headers: { 'Content-Type': 'application/json' },
+  1834→        body: JSON.stringify(data),
+  1835→      })
+  1836→      if (res.ok) toast({ title: 'Tetapan Disimpan' })
+  1837→      else toast({ title: 'Ralat', variant: 'destructive' })
+  1838→    } finally {
+  1839→      setSaving(false)
+  1840→    }
+  1841→  }
+  1842→
+  1843→  if (loading) return <LoadingSpinner />
+  1844→
+  1845→  return (
+  1846→    <div className="clay-card p-6 max-w-2xl">
+  1847→      <h3 className="font-semibold mb-4" style={{ color: 'var(--clay-ink)' }}>Tetapan Sistem</h3>
+  1848→      {data && (
+  1849→        <div className="space-y-4">
+  1850→          <FormField label="Nama Institusi" value={data.namaInstitusi} onChange={(v) => setData({ ...data, namaInstitusi: v })} />
+  1851→          <FormField label="Alamat" value={data.alamatInstitusi || ''} onChange={(v) => setData({ ...data, alamatInstitusi: v })} />
+  1852→          <FormField label="E-mel Hubungan" value={data.emelHubungan || ''} onChange={(v) => setData({ ...data, emelHubungan: v })} />
+  1853→          <FormField label="Telefon" value={data.telefonHubungan || ''} onChange={(v) => setData({ ...data, telefonHubungan: v })} />
+  1854→          <FormField label="Nama Pengarah" value={data.namaPengarah || ''} onChange={(v) => setData({ ...data, namaPengarah: v })} />
+  1855→          <FormField label="Teks Pengaki Sijil" value={data.teksPengaki || ''} onChange={(v) => setData({ ...data, teksPengaki: v })} multiline />
+  1856→          
+  1857→          <div className="space-y-2 pt-2">
+  1858→            <h4 className="text-sm font-medium" style={{ color: 'var(--clay-ink-secondary)' }}>Ciri Sistem</h4>
+  1859→            <ToggleField label="Pengesahan Kedua (4 digit MyKad)" checked={data.pengesahanKedua} onChange={(v) => setData({ ...data, pengesahanKedua: v })} />
+  1860→            <ToggleField label="CAPTCHA" checked={data.captchaAktif} onChange={(v) => setData({ ...data, captchaAktif: v })} />
+  1861→            <ToggleField label="Mod Penyelenggaraan" checked={data.modPenyelenggaraan} onChange={(v) => setData({ ...data, modPenyelenggaraan: v })} />
+  1862→          </div>
+  1863→
+  1864→          <button onClick={handleSave} disabled={saving} className="clay-btn w-full flex items-center justify-center gap-2 mt-4">
+  1865→            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Settings className="w-4 h-4" />}
+  1866→            Simpan Tetapan
+  1867→          </button>
+  1868→        </div>
+  1869→      )}
+  1870→    </div>
+  1871→  )
+  1872→}
+  1873→
+  1874→// ============================================================
+  1875→// Helper Components
+  1876→// ============================================================
+  1877→function LoadingSpinner() {
+  1878→  return (
+  1879→    <div className="flex items-center justify-center py-12">
+  1880→      <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--clay-primary)' }} />
+  1881→    </div>
+  1882→  )
+  1883→}
+  1884→
+  1885→function FormField({ label, value, onChange, multiline }: { label: string; value: string; onChange: (v: string) => void; multiline?: boolean }) {
+  1886→  return (
+  1887→    <div>
+  1888→      <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--clay-ink-secondary)' }}>{label}</label>
+  1889→      {multiline ? (
+  1890→        <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={3}
+  1891→          className="w-full clay-input px-4 py-3 text-sm" style={{ background: 'var(--clay)', color: 'var(--clay-ink)' }} />
+  1892→      ) : (
+  1893→        <input type="text" value={value} onChange={(e) => onChange(e.target.value)}
+  1894→          className="w-full clay-input px-4 py-3 text-sm" style={{ background: 'var(--clay)', color: 'var(--clay-ink)' }} />
+  1895→      )}
+  1896→    </div>
+  1897→  )
+  1898→}
+  1899→
+  1900→function ToggleField({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  1901→  return (
+  1902→    <div className="flex items-center justify-between py-2">
+  1903→      <span className="text-sm" style={{ color: 'var(--clay-ink-secondary)' }}>{label}</span>
+  1904→      <button
+  1905→        onClick={() => onChange(!checked)}
+  1906→        className="relative w-12 h-6 rounded-full transition-colors"
+  1907→        style={{ background: checked ? 'var(--clay-primary)' : 'var(--clay-ink-soft)', boxShadow: 'var(--clay-shadow-sm)' }}
+  1908→      >
+  1909→        <span className="absolute top-1 w-4 h-4 rounded-full bg-white transition-transform"
+  1910→          style={{ left: checked ? '26px' : '4px', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+  1911→      </button>
+  1912→    </div>
+  1913→  )
+  1914→}
+  1915→

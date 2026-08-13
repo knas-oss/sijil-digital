@@ -56,8 +56,18 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
 
-    // Update template metadata
-    if (body.templatId && !body.medan) {
+    if (!body.templatId) {
+      return NextResponse.json({ berjaya: false, mesej: 'ID templat diperlukan.' }, { status: 400 })
+    }
+
+    // Verify template exists
+    const existing = await db.templatSijil.findUnique({ where: { id: body.templatId } })
+    if (!existing) {
+      return NextResponse.json({ berjaya: false, mesej: 'Templat tidak dijumpai.' }, { status: 404 })
+    }
+
+    // Update template metadata only (no fields)
+    if (!body.medan) {
       const updateData: any = {}
       if (body.namaTemplat !== undefined) updateData.namaTemplat = body.namaTemplat
       if (body.keterangan !== undefined) updateData.keterangan = body.keterangan
@@ -72,32 +82,35 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ berjaya: true, data: templat })
     }
 
-    // Update all fields for a template (full replace)
-    if (body.templatId && body.medan && Array.isArray(body.medan)) {
-      // Delete existing fields
-      await db.medanTemplat.deleteMany({
-        where: { templatId: body.templatId },
-      })
-
-      // Create new fields
-      for (const medan of body.medan) {
-        await db.medanTemplat.create({
-          data: {
-            kunciMedan: medan.kunciMedan,
-            jenisElemen: medan.jenisElemen || 'teks',
-            posXPeratus: medan.posXPeratus ?? 50,
-            posYPeratus: medan.posYPeratus ?? 50,
-            lebarPeratus: medan.lebarPeratus ?? 40,
-            keluargaFon: medan.keluargaFon || 'Times New Roman',
-            saizFon: medan.saizFon ?? 24,
-            warnaFon: medan.warnaFon || '#000000',
-            gayaFon: medan.gayaFon || 'normal',
-            penjajaran: medan.penjajaran || 'tengah',
-            autoKecil: medan.autoKecil ?? true,
-            templatId: body.templatId,
-          },
+    // Update fields for a template (full replace)
+    if (Array.isArray(body.medan)) {
+      // Use transaction for atomicity
+      await db.$transaction(async (tx) => {
+        // Delete existing fields
+        await tx.medanTemplat.deleteMany({
+          where: { templatId: body.templatId },
         })
-      }
+
+        // Create new fields
+        for (const medan of body.medan) {
+          await tx.medanTemplat.create({
+            data: {
+              kunciMedan: medan.kunciMedan,
+              jenisElemen: medan.jenisElemen || 'teks',
+              posXPeratus: medan.posXPeratus ?? 50,
+              posYPeratus: medan.posYPeratus ?? 50,
+              lebarPeratus: medan.lebarPeratus ?? 40,
+              keluargaFon: medan.keluargaFon || 'Times New Roman',
+              saizFon: medan.saizFon ?? 24,
+              warnaFon: medan.warnaFon || '#000000',
+              gayaFon: medan.gayaFon || 'normal',
+              penjajaran: medan.penjajaran || 'tengah',
+              autoKecil: medan.autoKecil ?? true,
+              templatId: body.templatId,
+            },
+          })
+        }
+      })
 
       // Return updated template with fields
       const templat = await db.templatSijil.findUnique({
@@ -108,9 +121,10 @@ export async function PUT(request: NextRequest) {
     }
 
     return NextResponse.json({ berjaya: false, mesej: 'Data tidak lengkap.' }, { status: 400 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Templat PUT error:', error)
-    return NextResponse.json({ berjaya: false, mesej: 'Ralat mengemaskini templat.' }, { status: 500 })
+    const mesej = error?.code === 'P2003' ? 'Templat tidak dijumpai. Sila cipta templat baharu terlebih dahulu.' : 'Ralat mengemaskini templat.'
+    return NextResponse.json({ berjaya: false, mesej }, { status: 500 })
   }
 }
 

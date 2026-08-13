@@ -627,7 +627,7 @@ function AdminPortal({ user, activeTab, onTabChange, onLogout }: {
       {activeTab === 'kategori' && <KategoriTab />}
       {activeTab === 'kursus' && <KursusTab />}
       {activeTab === 'peserta' && <PesertaTab />}
-      {activeTab === 'templat' && <TemplatTab />}
+      {activeTab === 'templat' && <TemplatTab user={user} />}
       {activeTab === 'sijil' && <SijilTab />}
       {activeTab === 'audit' && <AuditTab />}
       {activeTab === 'tetapan' && <TetapanTab />}
@@ -987,7 +987,7 @@ const PENJAJARAN_SENARAI = [
   { nilai: 'kanan', label: 'Kanan', icon: AlignRight },
 ]
 
-function TemplatTab() {
+function TemplatTab({ user }: { user: AdminUser }) {
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [editingTemplate, setEditingTemplate] = useState<any>(null)
@@ -1006,20 +1006,48 @@ function TemplatTab() {
         template={editingTemplate}
         onSave={async (updatedMedan: any[]) => {
           try {
-            const res = await fetch('/api/templat', {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ templatId: editingTemplate.id, medan: updatedMedan }),
-            })
-            const result = await res.json()
-            if (result.berjaya) {
-              toast({ title: 'Templat Disimpan', description: 'Medan templat berjaya dikemaskini.' })
-              setEditingTemplate(null)
-              setLoading(true)
-              fetch('/api/templat').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
+            const isNew = editingTemplate.id === 'new'
+            let templatId = editingTemplate.id
+
+            if (isNew) {
+              // Create template first via POST
+              const createRes = await fetch('/api/templat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  namaTemplat: editingTemplate.namaTemplat,
+                  keterangan: editingTemplate.keterangan,
+                  orientasi: editingTemplate.orientasi,
+                  saizKertas: editingTemplate.saizKertas,
+                  dimuatNaikOlehId: user.id,
+                  medan: updatedMedan,
+                }),
+              })
+              const createResult = await createRes.json()
+              if (createResult.berjaya) {
+                templatId = createResult.data.id
+              } else {
+                toast({ title: 'Ralat', description: createResult.mesej || 'Gagal mencipta templat.', variant: 'destructive' })
+                return
+              }
             } else {
-              toast({ title: 'Ralat', description: result.mesej, variant: 'destructive' })
+              // Update existing template fields via PUT
+              const res = await fetch('/api/templat', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ templatId, medan: updatedMedan }),
+              })
+              const result = await res.json()
+              if (!result.berjaya) {
+                toast({ title: 'Ralat', description: result.mesej, variant: 'destructive' })
+                return
+              }
             }
+
+            toast({ title: 'Templat Disimpan', description: isNew ? 'Templat baharu berjaya dicipta.' : 'Medan templat berjaya dikemaskini.' })
+            setEditingTemplate(null)
+            setLoading(true)
+            fetch('/api/templat').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
           } catch {
             toast({ title: 'Ralat', description: 'Gagal menyimpan templat.', variant: 'destructive' })
           }
