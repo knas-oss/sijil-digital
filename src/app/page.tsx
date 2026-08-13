@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
@@ -743,49 +743,331 @@ function DashboardTab() {
 function KategoriTab() {
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<any>(null)
+  const [deletingItem, setDeletingItem] = useState<any>(null)
+  const [saving, setSaving] = useState(false)
+  const { toast } = useToast()
+
+  // Form state
+  const [formKod, setFormKod] = useState('')
+  const [formNama, setFormNama] = useState('')
+  const [formKeterangan, setFormKeterangan] = useState('')
+  const [formWarna, setFormWarna] = useState('#7C6CF0')
+  const [formStatus, setFormStatus] = useState('aktif')
+
+  const fetchData = () => {
+    setLoading(true)
+    fetch('/api/kategori').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
+  }
 
   useEffect(() => {
     fetch('/api/kategori').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
   }, [])
 
+  const openAddDialog = () => {
+    setEditingItem(null)
+    setFormKod('')
+    setFormNama('')
+    setFormKeterangan('')
+    setFormWarna('#7C6CF0')
+    setFormStatus('aktif')
+    setDialogOpen(true)
+  }
+
+  const openEditDialog = (item: any) => {
+    setEditingItem(item)
+    setFormKod(item.kodKategori)
+    setFormNama(item.namaKategori)
+    setFormKeterangan(item.keterangan || '')
+    setFormWarna(item.warnaLabel)
+    setFormStatus(item.status)
+    setDialogOpen(true)
+  }
+
+  const openDeleteDialog = (item: any) => {
+    setDeletingItem(item)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleSave = async () => {
+    if (!formKod.trim() || !formNama.trim()) {
+      toast({ title: 'Ralat', description: 'Kod dan Nama Kategori wajib diisi.', variant: 'destructive' })
+      return
+    }
+    setSaving(true)
+    try {
+      const isEdit = !!editingItem
+      const res = await fetch('/api/kategori', {
+        method: isEdit ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(isEdit
+          ? { id: editingItem.id, kodKategori: formKod.trim(), namaKategori: formNama.trim(), keterangan: formKeterangan.trim(), warnaLabel: formWarna, status: formStatus }
+          : { kodKategori: formKod.trim(), namaKategori: formNama.trim(), keterangan: formKeterangan.trim(), warnaLabel: formWarna, status: formStatus }
+        ),
+      })
+      const result = await res.json()
+      if (result.berjaya) {
+        toast({ title: isEdit ? 'Kategori Dikemaskini' : 'Kategori Ditambah', description: isEdit ? 'Kategori berjaya dikemaskini.' : 'Kategori baharu berjaya ditambah.' })
+        setDialogOpen(false)
+        fetchData()
+      } else {
+        toast({ title: 'Ralat', description: result.mesej, variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Ralat', description: 'Gagal menyimpan kategori.', variant: 'destructive' })
+    }
+    setSaving(false)
+  }
+
+  const handleDelete = async () => {
+    if (!deletingItem) return
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/kategori?id=${deletingItem.id}`, { method: 'DELETE' })
+      const result = await res.json()
+      if (result.berjaya) {
+        toast({ title: 'Kategori Dipadam', description: 'Kategori berjaya dipadam.' })
+        setDeleteDialogOpen(false)
+        setDeletingItem(null)
+        fetchData()
+      } else {
+        toast({ title: 'Ralat', description: result.mesej, variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Ralat', description: 'Gagal memadam kategori.', variant: 'destructive' })
+    }
+    setSaving(false)
+  }
+
   if (loading) return <LoadingSpinner />
 
+  const colorPresets = ['#7C6CF0', '#4FC4A1', '#E8A33D', '#E26D8E', '#5B9BD5', '#70AD47', '#FFC000', '#ED7D31', '#A5A5A5', '#4472C4']
+
   return (
-    <div className="clay-card p-5">
-      <h3 className="font-semibold mb-4" style={{ color: 'var(--clay-ink)' }}>Pengurusan Kategori Program</h3>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr style={{ background: 'var(--clay-primary)', color: 'white' }}>
-              <th className="px-4 py-3 text-left rounded-tl-xl">Kod</th>
-              <th className="px-4 py-3 text-left">Nama Kategori</th>
-              <th className="px-4 py-3 text-left">Keterangan</th>
-              <th className="px-4 py-3 text-center">Kursus</th>
-              <th className="px-4 py-3 text-center">Status</th>
-              <th className="px-4 py-3 text-center rounded-tr-xl">Warna</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((k, i) => (
-              <tr key={k.id} className={i % 2 === 0 ? '' : ''} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(124,108,240,0.04)' }}>
-                <td className="px-4 py-3 font-mono font-semibold" style={{ color: 'var(--clay-primary)' }}>{k.kodKategori}</td>
-                <td className="px-4 py-3" style={{ color: 'var(--clay-ink)' }}>{k.namaKategori}</td>
-                <td className="px-4 py-3 text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>{k.keterangan || '-'}</td>
-                <td className="px-4 py-3 text-center" style={{ color: 'var(--clay-ink-secondary)' }}>{k._count?.kursus || 0}</td>
-                <td className="px-4 py-3 text-center">
-                  <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
-                    style={{ background: k.status === 'aktif' ? 'var(--clay-success-bg)' : 'var(--clay-warning-bg)', color: k.status === 'aktif' ? 'var(--clay-success)' : 'var(--clay-warning)' }}>
-                    {k.status === 'aktif' ? 'Aktif' : 'Arkib'}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <span className="inline-block w-5 h-5 rounded-full" style={{ background: k.warnaLabel }} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold" style={{ color: 'var(--clay-ink)' }}>Pengurusan Kategori Program</h3>
+        <Button
+          onClick={openAddDialog}
+          className="clay-btn text-sm px-4 py-2 flex items-center gap-2"
+          style={{ background: 'var(--clay-primary)', color: 'white', borderRadius: '20px', boxShadow: 'var(--clay-shadow-sm)' }}
+        >
+          <Plus className="w-4 h-4" /> Tambah Kategori
+        </Button>
       </div>
+
+      {/* Table */}
+      <div className="clay-card p-0 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ background: 'var(--clay-primary)', color: 'white' }}>
+                <th className="px-4 py-3 text-left rounded-tl-xl">Kod</th>
+                <th className="px-4 py-3 text-left">Nama Kategori</th>
+                <th className="px-4 py-3 text-left">Keterangan</th>
+                <th className="px-4 py-3 text-center">Kursus</th>
+                <th className="px-4 py-3 text-center">Status</th>
+                <th className="px-4 py-3 text-center">Warna</th>
+                <th className="px-4 py-3 text-center rounded-tr-xl">Tindakan</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((k, i) => (
+                <tr key={k.id} className="group" style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(124,108,240,0.04)' }}>
+                  <td className="px-4 py-3 font-mono font-semibold" style={{ color: 'var(--clay-primary)' }}>{k.kodKategori}</td>
+                  <td className="px-4 py-3" style={{ color: 'var(--clay-ink)' }}>{k.namaKategori}</td>
+                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>{k.keterangan || '-'}</td>
+                  <td className="px-4 py-3 text-center" style={{ color: 'var(--clay-ink-secondary)' }}>{k._count?.kursus || 0}</td>
+                  <td className="px-4 py-3 text-center">
+                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+                      style={{ background: k.status === 'aktif' ? 'var(--clay-success-bg)' : 'var(--clay-warning-bg)', color: k.status === 'aktif' ? 'var(--clay-success)' : 'var(--clay-warning)' }}>
+                      {k.status === 'aktif' ? 'Aktif' : 'Arkib'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span className="inline-block w-5 h-5 rounded-full" style={{ background: k.warnaLabel }} />
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={() => openEditDialog(k)}
+                        className="p-1.5 rounded-lg transition-all hover:scale-110"
+                        style={{ background: 'rgba(124,108,240,0.1)', color: 'var(--clay-primary)' }}
+                        title="Kemaskini"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => openDeleteDialog(k)}
+                        className="p-1.5 rounded-lg transition-all hover:scale-110"
+                        style={{ background: 'rgba(226,109,142,0.1)', color: 'var(--clay-destructive)' }}
+                        title="Padam"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {data.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center" style={{ color: 'var(--clay-ink-soft)' }}>
+                    Tiada kategori. Klik &quot;Tambah Kategori&quot; untuk menambah.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md" style={{ background: 'var(--clay)', borderRadius: '24px', boxShadow: 'var(--clay-shadow-lg)', border: '1px solid rgba(255,255,255,0.6)' }}>
+          <DialogHeader>
+            <DialogTitle style={{ color: 'var(--clay-ink)' }}>
+              {editingItem ? 'Kemaskini Kategori' : 'Tambah Kategori Baharu'}
+            </DialogTitle>
+            <DialogDescription style={{ color: 'var(--clay-ink-soft)' }}>
+              {editingItem ? 'Kemaskini maklumat kategori program.' : 'Isi maklumat kategori program baharu.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {/* Kod Kategori */}
+            <div>
+              <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Kod Kategori <span style={{ color: 'var(--clay-destructive)' }}>*</span></label>
+              <Input
+                value={formKod}
+                onChange={e => setFormKod(e.target.value)}
+                placeholder="cth: KP, PI, BK"
+                className="h-10"
+                style={{ borderRadius: '16px', boxShadow: 'var(--clay-inset)', background: 'var(--clay)', border: '2px solid transparent' }}
+              />
+              <p className="text-xs mt-1" style={{ color: 'var(--clay-ink-soft)' }}>Kod unik ringkas (2-5 aksara)</p>
+            </div>
+            {/* Nama Kategori */}
+            <div>
+              <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Nama Kategori <span style={{ color: 'var(--clay-destructive)' }}>*</span></label>
+              <Input
+                value={formNama}
+                onChange={e => setFormNama(e.target.value)}
+                placeholder="cth: Kemahiran Perdana"
+                className="h-10"
+                style={{ borderRadius: '16px', boxShadow: 'var(--clay-inset)', background: 'var(--clay)', border: '2px solid transparent' }}
+              />
+            </div>
+            {/* Keterangan */}
+            <div>
+              <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Keterangan</label>
+              <Input
+                value={formKeterangan}
+                onChange={e => setFormKeterangan(e.target.value)}
+                placeholder="Penerangan ringkas (pilihan)"
+                className="h-10"
+                style={{ borderRadius: '16px', boxShadow: 'var(--clay-inset)', background: 'var(--clay)', border: '2px solid transparent' }}
+              />
+            </div>
+            {/* Warna Label */}
+            <div>
+              <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Warna Label</label>
+              <div className="flex items-center gap-2 flex-wrap">
+                {colorPresets.map(c => (
+                  <button
+                    key={c}
+                    onClick={() => setFormWarna(c)}
+                    className="w-7 h-7 rounded-full transition-all hover:scale-110"
+                    style={{
+                      background: c,
+                      border: formWarna === c ? '3px solid var(--clay-ink)' : '2px solid rgba(255,255,255,0.6)',
+                      boxShadow: formWarna === c ? '0 0 0 2px rgba(124,108,240,0.3)' : 'none',
+                    }}
+                  />
+                ))}
+                <input
+                  type="color"
+                  value={formWarna}
+                  onChange={e => setFormWarna(e.target.value)}
+                  className="w-7 h-7 rounded-full cursor-pointer border-0 p-0"
+                  style={{ background: 'transparent' }}
+                />
+              </div>
+            </div>
+            {/* Status */}
+            <div>
+              <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Status</label>
+              <Select value={formStatus} onValueChange={setFormStatus}>
+                <SelectTrigger className="h-10" style={{ borderRadius: '16px', boxShadow: 'var(--clay-inset)', background: 'var(--clay)', border: '2px solid transparent' }}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent style={{ borderRadius: '16px' }}>
+                  <SelectItem value="aktif">Aktif</SelectItem>
+                  <SelectItem value="arkib">Arkib</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDialogOpen(false)}
+              className="clay-btn-secondary text-sm px-4"
+              style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="clay-btn text-sm px-5 flex items-center gap-2"
+              style={{ background: 'var(--clay-primary)', color: 'white', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {saving ? 'Menyimpan...' : editingItem ? 'Kemaskini' : 'Tambah'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-sm" style={{ background: 'var(--clay)', borderRadius: '24px', boxShadow: 'var(--clay-shadow-lg)', border: '1px solid rgba(255,255,255,0.6)' }}>
+          <DialogHeader>
+            <DialogTitle style={{ color: 'var(--clay-destructive)' }} className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" /> Padam Kategori
+            </DialogTitle>
+            <DialogDescription style={{ color: 'var(--clay-ink-soft)' }}>
+              Adakah anda pasti ingin memadam kategori <strong style={{ color: 'var(--clay-ink)' }}>{deletingItem?.namaKategori}</strong> ({deletingItem?.kodKategori})?
+            </DialogDescription>
+          </DialogHeader>
+          {deletingItem && (deletingItem._count?.kursus || 0) > 0 && (
+            <div className="rounded-xl p-3 text-sm" style={{ background: 'rgba(226,109,142,0.1)', color: 'var(--clay-destructive)', borderRadius: '12px' }}>
+              ⚠️ {deletingItem._count?.kursus} kursus menggunakan kategori ini. Sila arkibkan sebagai ganti.
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => { setDeleteDialogOpen(false); setDeletingItem(null) }}
+              className="clay-btn-secondary text-sm px-4"
+              style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleDelete}
+              disabled={saving || (deletingItem && (deletingItem._count?.kursus || 0) > 0)}
+              className="text-sm px-5 flex items-center gap-2"
+              style={{ background: 'var(--clay-destructive)', color: 'white', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              {saving ? 'Memadam...' : 'Padam'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
