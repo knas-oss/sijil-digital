@@ -131,8 +131,8 @@ export async function POST(request: NextRequest) {
 
     // Separator line
     page.drawLine({
-      from: { x: 80, y: height - 95 },
-      to: { x: width - 80, y: height - 95 },
+      start: { x: 80, y: height - 95 },
+      end: { x: width - 80, y: height - 95 },
       thickness: 1.5,
       color: rgb(0.486, 0.424, 0.941),
       opacity: 0.5,

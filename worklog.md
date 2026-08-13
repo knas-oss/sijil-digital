@@ -18,9 +18,25 @@ Work Log:
 - Verified all functionality via Agent Browser: MyKad search, certificate download/preview, admin login, dashboard, category management, bulk certificate generation
 - Verified responsive design on mobile viewport
 
+---
+
+Task ID: 2
+Agent: main
+Task: Fix certificate PDF generation and copy official logo
+
+Work Log:
+- Identified pdf-lib API error: `drawLine` uses `start`/`end` instead of `from`/`to`
+- Fixed the drawLine call in /src/app/api/awam/jana-sijil/route.ts
+- Copied official ADTEC logo from upload directory to /public/logo-adtec.png
+- Verified PDF generation works (200 status)
+- Verified all admin sections: Dashboard, Kategori, Kursus, Peserta, Templat, Sijil, Log Audit, Tetapan
+- Verified public portal MyKad search with valid MyKad (901231125678 - AMIRUL)
+- Certificate preview, download, and print all functional
+- Lint passes cleanly
+- No browser errors
+
 Stage Summary:
-- Full-stack e-Sijil ADTEC Sandakan system built and verified
-- Claymorphism UI design implemented per PRD specifications
-- Certificate PDF generation working with QR code and proper formatting
-- All CRUD operations functional for admin portal
+- Certificate PDF generation fixed and working
+- Official ADTEC logo properly placed
+- All system modules verified and functional
 - Demo login: admin@adtec.gov.my / Admin@2026

@@ -1,0 +1,1272 @@
+     1→'use client'
+     2→
+     3→import React, { useState, useEffect, useCallback, useRef } from 'react'
+     4→import { Button } from '@/components/ui/button'
+     5→import { Input } from '@/components/ui/input'
+     6→import { Card, CardContent } from '@/components/ui/card'
+     7→import { Badge } from '@/components/ui/badge'
+     8→import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+     9→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    10→import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+    11→import { Separator } from '@/components/ui/separator'
+    12→import { ScrollArea } from '@/components/ui/scroll-area'
+    13→import { useToast } from '@/hooks/use-toast'
+    14→import {
+    15→  Search, Download, Printer, Eye, Shield, LogOut, LayoutDashboard,
+    16→  FolderOpen, GraduationCap, Users, FileText, Activity, Settings,
+    17→  ChevronRight, Calendar, Clock, Award, QrCode, CheckCircle2,
+    18→  XCircle, AlertCircle, Loader2, BarChart3, FileBadge, LogIn,
+    19→  Plus, Edit2, Trash2, RefreshCw, ArrowLeft, Info
+    20→} from 'lucide-react'
+    21→
+    22→// ============================================================
+    23→// Types
+    24→// ============================================================
+    25→interface SijilItem {
+    26→  id: string | null
+    27→  noSiri: string | null
+    28→  status: string
+    29→  namaKursus: string
+    30→  namaKursusBi: string | null
+    31→  kodKursus: string
+    32→  kategori: string
+    33→  kategoriKod: string
+    34→  kategoriWarna: string
+    35→  tarikhMula: string
+    36→  tarikhTamat: string
+    37→  dijanaPada: string | null
+    38→}
+    39→
+    40→interface AdminUser {
+    41→  id: string
+    42→  namaPenuh: string
+    43→  emel: string
+    44→  peranan: string
+    45→}
+    46→
+    47→interface StatsData {
+    48→  jumlahKursusAktif: number
+    49→  jumlahPeserta: number
+    50→  jumlahSijilDijana: number
+    51→  sijilBulanIni: number
+    52→  categoryBreakdown: { nama: string; warna: string; bil: number }[]
+    53→  monthlyStats: { bulan: string; bil: number }[]
+    54→  kursusRecent: any[]
+    55→}
+    56→
+    57→// ============================================================
+    58→// Utility: Format date to BM
+    59→// ============================================================
+    60→function formatDateBM(date: Date | string): string {
+    61→  const d = typeof date === 'string' ? new Date(date) : date
+    62→  const months = ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember']
+    63→  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`
+    64→}
+    65→
+    66→function formatDateShort(date: Date | string): string {
+    67→  const d = typeof date === 'string' ? new Date(date) : date
+    68→  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    69→}
+    70→
+    71→// ============================================================
+    72→// Main Page Component
+    73→// ============================================================
+    74→export default function Home() {
+    75→  const [view, setView] = useState<'public' | 'admin'>('public')
+    76→  const [adminUser, setAdminUser] = useState<AdminUser | null>(null)
+    77→  const [adminTab, setAdminTab] = useState('dashboard')
+    78→
+    79→  return (
+    80→    <div className="min-h-screen flex flex-col" style={{ background: 'var(--clay-bg)' }}>
+    81→      {/* Header */}
+    82→      <header className="clay-card-sm mx-4 mt-4 px-6 py-3 flex items-center justify-between">
+    83→        <div className="flex items-center gap-3">
+    84→          <img src="/logo-adtec.png" alt="Logo ADTEC JTM Kampus Sandakan" className="h-10 sm:h-12 object-contain" />
+    85→          <div className="hidden sm:block">
+    86→            <h1 className="text-sm font-bold" style={{ color: 'var(--clay-ink)' }}>e-Sijil ADTEC Sandakan</h1>
+    87→            <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>Sistem Cetak Sijil Digital Dinamik</p>
+    88→          </div>
+    89→        </div>
+    90→        <div className="flex items-center gap-2">
+    91→          {view === 'public' ? (
+    92→            <Button
+    93→              onClick={() => setView('admin')}
+    94→              className="clay-btn-secondary text-sm px-4 py-2 flex items-center gap-2"
+    95→              variant="outline"
+    96→              style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '20px', boxShadow: 'var(--clay-shadow-sm)' }}
+    97→            >
+    98→              <Shield className="w-4 h-4" />
+    99→              <span className="hidden sm:inline">Portal Pentadbir</span>
+   100→            </Button>
+   101→          ) : (
+   102→            <div className="flex items-center gap-2">
+   103→              {adminUser && (
+   104→                <span className="text-xs px-3 py-1 rounded-full" style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)' }}>
+   105→                  {adminUser.namaPenuh}
+   106→                </span>
+   107→              )}
+   108→              <Button
+   109→                onClick={() => { setView('public'); setAdminUser(null) }}
+   110→                variant="outline"
+   111→                className="text-sm px-4 py-2 flex items-center gap-2"
+   112→                style={{ background: 'var(--clay)', color: 'var(--clay-ink-secondary)', borderRadius: '20px', boxShadow: 'var(--clay-shadow-sm)' }}
+   113→              >
+   114→                <ArrowLeft className="w-4 h-4" />
+   115→                <span className="hidden sm:inline">Portal Awam</span>
+   116→              </Button>
+   117→            </div>
+   118→          )}
+   119→        </div>
+   120→      </header>
+   121→
+   122→      {/* Main Content */}
+   123→      <main className="flex-1 px-4 py-6">
+   124→        {view === 'public' ? (
+   125→          <PublicPortal />
+   126→        ) : adminUser ? (
+   127→          <AdminPortal user={adminUser} activeTab={adminTab} onTabChange={setAdminTab} onLogout={() => { setAdminUser(null); setView('public') }} />
+   128→        ) : (
+   129→          <AdminLogin onLogin={(user) => { setAdminUser(user); setAdminTab('dashboard') }} />
+   130→        )}
+   131→      </main>
+   132→
+   133→      {/* Footer */}
+   134→      <footer className="mt-auto px-4 pb-4">
+   135→        <div className="clay-card-sm px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-2">
+   136→          <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+   137→            © 2026 ADTEC JTM Kampus Sandakan — Jabatan Tenaga Manusia, Kementerian Sumber Manusia
+   138→          </p>
+   139→          <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+   140→            e-Sijil v1.0 · SCS-ADTEC-SDK
+   141→          </p>
+   142→        </div>
+   143→      </footer>
+   144→    </div>
+   145→  )
+   146→}
+   147→
+   148→// ============================================================
+   149→// PUBLIC PORTAL
+   150→// ============================================================
+   151→function PublicPortal() {
+   152→  const [mykadInput, setMykadInput] = useState('')
+   153→  const [loading, setLoading] = useState(false)
+   154→  const [results, setResults] = useState<{ bilangan: number; namaDipaparkan: string; noMykadFormat: string; sijil: SijilItem[] } | null>(null)
+   155→  const [error, setError] = useState('')
+   156→  const [previewSijil, setPreviewSijil] = useState<SijilItem | null>(null)
+   157→  const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+   158→  const [pdfLoading, setPdfLoading] = useState(false)
+   159→  const { toast } = useToast()
+   160→
+   161→  // Format MyKad with dashes as user types
+   162→  const handleMyKadChange = (value: string) => {
+   163→    const digits = value.replace(/[^0-9]/g, '')
+   164→    if (digits.length > 12) return
+   165→    let formatted = digits
+   166→    if (digits.length > 6) formatted = `${digits.slice(0, 6)}-${digits.slice(6)}`
+   167→    if (digits.length > 8) formatted = `${digits.slice(0, 6)}-${digits.slice(6, 8)}-${digits.slice(8)}`
+   168→    setMykadInput(formatted)
+   169→  }
+   170→
+   171→  const handleSearch = async () => {
+   172→    const digits = mykadInput.replace(/[^0-9]/g, '')
+   173→    if (digits.length !== 12) {
+   174→      setError('Nombor MyKad mesti mengandungi 12 digit.')
+   175→      return
+   176→    }
+   177→    setLoading(true)
+   178→    setError('')
+   179→    setResults(null)
+   180→    try {
+   181→      const res = await fetch('/api/awam/carian', {
+   182→        method: 'POST',
+   183→        headers: { 'Content-Type': 'application/json' },
+   184→        body: JSON.stringify({ no_mykad: digits }),
+   185→      })
+   186→      const data = await res.json()
+   187→      if (data.berjaya) {
+   188→        setResults(data)
+   189→      } else {
+   190→        setError(data.mesej || 'Tiada rekod ditemui.')
+   191→      }
+   192→    } catch {
+   193→      setError('Ralat sambungan. Sila cuba sebentar lagi.')
+   194→    } finally {
+   195→      setLoading(false)
+   196→    }
+   197→  }
+   198→
+   199→  const handleDownload = async (sijilId: string) => {
+   200→    setPdfLoading(true)
+   201→    try {
+   202→      const res = await fetch('/api/awam/jana-sijil', {
+   203→        method: 'POST',
+   204→        headers: { 'Content-Type': 'application/json' },
+   205→        body: JSON.stringify({ sijilId }),
+   206→      })
+   207→      if (!res.ok) throw new Error('Gagal menjana sijil')
+   208→      const blob = await res.blob()
+   209→      const url = URL.createObjectURL(blob)
+   210→      setPdfUrl(url)
+   211→      const a = document.createElement('a')
+   212→      a.href = url
+   213→      a.download = 'Sijil_ADTEC_Sandakan.pdf'
+   214→      a.click()
+   215→      toast({ title: 'Sijil Dimuat Turun', description: 'Fail PDF sijil telah dimuat turun.' })
+   216→    } catch {
+   217→      toast({ title: 'Ralat', description: 'Gagal menjana sijil. Sila cuba lagi.', variant: 'destructive' })
+   218→    } finally {
+   219→      setPdfLoading(false)
+   220→    }
+   221→  }
+   222→
+   223→  const handlePreview = async (sijil: SijilItem) => {
+   224→    if (!sijil.id) return
+   225→    setPreviewSijil(sijil)
+   226→    setPdfLoading(true)
+   227→    try {
+   228→      const res = await fetch('/api/awam/jana-sijil', {
+   229→        method: 'POST',
+   230→        headers: { 'Content-Type': 'application/json' },
+   231→        body: JSON.stringify({ sijilId: sijil.id }),
+   232→      })
+   233→      if (!res.ok) throw new Error('Gagal')
+   234→      const blob = await res.blob()
+   235→      const url = URL.createObjectURL(blob)
+   236→      setPdfUrl(url)
+   237→    } catch {
+   238→      toast({ title: 'Ralat', description: 'Gagal pratonton sijil.', variant: 'destructive' })
+   239→    } finally {
+   240→      setPdfLoading(false)
+   241→    }
+   242→  }
+   243→
+   244→  const handlePrint = async (sijilId: string) => {
+   245→    setPdfLoading(true)
+   246→    try {
+   247→      const res = await fetch('/api/awam/jana-sijil', {
+   248→        method: 'POST',
+   249→        headers: { 'Content-Type': 'application/json' },
+   250→        body: JSON.stringify({ sijilId }),
+   251→      })
+   252→      if (!res.ok) throw new Error('Gagal')
+   253→      const blob = await res.blob()
+   254→      const url = URL.createObjectURL(blob)
+   255→      const printWindow = window.open(url, '_blank')
+   256→      if (printWindow) {
+   257→        printWindow.onload = () => { printWindow.print() }
+   258→      }
+   259→    } catch {
+   260→      toast({ title: 'Ralat', description: 'Gagal mencetak sijil.', variant: 'destructive' })
+   261→    } finally {
+   262→      setPdfLoading(false)
+   263→    }
+   264→  }
+   265→
+   266→  return (
+   267→    <div className="max-w-4xl mx-auto space-y-6">
+   268→      {/* Hero Section */}
+   269→      <div className="clay-card-lg p-8 sm:p-12 text-center hero-gradient relative overflow-hidden">
+   270→        <div className="absolute inset-0 opacity-5" style={{ background: 'radial-gradient(circle at 30% 40%, var(--clay-primary), transparent 50%)' }} />
+   271→        <div className="relative z-10">
+   272→          <img src="/logo-adtec.png" alt="Logo ADTEC" className="h-16 sm:h-20 mx-auto mb-4 object-contain clay-float" />
+   273→          <h1 className="text-2xl sm:text-4xl font-bold mb-2" style={{ color: 'var(--clay-ink)' }}>
+   274→            e-Sijil ADTEC Sandakan
+   275→          </h1>
+   276→          <p className="text-lg sm:text-xl mb-1" style={{ color: 'var(--clay-primary-dark)' }}>
+   277→            Sistem Cetak Sijil Digital Dinamik
+   278→          </p>
+   279→          <p className="text-sm max-w-lg mx-auto" style={{ color: 'var(--clay-ink-secondary)' }}>
+   280→            Dapatkan sijil rasmi anda dalam masa kurang 1 minit — hanya dengan memasukkan nombor MyKad.
+   281→          </p>
+   282→        </div>
+   283→      </div>
+   284→
+   285→      {/* Search Section */}
+   286→      <div className="clay-card p-6 sm:p-8">
+   287→        <div className="text-center mb-4">
+   288→          <h2 className="text-lg font-semibold mb-1" style={{ color: 'var(--clay-ink)' }}>
+   289→            Semak Sijil Anda
+   290→          </h2>
+   291→          <p className="text-sm" style={{ color: 'var(--clay-ink-soft)' }}>
+   292→            Masukkan nombor MyKad 12 digit untuk mencari sijil yang layak
+   293→          </p>
+   294→        </div>
+   295→        <div className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto">
+   296→          <div className="flex-1 relative">
+   297→            <input
+   298→              type="text"
+   299→              value={mykadInput}
+   300→              onChange={(e) => handleMyKadChange(e.target.value)}
+   301→              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+   302→              placeholder="901231-12-5678"
+   303→              className="w-full clay-input mykad-input px-6 text-center"
+   304→              style={{ background: 'var(--clay)', color: 'var(--clay-ink)', fontSize: '20px', letterSpacing: '2px' }}
+   305→              maxLength={14}
+   306→            />
+   307→            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+   308→              {mykadInput.replace(/[^0-9]/g, '').length}/12
+   309→            </span>
+   310→          </div>
+   311→          <button
+   312→            onClick={handleSearch}
+   313→            disabled={loading || mykadInput.replace(/[^0-9]/g, '').length !== 12}
+   314→            className="clay-btn flex items-center justify-center gap-2 px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+   315→          >
+   316→            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+   317→            Semak
+   318→          </button>
+   319→        </div>
+   320→        {error && (
+   321→          <div className="mt-4 text-center">
+   322→            <p className="text-sm px-4 py-2 inline-block rounded-full" style={{ background: 'var(--clay-danger-bg)', color: 'var(--clay-danger)' }}>
+   323→              {error}
+   324→            </p>
+   325→          </div>
+   326→        )}
+   327→      </div>
+   328→
+   329→      {/* Results */}
+   330→      {results && (
+   331→        <div className="space-y-4">
+   332→          <div className="flex items-center justify-between px-2">
+   333→            <div>
+   334→              <h3 className="font-semibold" style={{ color: 'var(--clay-ink)' }}>
+   335→                {results.namaDipaparkan}
+   336→              </h3>
+   337→              <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+   338→                MyKad: {results.noMykadFormat} · {results.bilangan} sijil ditemui
+   339→              </p>
+   340→            </div>
+   341→            <Badge variant="secondary" className="clay-badge" style={{ color: 'var(--clay-success)' }}>
+   342→              <CheckCircle2 className="w-3 h-3 mr-1" /> Rekod Ditemui
+   343→            </Badge>
+   344→          </div>
+   345→
+   346→          {results.sijil.map((s, idx) => (
+   347→            <div key={idx} className="clay-card p-5 relative overflow-hidden">
+   348→              {/* Category color strip */}
+   349→              <div className="absolute left-0 top-3 bottom-3 w-2 rounded-r" style={{ background: s.kategoriWarna }} />
+   350→              
+   351→              <div className="pl-4">
+   352→                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+   353→                  <div className="flex-1">
+   354→                    <h4 className="font-semibold text-base mb-1" style={{ color: 'var(--clay-ink)' }}>
+   355→                      {s.namaKursus}
+   356→                    </h4>
+   357→                    {s.namaKursusBi && (
+   358→                      <p className="text-sm italic mb-2" style={{ color: 'var(--clay-ink-secondary)' }}>
+   359→                        {s.namaKursusBi}
+   360→                      </p>
+   361→                    )}
+   362→                    <div className="flex flex-wrap items-center gap-2 mb-2">
+   363→                      <Badge className="text-xs" style={{ background: s.kategoriWarna + '20', color: s.kategoriWarna, borderRadius: '12px' }}>
+   364→                        {s.kategori}
+   365→                      </Badge>
+   366→                      {s.status === 'sah' && (
+   367→                        <Badge className="text-xs" style={{ background: 'var(--clay-success-bg)', color: 'var(--clay-success)', borderRadius: '12px' }}>
+   368→                          <CheckCircle2 className="w-3 h-3 mr-1" /> Sedia
+   369→                        </Badge>
+   370→                      )}
+   371→                      {s.status === 'dibatalkan' && (
+   372→                        <Badge className="text-xs" style={{ background: 'var(--clay-danger-bg)', color: 'var(--clay-danger)', borderRadius: '12px' }}>
+   373→                          <XCircle className="w-3 h-3 mr-1" /> Dibatalkan
+   374→                        </Badge>
+   375→                      )}
+   376→                      {s.status === 'menunggu' && (
+   377→                        <Badge className="text-xs" style={{ background: 'var(--clay-warning-bg)', color: 'var(--clay-warning)', borderRadius: '12px' }}>
+   378→                          <Clock className="w-3 h-3 mr-1" /> Menunggu
+   379→                        </Badge>
+   380→                      )}
+   381→                    </div>
+   382→                    <div className="flex flex-wrap gap-3 text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+   383→                      <span className="flex items-center gap-1">
+   384→                        <Calendar className="w-3 h-3" />
+   385→                        {formatDateShort(s.tarikhMula)} – {formatDateShort(s.tarikhTamat)}
+   386→                      </span>
+   387→                      {s.noSiri && (
+   388→                        <span className="flex items-center gap-1">
+   389→                          <QrCode className="w-3 h-3" />
+   390→                          {s.noSiri}
+   391→                        </span>
+   392→                      )}
+   393→                    </div>
+   394→                  </div>
+   395→
+   396→                  {/* Action Buttons */}
+   397→                  {s.id && s.status === 'sah' && (
+   398→                    <div className="flex gap-2 self-start">
+   399→                      <button
+   400→                        onClick={() => handlePreview(s)}
+   401→                        className="clay-btn-secondary text-xs px-3 py-2 flex items-center gap-1"
+   402→                        style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)', fontSize: '12px' }}
+   403→                      >
+   404→                        <Eye className="w-3.5 h-3.5" /> Pratonton
+   405→                      </button>
+   406→                      <button
+   407→                        onClick={() => handleDownload(s.id!)}
+   408→                        disabled={pdfLoading}
+   409→                        className="clay-btn text-xs px-3 py-2 flex items-center gap-1"
+   410→                        style={{ borderRadius: '16px', fontSize: '12px' }}
+   411→                      >
+   412→                        {pdfLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+   413→                        Muat Turun
+   414→                      </button>
+   415→                      <button
+   416→                        onClick={() => handlePrint(s.id!)}
+   417→                        className="clay-btn-secondary text-xs px-3 py-2 flex items-center gap-1"
+   418→                        style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)', fontSize: '12px' }}
+   419→                      >
+   420→                        <Printer className="w-3.5 h-3.5" /> Cetak
+   421→                      </button>
+   422→                    </div>
+   423→                  )}
+   424→                </div>
+   425→              </div>
+   426→            </div>
+   427→          ))}
+   428→        </div>
+   429→      )}
+   430→
+   431→      {/* Info Section */}
+   432→      {!results && !loading && (
+   433→        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+   434→          {[
+   435→            { icon: Search, title: 'Cari', desc: 'Masukkan nombor MyKad 12 digit' },
+   436→            { icon: FileBadge, title: 'Semak', desc: 'Sistem papar senarai sijil layak' },
+   437→            { icon: Download, title: 'Muat Turun', desc: 'Jana PDF sijil sedia cetak' },
+   438→          ].map((step, i) => (
+   439→            <div key={i} className="clay-card p-5 text-center">
+   440→              <div className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center"
+   441→                style={{ background: 'var(--clay-primary)', color: 'white', boxShadow: 'var(--clay-shadow-sm)' }}>
+   442→                <step.icon className="w-6 h-6" />
+   443→              </div>
+   444→              <h3 className="font-semibold text-sm mb-1" style={{ color: 'var(--clay-ink)' }}>{step.title}</h3>
+   445→              <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>{step.desc}</p>
+   446→            </div>
+   447→          ))}
+   448→        </div>
+   449→      )}
+   450→
+   451→      {/* Preview Dialog */}
+   452→      <Dialog open={!!previewSijil} onOpenChange={() => { setPreviewSijil(null); if (pdfUrl) URL.revokeObjectURL(pdfUrl); setPdfUrl(null) }}>
+   453→        <DialogContent className="max-w-4xl" style={{ borderRadius: '32px', boxShadow: 'var(--clay-shadow-lg)' }}>
+   454→          <DialogHeader>
+   455→            <DialogTitle className="flex items-center gap-2">
+   456→              <Eye className="w-5 h-5" style={{ color: 'var(--clay-primary)' }} />
+   457→              Pratonton Sijil
+   458→            </DialogTitle>
+   459→          </DialogHeader>
+   460→          <div className="mt-2" style={{ minHeight: '400px' }}>
+   461→            {pdfLoading ? (
+   462→              <div className="flex items-center justify-center h-64">
+   463→                <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--clay-primary)' }} />
+   464→              </div>
+   465→            ) : pdfUrl ? (
+   466→              <iframe src={pdfUrl} className="w-full border-0 rounded-2xl" style={{ height: '500px', background: 'white' }} />
+   467→            ) : null}
+   468→          </div>
+   469→          {previewSijil && previewSijil.id && (
+   470→            <div className="flex justify-end gap-2 mt-2">
+   471→              <button
+   472→                onClick={() => handleDownload(previewSijil.id!)}
+   473→                className="clay-btn flex items-center gap-2 text-sm"
+   474→              >
+   475→                <Download className="w-4 h-4" /> Muat Turun PDF
+   476→              </button>
+   477→              <button
+   478→                onClick={() => handlePrint(previewSijil.id!)}
+   479→                className="clay-btn-secondary flex items-center gap-2 text-sm"
+   480→                style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)' }}
+   481→              >
+   482→                <Printer className="w-4 h-4" /> Cetak
+   483→              </button>
+   484→            </div>
+   485→          )}
+   486→        </DialogContent>
+   487→      </Dialog>
+   488→    </div>
+   489→  )
+   490→}
+   491→
+   492→// ============================================================
+   493→// ADMIN LOGIN
+   494→// ============================================================
+   495→function AdminLogin({ onLogin }: { onLogin: (user: AdminUser) => void }) {
+   496→  const [emel, setEmel] = useState('')
+   497→  const [kataLaluan, setKataLaluan] = useState('')
+   498→  const [loading, setLoading] = useState(false)
+   499→  const [error, setError] = useState('')
+   500→  const { toast } = useToast()
+   501→
+   502→  const handleLogin = async () => {
+   503→    setLoading(true)
+   504→    setError('')
+   505→    try {
+   506→      const res = await fetch('/api/auth/login', {
+   507→        method: 'POST',
+   508→        headers: { 'Content-Type': 'application/json' },
+   509→        body: JSON.stringify({ emel, kataLaluan }),
+   510→      })
+   511→      const data = await res.json()
+   512→      if (data.berjaya) {
+   513→        onLogin(data.pengguna)
+   514→        toast({ title: 'Log Masuk Berjaya', description: `Selamat datang, ${data.pengguna.namaPenuh}` })
+   515→      } else {
+   516→        setError(data.mesej)
+   517→      }
+   518→    } catch {
+   519→      setError('Ralat sambungan.')
+   520→    } finally {
+   521→      setLoading(false)
+   522→    }
+   523→  }
+   524→
+   525→  return (
+   526→    <div className="max-w-md mx-auto">
+   527→      <div className="clay-card-lg p-8">
+   528→        <div className="text-center mb-6">
+   529→          <img src="/logo-adtec.png" alt="ADTEC" className="h-16 mx-auto mb-4" />
+   530→          <h2 className="text-xl font-bold" style={{ color: 'var(--clay-ink)' }}>Log Masuk Pentadbir</h2>
+   531→          <p className="text-sm" style={{ color: 'var(--clay-ink-soft)' }}>Portal Pengurusan e-Sijil</p>
+   532→        </div>
+   533→        <div className="space-y-4">
+   534→          <div>
+   535→            <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--clay-ink-secondary)' }}>E-mel Rasmi</label>
+   536→            <input
+   537→              type="email"
+   538→              value={emel}
+   539→              onChange={(e) => setEmel(e.target.value)}
+   540→              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+   541→              placeholder="admin@adtec.gov.my"
+   542→              className="w-full clay-input px-4 py-3"
+   543→              style={{ background: 'var(--clay)', color: 'var(--clay-ink)' }}
+   544→            />
+   545→          </div>
+   546→          <div>
+   547→            <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--clay-ink-secondary)' }}>Kata Laluan</label>
+   548→            <input
+   549→              type="password"
+   550→              value={kataLaluan}
+   551→              onChange={(e) => setKataLaluan(e.target.value)}
+   552→              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+   553→              placeholder="••••••••••••"
+   554→              className="w-full clay-input px-4 py-3"
+   555→              style={{ background: 'var(--clay)', color: 'var(--clay-ink)' }}
+   556→            />
+   557→          </div>
+   558→          {error && <p className="text-sm text-center" style={{ color: 'var(--clay-danger)' }}>{error}</p>}
+   559→          <button
+   560→            onClick={handleLogin}
+   561→            disabled={loading || !emel || !kataLaluan}
+   562→            className="clay-btn w-full flex items-center justify-center gap-2"
+   563→          >
+   564→            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />}
+   565→            Log Masuk
+   566→          </button>
+   567→          <p className="text-xs text-center mt-2" style={{ color: 'var(--clay-ink-soft)' }}>
+   568→            Demo: admin@adtec.gov.my / Admin@2026
+   569→          </p>
+   570→        </div>
+   571→      </div>
+   572→    </div>
+   573→  )
+   574→}
+   575→
+   576→// ============================================================
+   577→// ADMIN PORTAL
+   578→// ============================================================
+   579→function AdminPortal({ user, activeTab, onTabChange, onLogout }: {
+   580→  user: AdminUser
+   581→  activeTab: string
+   582→  onTabChange: (tab: string) => void
+   583→  onLogout: () => void
+   584→}) {
+   585→  const tabs = [
+   586→    { id: 'dashboard', label: 'Papan Pemuka', icon: LayoutDashboard },
+   587→    { id: 'kategori', label: 'Kategori', icon: FolderOpen },
+   588→    { id: 'kursus', label: 'Kursus', icon: GraduationCap },
+   589→    { id: 'peserta', label: 'Peserta', icon: Users },
+   590→    { id: 'templat', label: 'Templat', icon: FileText },
+   591→    { id: 'sijil', label: 'Sijil', icon: Award },
+   592→    { id: 'audit', label: 'Log Audit', icon: Activity },
+   593→    { id: 'tetapan', label: 'Tetapan', icon: Settings },
+   594→  ]
+   595→
+   596→  return (
+   597→    <div className="max-w-6xl mx-auto">
+   598→      {/* Admin Tabs */}
+   599→      <div className="clay-card-sm p-2 mb-6 overflow-x-auto">
+   600→        <div className="flex gap-1 min-w-max">
+   601→          {tabs.map((tab) => {
+   602→            const isActive = activeTab === tab.id
+   603→            return (
+   604→              <button
+   605→                key={tab.id}
+   606→                onClick={() => onTabChange(tab.id)}
+   607→                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap"
+   608→                style={{
+   609→                  background: isActive ? 'var(--clay-primary)' : 'transparent',
+   610→                  color: isActive ? 'white' : 'var(--clay-ink-secondary)',
+   611→                  boxShadow: isActive ? 'var(--clay-shadow-sm)' : 'none',
+   612→                }}
+   613→              >
+   614→                <tab.icon className="w-4 h-4" />
+   615→                {tab.label}
+   616→              </button>
+   617→            )
+   618→          })}
+   619→        </div>
+   620→      </div>
+   621→
+   622→      {/* Tab Content */}
+   623→      {activeTab === 'dashboard' && <DashboardTab />}
+   624→      {activeTab === 'kategori' && <KategoriTab />}
+   625→      {activeTab === 'kursus' && <KursusTab />}
+   626→      {activeTab === 'peserta' && <PesertaTab />}
+   627→      {activeTab === 'templat' && <TemplatTab />}
+   628→      {activeTab === 'sijil' && <SijilTab />}
+   629→      {activeTab === 'audit' && <AuditTab />}
+   630→      {activeTab === 'tetapan' && <TetapanTab />}
+   631→    </div>
+   632→  )
+   633→}
+   634→
+   635→// ============================================================
+   636→// DASHBOARD TAB
+   637→// ============================================================
+   638→function DashboardTab() {
+   639→  const [stats, setStats] = useState<StatsData | null>(null)
+   640→  const [loading, setLoading] = useState(true)
+   641→
+   642→  useEffect(() => {
+   643→    fetch('/api/laporan/statistik')
+   644→      .then(r => r.json())
+   645→      .then(d => { if (d.berjaya) setStats(d.data) })
+   646→      .finally(() => setLoading(false))
+   647→  }, [])
+   648→
+   649→  if (loading) return <LoadingSpinner />
+   650→
+   651→  const statCards = stats ? [
+   652→    { label: 'KURSUS AKTIF', value: stats.jumlahKursusAktif, color: 'var(--clay-primary)' },
+   653→    { label: 'JUMLAH PESERTA', value: stats.jumlahPeserta, color: 'var(--clay-success)' },
+   654→    { label: 'SIJIL DIJANA', value: stats.jumlahSijilDijana, color: 'var(--clay-primary-dark)' },
+   655→    { label: 'SIJIL BULAN INI', value: stats.sijilBulanIni, color: 'var(--clay-warning)' },
+   656→  ] : []
+   657→
+   658→  return (
+   659→    <div className="space-y-6">
+   660→      {/* Stats Cards */}
+   661→      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+   662→        {statCards.map((s, i) => (
+   663→          <div key={i} className="clay-card p-5 text-center">
+   664→            <p className="text-3xl font-extrabold" style={{ color: s.color }}>{s.value}</p>
+   665→            <p className="text-xs font-semibold mt-1 uppercase tracking-wider" style={{ color: 'var(--clay-ink-soft)' }}>{s.label}</p>
+   666→          </div>
+   667→        ))}
+   668→      </div>
+   669→
+   670→      {/* Charts Area */}
+   671→      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   672→        {/* Monthly Chart */}
+   673→        <div className="clay-card p-5">
+   674→          <h3 className="font-semibold text-sm mb-3" style={{ color: 'var(--clay-ink)' }}>Sijil Mengikut Bulan</h3>
+   675→          <div className="flex items-end gap-1 h-40">
+   676→            {stats?.monthlyStats.map((m, i) => {
+   677→              const max = Math.max(...(stats?.monthlyStats.map(x => x.bil) || [1]), 1)
+   678→              const h = Math.max((m.bil / max) * 100, 2)
+   679→              return (
+   680→                <div key={i} className="flex-1 flex flex-col items-center gap-1">
+   681→                  <span className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>{m.bil || ''}</span>
+   682→                  <div className="w-full rounded-t-lg transition-all" style={{ height: `${h}%`, background: 'var(--clay-primary)', minHeight: '4px', opacity: 0.7 + (i / 12) * 0.3 }} />
+   683→                  <span className="text-[9px] -rotate-45 origin-top-left" style={{ color: 'var(--clay-ink-soft)' }}>{m.bulan}</span>
+   684→                </div>
+   685→              )
+   686→            })}
+   687→          </div>
+   688→        </div>
+   689→
+   690→        {/* Category Breakdown */}
+   691→        <div className="clay-card p-5">
+   692→          <h3 className="font-semibold text-sm mb-3" style={{ color: 'var(--clay-ink)' }}>Sijil Mengikut Kategori</h3>
+   693→          <div className="space-y-3">
+   694→            {stats?.categoryBreakdown.map((c, i) => {
+   695→              const max = Math.max(...(stats?.categoryBreakdown.map(x => x.bil) || [1]), 1)
+   696→              return (
+   697→                <div key={i}>
+   698→                  <div className="flex justify-between text-xs mb-1">
+   699→                    <span style={{ color: 'var(--clay-ink-secondary)' }}>{c.nama}</span>
+   700→                    <span className="font-semibold" style={{ color: c.warna }}>{c.bil}</span>
+   701→                  </div>
+   702→                  <div className="h-2 rounded-full" style={{ background: 'var(--clay)' }}>
+   703→                    <div className="h-full rounded-full transition-all" style={{ width: `${(c.bil / max) * 100}%`, background: c.warna }} />
+   704→                  </div>
+   705→                </div>
+   706→              )
+   707→            })}
+   708→            {(!stats?.categoryBreakdown.length) && (
+   709→              <p className="text-sm text-center py-4" style={{ color: 'var(--clay-ink-soft)' }}>Tiada data lagi</p>
+   710→            )}
+   711→          </div>
+   712→        </div>
+   713→      </div>
+   714→
+   715→      {/* Recent Courses */}
+   716→      <div className="clay-card p-5">
+   717→        <h3 className="font-semibold text-sm mb-3" style={{ color: 'var(--clay-ink)' }}>Kursus Terkini</h3>
+   718→        <div className="space-y-2">
+   719→          {stats?.kursusRecent.map((k: any) => (
+   720→            <div key={k.id} className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(124,108,240,0.04)' }}>
+   721→              <div>
+   722→                <p className="text-sm font-medium" style={{ color: 'var(--clay-ink)' }}>{k.namaKursusBm}</p>
+   723→                <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>{k.kodKursus} · {k.kategori?.namaKategori}</p>
+   724→              </div>
+   725→              <div className="flex gap-3 text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+   726→                <span>{k._count?.peserta || 0} peserta</span>
+   727→                <span>{k._count?.sijil || 0} sijil</span>
+   728→              </div>
+   729→            </div>
+   730→          ))}
+   731→        </div>
+   732→      </div>
+   733→    </div>
+   734→  )
+   735→}
+   736→
+   737→// ============================================================
+   738→// KATEGORI TAB
+   739→// ============================================================
+   740→function KategoriTab() {
+   741→  const [data, setData] = useState<any[]>([])
+   742→  const [loading, setLoading] = useState(true)
+   743→
+   744→  useEffect(() => {
+   745→    fetch('/api/kategori').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
+   746→  }, [])
+   747→
+   748→  if (loading) return <LoadingSpinner />
+   749→
+   750→  return (
+   751→    <div className="clay-card p-5">
+   752→      <h3 className="font-semibold mb-4" style={{ color: 'var(--clay-ink)' }}>Pengurusan Kategori Program</h3>
+   753→      <div className="overflow-x-auto">
+   754→        <table className="w-full text-sm">
+   755→          <thead>
+   756→            <tr style={{ background: 'var(--clay-primary)', color: 'white' }}>
+   757→              <th className="px-4 py-3 text-left rounded-tl-xl">Kod</th>
+   758→              <th className="px-4 py-3 text-left">Nama Kategori</th>
+   759→              <th className="px-4 py-3 text-left">Keterangan</th>
+   760→              <th className="px-4 py-3 text-center">Kursus</th>
+   761→              <th className="px-4 py-3 text-center">Status</th>
+   762→              <th className="px-4 py-3 text-center rounded-tr-xl">Warna</th>
+   763→            </tr>
+   764→          </thead>
+   765→          <tbody>
+   766→            {data.map((k, i) => (
+   767→              <tr key={k.id} className={i % 2 === 0 ? '' : ''} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(124,108,240,0.04)' }}>
+   768→                <td className="px-4 py-3 font-mono font-semibold" style={{ color: 'var(--clay-primary)' }}>{k.kodKategori}</td>
+   769→                <td className="px-4 py-3" style={{ color: 'var(--clay-ink)' }}>{k.namaKategori}</td>
+   770→                <td className="px-4 py-3 text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>{k.keterangan || '-'}</td>
+   771→                <td className="px-4 py-3 text-center" style={{ color: 'var(--clay-ink-secondary)' }}>{k._count?.kursus || 0}</td>
+   772→                <td className="px-4 py-3 text-center">
+   773→                  <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+   774→                    style={{ background: k.status === 'aktif' ? 'var(--clay-success-bg)' : 'var(--clay-warning-bg)', color: k.status === 'aktif' ? 'var(--clay-success)' : 'var(--clay-warning)' }}>
+   775→                    {k.status === 'aktif' ? 'Aktif' : 'Arkib'}
+   776→                  </span>
+   777→                </td>
+   778→                <td className="px-4 py-3 text-center">
+   779→                  <span className="inline-block w-5 h-5 rounded-full" style={{ background: k.warnaLabel }} />
+   780→                </td>
+   781→              </tr>
+   782→            ))}
+   783→          </tbody>
+   784→        </table>
+   785→      </div>
+   786→    </div>
+   787→  )
+   788→}
+   789→
+   790→// ============================================================
+   791→// KURSUS TAB
+   792→// ============================================================
+   793→function KursusTab() {
+   794→  const [data, setData] = useState<any[]>([])
+   795→  const [loading, setLoading] = useState(true)
+   796→
+   797→  useEffect(() => {
+   798→    fetch('/api/kursus').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
+   799→  }, [])
+   800→
+   801→  if (loading) return <LoadingSpinner />
+   802→
+   803→  return (
+   804→    <div className="clay-card p-5">
+   805→      <h3 className="font-semibold mb-4" style={{ color: 'var(--clay-ink)' }}>Pengurusan Kursus / Program</h3>
+   806→      <div className="overflow-x-auto">
+   807→        <table className="w-full text-sm">
+   808→          <thead>
+   809→            <tr style={{ background: 'var(--clay-primary)', color: 'white' }}>
+   810→              <th className="px-3 py-3 text-left rounded-tl-xl">Kod</th>
+   811→              <th className="px-3 py-3 text-left">Nama Kursus</th>
+   812→              <th className="px-3 py-3 text-left">Kategori</th>
+   813→              <th className="px-3 py-3 text-center">Peserta</th>
+   814→              <th className="px-3 py-3 text-center">Sijil</th>
+   815→              <th className="px-3 py-3 text-center">Status</th>
+   816→              <th className="px-3 py-3 text-center rounded-tr-xl">Tarikh</th>
+   817→            </tr>
+   818→          </thead>
+   819→          <tbody>
+   820→            {data.map((k, i) => (
+   821→              <tr key={k.id} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(124,108,240,0.04)' }}>
+   822→                <td className="px-3 py-3 font-mono text-xs" style={{ color: 'var(--clay-primary)' }}>{k.kodKursus}</td>
+   823→                <td className="px-3 py-3" style={{ color: 'var(--clay-ink)' }}>
+   824→                  <p className="font-medium">{k.namaKursusBm}</p>
+   825→                  {k.namaKursusBi && <p className="text-xs italic" style={{ color: 'var(--clay-ink-soft)' }}>{k.namaKursusBi}</p>}
+   826→                </td>
+   827→                <td className="px-3 py-3">
+   828→                  <span className="inline-block px-2 py-0.5 rounded-full text-xs" style={{ background: (k.kategori?.warnaLabel || '#7C6CF0') + '20', color: k.kategori?.warnaLabel || '#7C6CF0' }}>
+   829→                    {k.kategori?.namaKategori || '-'}
+   830→                  </span>
+   831→                </td>
+   832→                <td className="px-3 py-3 text-center" style={{ color: 'var(--clay-ink-secondary)' }}>{k._count?.peserta || 0}</td>
+   833→                <td className="px-3 py-3 text-center" style={{ color: 'var(--clay-ink-secondary)' }}>{k._count?.sijil || 0}</td>
+   834→                <td className="px-3 py-3 text-center">
+   835→                  <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+   836→                    style={{
+   837→                      background: k.status === 'aktif' ? 'var(--clay-success-bg)' : k.status === 'tamat' ? 'var(--clay-warning-bg)' : 'rgba(124,108,240,0.08)',
+   838→                      color: k.status === 'aktif' ? 'var(--clay-success)' : k.status === 'tamat' ? 'var(--clay-warning)' : 'var(--clay-primary)'
+   839→                    }}>
+   840→                    {k.status === 'aktif' ? 'Aktif' : k.status === 'tamat' ? 'Tamat' : k.status === 'draf' ? 'Draf' : 'Arkib'}
+   841→                  </span>
+   842→                </td>
+   843→                <td className="px-3 py-3 text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+   844→                  {formatDateShort(k.tarikhMula)}<br />– {formatDateShort(k.tarikhTamat)}
+   845→                </td>
+   846→              </tr>
+   847→            ))}
+   848→          </tbody>
+   849→        </table>
+   850→      </div>
+   851→    </div>
+   852→  )
+   853→}
+   854→
+   855→// ============================================================
+   856→// PESERTA TAB
+   857→// ============================================================
+   858→function PesertaTab() {
+   859→  const [kursusList, setKursusList] = useState<any[]>([])
+   860→  const [selectedKursus, setSelectedKursus] = useState<string>('')
+   861→  const [pesertaList, setPesertaList] = useState<any[]>([])
+   862→  const [loading, setLoading] = useState(true)
+   863→
+   864→  // Load kursus list and first set of peserta on mount
+   865→  useEffect(() => {
+   866→    fetch('/api/kursus').then(r => r.json()).then(d => {
+   867→      if (d.berjaya) {
+   868→        setKursusList(d.data)
+   869→        if (d.data.length > 0) {
+   870→          const firstId = d.data[0].id
+   871→          setSelectedKursus(firstId)
+   872→          fetch(`/api/peserta?kursusId=${firstId}`).then(r2 => r2.json()).then(d2 => {
+   873→            if (d2.berjaya) setPesertaList(d2.data)
+   874→          }).finally(() => setLoading(false))
+   875→        }
+   876→      }
+   877→    })
+   878→  }, [])
+   879→
+   880→  const handleKursusChange = (id: string) => {
+   881→    setSelectedKursus(id)
+   882→    setLoading(true)
+   883→    fetch(`/api/peserta?kursusId=${id}`).then(r => r.json()).then(d => {
+   884→      if (d.berjaya) setPesertaList(d.data)
+   885→    }).finally(() => setLoading(false))
+   886→  }
+   887→
+   888→  return (
+   889→    <div className="space-y-4">
+   890→      {/* Kursus selector */}
+   891→      <div className="clay-card p-5">
+   892→        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+   893→          <h3 className="font-semibold" style={{ color: 'var(--clay-ink)' }}>Senarai Peserta</h3>
+   894→          <select
+   895→            value={selectedKursus}
+   896→            onChange={(e) => handleKursusChange(e.target.value)}
+   897→            className="clay-input px-4 py-2 text-sm flex-1 sm:max-w-md"
+   898→            style={{ background: 'var(--clay)', color: 'var(--clay-ink)' }}
+   899→          >
+   900→            {kursusList.map((k: any) => (
+   901→              <option key={k.id} value={k.id}>{k.namaKursusBm} ({k.kodKursus})</option>
+   902→            ))}
+   903→          </select>
+   904→        </div>
+   905→      </div>
+   906→
+   907→      {/* Participant table */}
+   908→      {loading ? <LoadingSpinner /> : (
+   909→        <div className="clay-card p-5">
+   910→          <div className="overflow-x-auto">
+   911→            <table className="w-full text-sm">
+   912→              <thead>
+   913→                <tr style={{ background: 'var(--clay-primary)', color: 'white' }}>
+   914→                  <th className="px-3 py-3 text-left rounded-tl-xl">#</th>
+   915→                  <th className="px-3 py-3 text-left">Nama Penuh</th>
+   916→                  <th className="px-3 py-3 text-left">No. MyKad</th>
+   917→                  <th className="px-3 py-3 text-center">Jantina</th>
+   918→                  <th className="px-3 py-3 text-center">Kelayakan</th>
+   919→                  <th className="px-3 py-3 text-center rounded-tr-xl">Sijil</th>
+   920→                </tr>
+   921→              </thead>
+   922→              <tbody>
+   923→                {pesertaList.map((p: any, i: number) => (
+   924→                  <tr key={p.id} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(124,108,240,0.04)' }}>
+   925→                    <td className="px-3 py-3 text-center" style={{ color: 'var(--clay-ink-soft)' }}>{i + 1}</td>
+   926→                    <td className="px-3 py-3 font-medium" style={{ color: 'var(--clay-ink)' }}>{p.namaPenuh}</td>
+   927→                    <td className="px-3 py-3 font-mono text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>
+   928→                      {p.noMykad.length === 12 ? `${p.noMykad.slice(0,6)}-${p.noMykad.slice(6,8)}-${p.noMykad.slice(8)}` : p.noMykad}
+   929→                    </td>
+   930→                    <td className="px-3 py-3 text-center text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>{p.jantina === 'lelaki' ? '♂' : '♀'}</td>
+   931→                    <td className="px-3 py-3 text-center">
+   932→                      <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+   933→                        style={{
+   934→                          background: p.statusKelayakan === 'layak' ? 'var(--clay-success-bg)' : p.statusKelayakan === 'tidak_layak' ? 'var(--clay-danger-bg)' : 'var(--clay-warning-bg)',
+   935→                          color: p.statusKelayakan === 'layak' ? 'var(--clay-success)' : p.statusKelayakan === 'tidak_layak' ? 'var(--clay-danger)' : 'var(--clay-warning)'
+   936→                        }}>
+   937→                        {p.statusKelayakan === 'layak' ? 'Layak' : p.statusKelayakan === 'tidak_layak' ? 'Tidak Layak' : 'Ditangguh'}
+   938→                      </span>
+   939→                    </td>
+   940→                    <td className="px-3 py-3 text-center" style={{ color: 'var(--clay-ink-soft)' }}>
+   941→                      {p.sijil?.length > 0 ? <CheckCircle2 className="w-4 h-4 inline" style={{ color: 'var(--clay-success)' }} /> : '—'}
+   942→                    </td>
+   943→                  </tr>
+   944→                ))}
+   945→              </tbody>
+   946→            </table>
+   947→          </div>
+   948→        </div>
+   949→      )}
+   950→    </div>
+   951→  )
+   952→}
+   953→
+   954→// ============================================================
+   955→// TEMPLAT TAB
+   956→// ============================================================
+   957→function TemplatTab() {
+   958→  const [data, setData] = useState<any[]>([])
+   959→  const [loading, setLoading] = useState(true)
+   960→
+   961→  useEffect(() => {
+   962→    fetch('/api/templat').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
+   963→  }, [])
+   964→
+   965→  if (loading) return <LoadingSpinner />
+   966→
+   967→  return (
+   968→    <div className="space-y-4">
+   969→      <div className="flex items-center justify-between">
+   970→        <h3 className="font-semibold" style={{ color: 'var(--clay-ink)' }}>Galeri Templat Sijil</h3>
+   971→      </div>
+   972→      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+   973→        {data.map((t: any) => (
+   974→          <div key={t.id} className="clay-card p-5">
+   975→            {/* Template preview area */}
+   976→            <div className="rounded-xl mb-4 flex items-center justify-center"
+   977→              style={{
+   978→                background: t.orientasi === 'landskap' ? 'linear-gradient(135deg, #f8f9ff, #eef0fa)' : 'linear-gradient(180deg, #f8f9ff, #eef0fa)',
+   979→                aspectRatio: t.orientasi === 'landskap' ? '297/210' : '210/297',
+   980→                border: '2px dashed var(--border)',
+   981→              }}>
+   982→              <div className="text-center">
+   983→                <FileText className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--clay-primary)', opacity: 0.5 }} />
+   984→                <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+   985→                  {t.orientasi === 'landskap' ? 'Landskap' : 'Potret'} · {t.saizKertas?.toUpperCase()}
+   986→                </p>
+   987→              </div>
+   988→            </div>
+   989→            <h4 className="font-semibold text-sm mb-1" style={{ color: 'var(--clay-ink)' }}>{t.namaTemplat}</h4>
+   990→            <p className="text-xs mb-2" style={{ color: 'var(--clay-ink-soft)' }}>{t.keterangan || 'Tiada keterangan'}</p>
+   991→            <div className="flex items-center justify-between">
+   992→              <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+   993→                style={{
+   994→                  background: t.status === 'aktif' ? 'var(--clay-success-bg)' : t.status === 'draf' ? 'var(--clay-warning-bg)' : 'rgba(124,108,240,0.08)',
+   995→                  color: t.status === 'aktif' ? 'var(--clay-success)' : t.status === 'draf' ? 'var(--clay-warning)' : 'var(--clay-primary)'
+   996→                }}>
+   997→                {t.status === 'aktif' ? 'Aktif' : t.status === 'draf' ? 'Draf' : 'Arkib'}
+   998→              </span>
+   999→              <span className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>v{t.versi} · {t.medanTemplat?.length || 0} medan</span>
+  1000→            </div>
+  1001→          </div>
+  1002→        ))}
+  1003→      </div>
+  1004→    </div>
+  1005→  )
+  1006→}
+  1007→
+  1008→// ============================================================
+  1009→// SIJIL TAB
+  1010→// ============================================================
+  1011→function SijilTab() {
+  1012→  const [kursusList, setKursusList] = useState<any[]>([])
+  1013→  const [selectedKursus, setSelectedKursus] = useState<string>('')
+  1014→  const [sijilList, setSijilList] = useState<any[]>([])
+  1015→  const [loading, setLoading] = useState(true)
+  1016→  const [generating, setGenerating] = useState(false)
+  1017→  const { toast } = useToast()
+  1018→
+  1019→  useEffect(() => {
+  1020→    fetch('/api/kursus').then(r => r.json()).then(d => {
+  1021→      if (d.berjaya) {
+  1022→        setKursusList(d.data)
+  1023→        if (d.data.length > 0) {
+  1024→          const firstId = d.data[0].id
+  1025→          setSelectedKursus(firstId)
+  1026→          fetch(`/api/sijil?kursusId=${firstId}`).then(r2 => r2.json()).then(d2 => {
+  1027→            if (d2.berjaya) setSijilList(d2.data)
+  1028→          }).finally(() => setLoading(false))
+  1029→        }
+  1030→      }
+  1031→    })
+  1032→  }, [])
+  1033→
+  1034→  const handleKursusChange = (id: string) => {
+  1035→    setSelectedKursus(id)
+  1036→    setLoading(true)
+  1037→    fetch(`/api/sijil?kursusId=${id}`).then(r => r.json()).then(d => {
+  1038→      if (d.berjaya) setSijilList(d.data)
+  1039→    }).finally(() => setLoading(false))
+  1040→  }
+  1041→
+  1042→  const handleBulkGenerate = async () => {
+  1043→    setGenerating(true)
+  1044→    try {
+  1045→      const res = await fetch('/api/sijil', {
+  1046→        method: 'POST',
+  1047→        headers: { 'Content-Type': 'application/json' },
+  1048→        body: JSON.stringify({ kursusId: selectedKursus, dimuatNaikOlehId: 'admin' }),
+  1049→      })
+  1050→      const data = await res.json()
+  1051→      if (data.berjaya) {
+  1052→        toast({ title: 'Sijil Dijana', description: `${data.bilDijana} sijil berjaya dijana.` })
+  1053→        // Refresh
+  1054→        fetch(`/api/sijil?kursusId=${selectedKursus}`).then(r => r.json()).then(d => {
+  1055→          if (d.berjaya) setSijilList(d.data)
+  1056→        })
+  1057→      }
+  1058→    } catch {
+  1059→      toast({ title: 'Ralat', description: 'Galah menjana sijil.', variant: 'destructive' })
+  1060→    } finally {
+  1061→      setGenerating(false)
+  1062→    }
+  1063→  }
+  1064→
+  1065→  return (
+  1066→    <div className="space-y-4">
+  1067→      <div className="clay-card p-5">
+  1068→        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+  1069→          <h3 className="font-semibold" style={{ color: 'var(--clay-ink)' }}>Senarai Sijil</h3>
+  1070→          <select value={selectedKursus} onChange={(e) => handleKursusChange(e.target.value)}
+  1071→            className="clay-input px-4 py-2 text-sm flex-1 sm:max-w-sm"
+  1072→            style={{ background: 'var(--clay)', color: 'var(--clay-ink)' }}>
+  1073→            {kursusList.map((k: any) => <option key={k.id} value={k.id}>{k.namaKursusBm}</option>)}
+  1074→          </select>
+  1075→          <button onClick={handleBulkGenerate} disabled={generating}
+  1076→            className="clay-btn text-sm flex items-center gap-2"
+  1077→            style={{ borderRadius: '16px' }}>
+  1078→            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+  1079→            Jana Semua Sijil
+  1080→          </button>
+  1081→        </div>
+  1082→      </div>
+  1083→
+  1084→      {loading ? <LoadingSpinner /> : (
+  1085→        <div className="clay-card p-5">
+  1086→          <div className="overflow-x-auto">
+  1087→            <table className="w-full text-sm">
+  1088→              <thead>
+  1089→                <tr style={{ background: 'var(--clay-primary)', color: 'white' }}>
+  1090→                  <th className="px-3 py-3 text-left rounded-tl-xl">No. Siri</th>
+  1091→                  <th className="px-3 py-3 text-left">Nama Peserta</th>
+  1092→                  <th className="px-3 py-3 text-left">No. MyKad</th>
+  1093→                  <th className="px-3 py-3 text-center">Status</th>
+  1094→                  <th className="px-3 py-3 text-center rounded-tr-xl">Muat Turun</th>
+  1095→                </tr>
+  1096→              </thead>
+  1097→              <tbody>
+  1098→                {sijilList.map((s: any, i: number) => (
+  1099→                  <tr key={s.id} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(124,108,240,0.04)' }}>
+  1100→                    <td className="px-3 py-3 font-mono text-xs" style={{ color: 'var(--clay-primary)' }}>{s.noSiri}</td>
+  1101→                    <td className="px-3 py-3" style={{ color: 'var(--clay-ink)' }}>{s.peserta?.namaPenuh}</td>
+  1102→                    <td className="px-3 py-3 font-mono text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>
+  1103→                      {s.peserta?.noMykad ? `${s.peserta.noMykad.slice(0,6)}-${s.peserta.noMykad.slice(6,8)}-${s.peserta.noMykad.slice(8)}` : '-'}
+  1104→                    </td>
+  1105→                    <td className="px-3 py-3 text-center">
+  1106→                      <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+  1107→                        style={{ background: s.status === 'sah' ? 'var(--clay-success-bg)' : 'var(--clay-danger-bg)', color: s.status === 'sah' ? 'var(--clay-success)' : 'var(--clay-danger)' }}>
+  1108→                        {s.status === 'sah' ? 'Sah' : 'Dibatalkan'}
+  1109→                      </span>
+  1110→                    </td>
+  1111→                    <td className="px-3 py-3 text-center" style={{ color: 'var(--clay-ink-soft)' }}>{s.bilMuatTurun}</td>
+  1112→                  </tr>
+  1113→                ))}
+  1114→                {sijilList.length === 0 && (
+  1115→                  <tr><td colSpan={5} className="px-3 py-8 text-center" style={{ color: 'var(--clay-ink-soft)' }}>
+  1116→                    Tiada sijil lagi. Klik &quot;Jana Semua Sijil&quot; untuk menjana sijil bagi peserta yang layak.
+  1117→                  </td></tr>
+  1118→                )}
+  1119→              </tbody>
+  1120→            </table>
+  1121→          </div>
+  1122→        </div>
+  1123→      )}
+  1124→    </div>
+  1125→  )
+  1126→}
+  1127→
+  1128→// ============================================================
+  1129→// AUDIT TAB
+  1130→// ============================================================
+  1131→function AuditTab() {
+  1132→  const [data, setData] = useState<any[]>([])
+  1133→  const [loading, setLoading] = useState(true)
+  1134→
+  1135→  useEffect(() => {
+  1136→    fetch('/api/log-audit').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
+  1137→  }, [])
+  1138→
+  1139→  if (loading) return <LoadingSpinner />
+  1140→
+  1141→  return (
+  1142→    <div className="clay-card p-5">
+  1143→      <h3 className="font-semibold mb-4" style={{ color: 'var(--clay-ink)' }}>Log Audit</h3>
+  1144→      <div className="overflow-x-auto">
+  1145→        <table className="w-full text-sm">
+  1146→          <thead>
+  1147→            <tr style={{ background: 'var(--clay-primary)', color: 'white' }}>
+  1148→              <th className="px-3 py-3 text-left rounded-tl-xl">Masa</th>
+  1149→              <th className="px-3 py-3 text-left">Pengguna</th>
+  1150→              <th className="px-3 py-3 text-left">Tindakan</th>
+  1151→              <th className="px-3 py-3 text-left">Entiti</th>
+  1152→              <th className="px-3 py-3 text-left rounded-tr-xl">IP</th>
+  1153→            </tr>
+  1154→          </thead>
+  1155→          <tbody>
+  1156→            {data.map((l: any, i: number) => (
+  1157→              <tr key={l.id} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(124,108,240,0.04)' }}>
+  1158→                <td className="px-3 py-3 text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>{new Date(l.diciptaPada).toLocaleString('ms-MY')}</td>
+  1159→                <td className="px-3 py-3 text-xs" style={{ color: 'var(--clay-ink)' }}>{l.pengguna?.namaPenuh || 'Awam'}</td>
+  1160→                <td className="px-3 py-3 text-xs font-mono" style={{ color: 'var(--clay-primary)' }}>{l.tindakan}</td>
+  1161→                <td className="px-3 py-3 text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>{l.entiti}</td>
+  1162→                <td className="px-3 py-3 text-xs font-mono" style={{ color: 'var(--clay-ink-soft)' }}>{l.alamatIp}</td>
+  1163→              </tr>
+  1164→            ))}
+  1165→          </tbody>
+  1166→        </table>
+  1167→      </div>
+  1168→    </div>
+  1169→  )
+  1170→}
+  1171→
+  1172→// ============================================================
+  1173→// TETAPAN TAB
+  1174→// ============================================================
+  1175→function TetapanTab() {
+  1176→  const [data, setData] = useState<any>(null)
+  1177→  const [loading, setLoading] = useState(true)
+  1178→  const [saving, setSaving] = useState(false)
+  1179→  const { toast } = useToast()
+  1180→
+  1181→  useEffect(() => {
+  1182→    fetch('/api/tetapan').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
+  1183→  }, [])
+  1184→
+  1185→  const handleSave = async () => {
+  1186→    setSaving(true)
+  1187→    try {
+  1188→      const res = await fetch('/api/tetapan', {
+  1189→        method: 'PUT',
+  1190→        headers: { 'Content-Type': 'application/json' },
+  1191→        body: JSON.stringify(data),
+  1192→      })
+  1193→      if (res.ok) toast({ title: 'Tetapan Disimpan' })
+  1194→      else toast({ title: 'Ralat', variant: 'destructive' })
+  1195→    } finally {
+  1196→      setSaving(false)
+  1197→    }
+  1198→  }
+  1199→
+  1200→  if (loading) return <LoadingSpinner />
+  1201→
+  1202→  return (
+  1203→    <div className="clay-card p-6 max-w-2xl">
+  1204→      <h3 className="font-semibold mb-4" style={{ color: 'var(--clay-ink)' }}>Tetapan Sistem</h3>
+  1205→      {data && (
+  1206→        <div className="space-y-4">
+  1207→          <FormField label="Nama Institusi" value={data.namaInstitusi} onChange={(v) => setData({ ...data, namaInstitusi: v })} />
+  1208→          <FormField label="Alamat" value={data.alamatInstitusi || ''} onChange={(v) => setData({ ...data, alamatInstitusi: v })} />
+  1209→          <FormField label="E-mel Hubungan" value={data.emelHubungan || ''} onChange={(v) => setData({ ...data, emelHubungan: v })} />
+  1210→          <FormField label="Telefon" value={data.telefonHubungan || ''} onChange={(v) => setData({ ...data, telefonHubungan: v })} />
+  1211→          <FormField label="Nama Pengarah" value={data.namaPengarah || ''} onChange={(v) => setData({ ...data, namaPengarah: v })} />
+  1212→          <FormField label="Teks Pengaki Sijil" value={data.teksPengaki || ''} onChange={(v) => setData({ ...data, teksPengaki: v })} multiline />
+  1213→          
+  1214→          <div className="space-y-2 pt-2">
+  1215→            <h4 className="text-sm font-medium" style={{ color: 'var(--clay-ink-secondary)' }}>Ciri Sistem</h4>
+  1216→            <ToggleField label="Pengesahan Kedua (4 digit MyKad)" checked={data.pengesahanKedua} onChange={(v) => setData({ ...data, pengesahanKedua: v })} />
+  1217→            <ToggleField label="CAPTCHA" checked={data.captchaAktif} onChange={(v) => setData({ ...data, captchaAktif: v })} />
+  1218→            <ToggleField label="Mod Penyelenggaraan" checked={data.modPenyelenggaraan} onChange={(v) => setData({ ...data, modPenyelenggaraan: v })} />
+  1219→          </div>
+  1220→
+  1221→          <button onClick={handleSave} disabled={saving} className="clay-btn w-full flex items-center justify-center gap-2 mt-4">
+  1222→            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Settings className="w-4 h-4" />}
+  1223→            Simpan Tetapan
+  1224→          </button>
+  1225→        </div>
+  1226→      )}
+  1227→    </div>
+  1228→  )
+  1229→}
+  1230→
+  1231→// ============================================================
+  1232→// Helper Components
+  1233→// ============================================================
+  1234→function LoadingSpinner() {
+  1235→  return (
+  1236→    <div className="flex items-center justify-center py-12">
+  1237→      <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--clay-primary)' }} />
+  1238→    </div>
+  1239→  )
+  1240→}
+  1241→
+  1242→function FormField({ label, value, onChange, multiline }: { label: string; value: string; onChange: (v: string) => void; multiline?: boolean }) {
+  1243→  return (
+  1244→    <div>
+  1245→      <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--clay-ink-secondary)' }}>{label}</label>
+  1246→      {multiline ? (
+  1247→        <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={3}
+  1248→          className="w-full clay-input px-4 py-3 text-sm" style={{ background: 'var(--clay)', color: 'var(--clay-ink)' }} />
+  1249→      ) : (
+  1250→        <input type="text" value={value} onChange={(e) => onChange(e.target.value)}
+  1251→          className="w-full clay-input px-4 py-3 text-sm" style={{ background: 'var(--clay)', color: 'var(--clay-ink)' }} />
+  1252→      )}
+  1253→    </div>
+  1254→  )
+  1255→}
+  1256→
+  1257→function ToggleField({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  1258→  return (
+  1259→    <div className="flex items-center justify-between py-2">
+  1260→      <span className="text-sm" style={{ color: 'var(--clay-ink-secondary)' }}>{label}</span>
+  1261→      <button
+  1262→        onClick={() => onChange(!checked)}
+  1263→        className="relative w-12 h-6 rounded-full transition-colors"
+  1264→        style={{ background: checked ? 'var(--clay-primary)' : 'var(--clay-ink-soft)', boxShadow: 'var(--clay-shadow-sm)' }}
+  1265→      >
+  1266→        <span className="absolute top-1 w-4 h-4 rounded-full bg-white transition-transform"
+  1267→          style={{ left: checked ? '26px' : '4px', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+  1268→      </button>
+  1269→    </div>
+  1270→  )
+  1271→}
+  1272→
