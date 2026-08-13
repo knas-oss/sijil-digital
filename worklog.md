@@ -40,3 +40,32 @@ Stage Summary:
 - Official ADTEC logo properly placed
 - All system modules verified and functional
 - Demo login: admin@adtec.gov.my / Admin@2026
+
+---
+
+Task ID: 3
+Agent: main
+Task: Build Certificate Template Editor with drag & drop field mapping
+
+Work Log:
+- Enhanced /api/templat route with PUT (update fields) and DELETE methods
+- Built full TemplateEditor component with:
+  - Visual canvas showing A4 template with grid overlay
+  - Certificate header preview (ADTEC institution name, Sijil Penyertaan title)
+  - Drag & drop field positioning on canvas
+  - 12 available dynamic fields (nama_penuh, no_mykad, nama_kursus, nama_kursus_bi, kategori_program, julat_tarikh, tempoh_jam, no_siri, qr_pengesahan, tarikh_dijana, nama_institusi, tempat)
+  - Add/remove fields functionality
+  - Field property editor: position (X/Y %), width, font family, font size, font color, font style (biasa/tebal/condong/tebal condong), alignment (kiri/tengah/kanan), auto-shrink toggle
+  - Validation: template must have nama_penuh and nama_kursus fields
+  - Save functionality that replaces all fields via PUT API
+- Updated TemplatTab with gallery view showing field position previews and hover "Edit Templat" overlay
+- Added "Templat Baharu" button for creating new templates
+- Verified all functionality via Agent Browser: opening editor, selecting fields, editing properties, adding new fields, saving
+- Lint passes cleanly
+
+Stage Summary:
+- Full certificate template editor built per PRD FR-M5-04 specifications
+- Drag & drop field mapping working on visual canvas
+- Field property editor with all specified options (font, size, color, alignment, auto-shrink)
+- Save/load working with API
+- User can edit templates by clicking on them in the Templat gallery

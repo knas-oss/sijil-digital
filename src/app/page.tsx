@@ -10,13 +10,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Switch } from '@/components/ui/switch'
 import { useToast } from '@/hooks/use-toast'
 import {
   Search, Download, Printer, Eye, Shield, LogOut, LayoutDashboard,
   FolderOpen, GraduationCap, Users, FileText, Activity, Settings,
   ChevronRight, Calendar, Clock, Award, QrCode, CheckCircle2,
   XCircle, AlertCircle, Loader2, BarChart3, FileBadge, LogIn,
-  Plus, Edit2, Trash2, RefreshCw, ArrowLeft, Info
+  Plus, Edit2, Trash2, RefreshCw, ArrowLeft, Info, Save,
+  GripVertical, Type, AlignLeft, AlignCenter, AlignRight,
+  Bold, Italic, Move, X, ZoomIn, ZoomOut
 } from 'lucide-react'
 
 // ============================================================
@@ -952,11 +955,43 @@ function PesertaTab() {
 }
 
 // ============================================================
-// TEMPLAT TAB
+// TEMPLAT TAB - with full editor
 // ============================================================
+
+// Available dynamic fields for certificate templates
+const MEDAN_SENARAI = [
+  { kunci: 'nama_penuh', label: 'Nama Penuh', contoh: 'AMIRUL BIN ABDULLAH' },
+  { kunci: 'no_mykad', label: 'No. MyKad', contoh: '901231-12-5678' },
+  { kunci: 'nama_kursus', label: 'Nama Kursus (BM)', contoh: 'Pendawaian Elektrik Domestik' },
+  { kunci: 'nama_kursus_bi', label: 'Nama Kursus (BI)', contoh: 'Domestic Electrical Wiring' },
+  { kunci: 'kategori_program', label: 'Kategori Program', contoh: 'Kursus Pendek' },
+  { kunci: 'julat_tarikh', label: 'Julat Tarikh', contoh: '6 Januari – 10 Januari 2026' },
+  { kunci: 'tempoh_jam', label: 'Tempoh (jam)', contoh: '40 jam' },
+  { kunci: 'no_siri', label: 'No. Siri', contoh: 'ADTEC/SDK/2026/KP/00001' },
+  { kunci: 'qr_pengesahan', label: 'QR Pengesahan', contoh: '[QR CODE]' },
+  { kunci: 'tarikh_dijana', label: 'Tarikh Dijana', contoh: '10 Ogos 2026' },
+  { kunci: 'nama_institusi', label: 'Nama Institusi', contoh: 'ADTEC JTM Kampus Sandakan' },
+  { kunci: 'tempat', label: 'Tempat', contoh: 'ADTEC JTM Kampus Sandakan' },
+]
+
+const FON_SENARAI = ['Times New Roman', 'Arial', 'Helvetica', 'Courier New', 'Georgia', 'Verdana', 'Poppins']
+const GAYA_FON_SENARAI = [
+  { nilai: 'normal', label: 'Biasa' },
+  { nilai: 'tebal', label: 'Tebal' },
+  { nilai: 'condong', label: 'Condong' },
+  { nilai: 'tebal_condong', label: 'Tebal Condong' },
+]
+const PENJAJARAN_SENARAI = [
+  { nilai: 'kiri', label: 'Kiri', icon: AlignLeft },
+  { nilai: 'tengah', label: 'Tengah', icon: AlignCenter },
+  { nilai: 'kanan', label: 'Kanan', icon: AlignRight },
+]
+
 function TemplatTab() {
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [editingTemplate, setEditingTemplate] = useState<any>(null)
+  const { toast } = useToast()
 
   useEffect(() => {
     fetch('/api/templat').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
@@ -964,26 +999,99 @@ function TemplatTab() {
 
   if (loading) return <LoadingSpinner />
 
+  // If editing a template, show the editor
+  if (editingTemplate) {
+    return (
+      <TemplateEditor
+        template={editingTemplate}
+        onSave={async (updatedMedan: any[]) => {
+          try {
+            const res = await fetch('/api/templat', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ templatId: editingTemplate.id, medan: updatedMedan }),
+            })
+            const result = await res.json()
+            if (result.berjaya) {
+              toast({ title: 'Templat Disimpan', description: 'Medan templat berjaya dikemaskini.' })
+              setEditingTemplate(null)
+              setLoading(true)
+              fetch('/api/templat').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
+            } else {
+              toast({ title: 'Ralat', description: result.mesej, variant: 'destructive' })
+            }
+          } catch {
+            toast({ title: 'Ralat', description: 'Gagal menyimpan templat.', variant: 'destructive' })
+          }
+        }}
+        onClose={() => setEditingTemplate(null)}
+      />
+    )
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold" style={{ color: 'var(--clay-ink)' }}>Galeri Templat Sijil</h3>
+        <Button
+          onClick={() => {
+            setEditingTemplate({
+              id: 'new',
+              namaTemplat: 'Templat Baharu',
+              keterangan: '',
+              orientasi: 'landskap',
+              saizKertas: 'a4',
+              medanTemplat: [],
+              status: 'draf',
+              versi: 1,
+            })
+          }}
+          className="clay-btn text-sm px-4 py-2 flex items-center gap-2"
+          style={{ background: 'var(--clay-primary)', color: 'white', borderRadius: '20px', boxShadow: 'var(--clay-shadow-sm)' }}
+        >
+          <Plus className="w-4 h-4" /> Templat Baharu
+        </Button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {data.map((t: any) => (
-          <div key={t.id} className="clay-card p-5">
-            {/* Template preview area */}
-            <div className="rounded-xl mb-4 flex items-center justify-center"
+          <div key={t.id} className="clay-card p-5 cursor-pointer group" onClick={() => setEditingTemplate(t)}>
+            {/* Template preview with field positions */}
+            <div className="rounded-xl mb-4 relative overflow-hidden"
               style={{
-                background: t.orientasi === 'landskap' ? 'linear-gradient(135deg, #f8f9ff, #eef0fa)' : 'linear-gradient(180deg, #f8f9ff, #eef0fa)',
+                background: 'linear-gradient(135deg, #f8f9ff, #eef0fa)',
                 aspectRatio: t.orientasi === 'landskap' ? '297/210' : '210/297',
                 border: '2px dashed var(--border)',
               }}>
-              <div className="text-center">
-                <FileText className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--clay-primary)', opacity: 0.5 }} />
-                <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
-                  {t.orientasi === 'landskap' ? 'Landskap' : 'Potret'} · {t.saizKertas?.toUpperCase()}
-                </p>
+              {/* Render field positions as dots */}
+              {(t.medanTemplat || []).map((m: any, i: number) => (
+                <div key={i}
+                  className="absolute flex items-center justify-center"
+                  style={{
+                    left: `${m.posXPeratus}%`,
+                    top: `${m.posYPeratus}%`,
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                >
+                  <div className="px-1.5 py-0.5 rounded text-[6px] font-medium whitespace-nowrap"
+                    style={{
+                      background: m.jenisElemen === 'qr' ? 'rgba(226,109,142,0.15)' : 'rgba(124,108,240,0.12)',
+                      color: m.jenisElemen === 'qr' ? 'var(--clay-danger)' : 'var(--clay-primary)',
+                      border: `1px solid ${m.jenisElemen === 'qr' ? 'rgba(226,109,142,0.3)' : 'rgba(124,108,240,0.25)'}`,
+                    }}
+                  >
+                    {m.kunciMedan.replace(/_/g, ' ')}
+                  </div>
+                </div>
+              ))}
+              {/* Edit overlay */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ background: 'rgba(124,108,240,0.08)' }}
+              >
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
+                  style={{ background: 'var(--clay-primary)', color: 'white' }}
+                >
+                  <Edit2 className="w-3 h-3" /> <span className="text-xs font-medium">Edit Templat</span>
+                </div>
               </div>
             </div>
             <h4 className="font-semibold text-sm mb-1" style={{ color: 'var(--clay-ink)' }}>{t.namaTemplat}</h4>
@@ -996,10 +1104,517 @@ function TemplatTab() {
                 }}>
                 {t.status === 'aktif' ? 'Aktif' : t.status === 'draf' ? 'Draf' : 'Arkib'}
               </span>
-              <span className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>v{t.versi} · {t.medanTemplat?.length || 0} medan</span>
+              <span className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+                {t.orientasi === 'landskap' ? 'Landskap' : 'Potret'} · v{t.versi} · {t.medanTemplat?.length || 0} medan
+              </span>
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
+// TEMPLATE EDITOR - Drag & Drop Field Mapping
+// ============================================================
+function TemplateEditor({ template, onSave, onClose }: {
+  template: any
+  onSave: (medan: any[]) => void
+  onClose: () => void
+}) {
+  const [medan, setMedan] = useState<any[]>(template.medanTemplat || [])
+  const [selectedField, setSelectedField] = useState<number | null>(null)
+  const [dragging, setDragging] = useState<number | null>(null)
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const canvasRef = useRef<HTMLDivElement>(null)
+  const [saving, setSaving] = useState(false)
+  const { toast } = useToast()
+
+  const isLandscape = template.orientasi === 'landskap'
+
+  // Add a new field
+  const addField = (kunci: string) => {
+    const def = MEDAN_SENARAI.find(m => m.kunci === kunci)
+    if (!def) return
+    const newField = {
+      kunciMedan: kunci,
+      jenisElemen: kunci === 'qr_pengesahan' ? 'qr' : 'teks',
+      posXPeratus: 50,
+      posYPeratus: 50,
+      lebarPeratus: kunci === 'qr_pengesahan' ? 10 : 40,
+      keluargaFon: 'Times New Roman',
+      saizFon: kunci === 'nama_penuh' ? 36 : kunci === 'nama_kursus' ? 24 : 18,
+      warnaFon: '#1a1a2e',
+      gayaFon: kunci === 'nama_penuh' || kunci === 'nama_kursus' ? 'tebal' : 'normal',
+      penjajaran: 'tengah',
+      autoKecil: true,
+    }
+    setMedan([...medan, newField])
+    setSelectedField(medan.length)
+  }
+
+  // Remove a field
+  const removeField = (index: number) => {
+    const newMedan = medan.filter((_: any, i: number) => i !== index)
+    setMedan(newMedan)
+    if (selectedField === index) setSelectedField(null)
+    else if (selectedField !== null && selectedField > index) setSelectedField(selectedField - 1)
+  }
+
+  // Update a field property
+  const updateField = (index: number, key: string, value: any) => {
+    const newMedan = [...medan]
+    newMedan[index] = { ...newMedan[index], [key]: value }
+    setMedan(newMedan)
+  }
+
+  // Mouse handlers for drag
+  const handleMouseDown = (e: React.MouseEvent, index: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragging(index)
+    setSelectedField(index)
+    const rect = canvasRef.current?.getBoundingClientRect()
+    if (rect) {
+      const fieldEl = e.currentTarget as HTMLElement
+      const fieldRect = fieldEl.getBoundingClientRect()
+      setDragOffset({
+        x: e.clientX - fieldRect.left - fieldRect.width / 2,
+        y: e.clientY - fieldRect.top - fieldRect.height / 2,
+      })
+    }
+  }
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (dragging === null || !canvasRef.current) return
+    const rect = canvasRef.current.getBoundingClientRect()
+    const x = ((e.clientX - rect.left) / rect.width) * 100
+    const y = ((e.clientY - rect.top) / rect.height) * 100
+    const clampedX = Math.max(5, Math.min(95, x))
+    const clampedY = Math.max(5, Math.min(95, y))
+    setMedan(prev => {
+      const newMedan = [...prev]
+      if (dragging !== null && newMedan[dragging]) {
+        newMedan[dragging] = { ...newMedan[dragging], posXPeratus: Math.round(clampedX * 10) / 10, posYPeratus: Math.round(clampedY * 10) / 10 }
+      }
+      return newMedan
+    })
+  }, [dragging])
+
+  const handleMouseUp = useCallback(() => {
+    setDragging(null)
+  }, [])
+
+  // Save handler
+  const handleSave = async () => {
+    // Validate: must have nama_penuh and nama_kursus
+    const hasNama = medan.some((m: any) => m.kunciMedan === 'nama_penuh')
+    const hasKursus = medan.some((m: any) => m.kunciMedan === 'nama_kursus')
+    if (!hasNama || !hasKursus) {
+      toast({
+        title: 'Medan Wajib Hilang',
+        description: 'Templat mesti mempunyai medan Nama Penuh dan Nama Kursus.',
+        variant: 'destructive',
+      })
+      return
+    }
+    setSaving(true)
+    await onSave(medan)
+    setSaving(false)
+  }
+
+  const selectedFieldData = selectedField !== null ? medan[selectedField] : null
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={onClose}
+            className="clay-btn-secondary text-sm px-3 py-2"
+            variant="outline"
+            style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" /> Kembali
+          </Button>
+          <div>
+            <h3 className="font-semibold" style={{ color: 'var(--clay-ink)' }}>Editor Templat Sijil</h3>
+            <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>{template.namaTemplat}</p>
+          </div>
+        </div>
+        <Button
+          onClick={handleSave}
+          disabled={saving}
+          className="clay-btn text-sm px-5 py-2 flex items-center gap-2"
+          style={{ background: 'var(--clay-primary)', color: 'white', borderRadius: '20px', boxShadow: 'var(--clay-shadow-sm)' }}
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {saving ? 'Menyimpan...' : 'Simpan Templat'}
+        </Button>
+      </div>
+
+      {/* Main Editor Area */}
+      <div className="flex flex-col lg:flex-row gap-4">
+        {/* Canvas */}
+        <div className="flex-1">
+          <div className="clay-card-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>
+                Kanvas Templat — {isLandscape ? 'Landskap' : 'Potret'} {template.saizKertas?.toUpperCase()}
+              </span>
+              <span className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+                Seret medan untuk mengubah kedudukan
+              </span>
+            </div>
+            {/* Canvas */}
+            <div
+              ref={canvasRef}
+              className="relative mx-auto rounded-lg overflow-hidden cursor-crosshair"
+              style={{
+                width: '100%',
+                aspectRatio: isLandscape ? '297/210' : '210/297',
+                background: 'linear-gradient(135deg, #fafbff 0%, #f0f1f8 50%, #e8eaf4 100%)',
+                border: '2px solid var(--border)',
+                boxShadow: 'inset 0 2px 8px rgba(120,124,170,0.1)',
+              }}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+            >
+              {/* Grid overlay */}
+              <div className="absolute inset-0" style={{
+                backgroundImage: 'linear-gradient(rgba(120,124,170,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(120,124,170,0.06) 1px, transparent 1px)',
+                backgroundSize: '10% 10%',
+              }} />
+
+              {/* Certificate header preview */}
+              <div className="absolute top-0 left-0 right-0 text-center pt-3">
+                <p className="text-[7px] font-bold tracking-wider" style={{ color: 'rgba(47,49,80,0.4)' }}>ADVANCED TECHNOLOGY TRAINING CENTRE (ADTEC)</p>
+                <p className="text-[5px]" style={{ color: 'rgba(47,49,80,0.25)' }}>JABATAN TENAGA MANUSIA, KEMENTERIAN SUMBER MANUSIA</p>
+                <div className="mx-auto mt-1" style={{ width: '60%', height: '1px', background: 'rgba(124,108,240,0.2)' }} />
+                <p className="text-[9px] font-bold mt-2" style={{ color: 'rgba(47,49,80,0.35)' }}>SIJIL PENYERTAAN</p>
+                <p className="text-[6px] italic" style={{ color: 'rgba(47,49,80,0.2)' }}>CERTIFICATE OF PARTICIPATION</p>
+              </div>
+
+              {/* Decorative border */}
+              <div className="absolute inset-2 rounded-md" style={{ border: '1px solid rgba(124,108,240,0.15)' }} />
+
+              {/* Field items */}
+              {medan.map((m: any, index: number) => {
+                const isSelected = selectedField === index
+                const isDraggingThis = dragging === index
+                const fieldDef = MEDAN_SENARAI.find(f => f.kunci === m.kunciMedan)
+                const displayText = m.jenisElemen === 'qr' ? 'QR' : (fieldDef?.contoh || m.kunciMedan)
+                const isBold = m.gayaFon === 'tebal' || m.gayaFon === 'tebal_condong'
+                const isItalic = m.gayaFon === 'condong' || m.gayaFon === 'tebal_condong'
+
+                return (
+                  <div
+                    key={index}
+                    className="absolute select-none"
+                    style={{
+                      left: `${m.posXPeratus}%`,
+                      top: `${m.posYPeratus}%`,
+                      transform: 'translate(-50%, -50%)',
+                      cursor: isDraggingThis ? 'grabbing' : 'grab',
+                      zIndex: isDraggingThis ? 100 : isSelected ? 50 : 10,
+                      transition: isDraggingThis ? 'none' : 'box-shadow 0.15s',
+                    }}
+                    onMouseDown={(e) => handleMouseDown(e, index)}
+                    onClick={(e) => { e.stopPropagation(); setSelectedField(index) }}
+                  >
+                    <div
+                      className="px-2 py-1 rounded-lg text-center whitespace-nowrap"
+                      style={{
+                        minWidth: m.jenisElemen === 'qr' ? '28px' : undefined,
+                        fontSize: `${Math.max(6, Math.min(12, m.saizFon / 3))}px`,
+                        fontFamily: m.keluargaFon,
+                        fontWeight: isBold ? 700 : 400,
+                        fontStyle: isItalic ? 'italic' : 'normal',
+                        color: m.warnaFon,
+                        background: isSelected
+                          ? 'rgba(124,108,240,0.12)'
+                          : m.jenisElemen === 'qr'
+                            ? 'rgba(226,109,142,0.08)'
+                            : 'rgba(255,255,255,0.7)',
+                        border: isSelected
+                          ? '2px solid var(--clay-primary)'
+                          : '1px dashed rgba(120,124,170,0.3)',
+                        boxShadow: isSelected ? '0 0 0 3px rgba(124,108,240,0.15)' : 'none',
+                        width: `${m.lebarPeratus * 3}px`,
+                      }}
+                    >
+                      {m.jenisElemen === 'qr' ? (
+                        <div className="flex items-center justify-center" style={{ width: '24px', height: '24px', margin: '0 auto' }}>
+                          <QrCode className="w-4 h-4" style={{ color: m.warnaFon }} />
+                        </div>
+                      ) : (
+                        <span className="block truncate">{displayText}</span>
+                      )}
+                    </div>
+                    {/* Field label */}
+                    <p className="text-[5px] mt-0.5 text-center font-medium" style={{ color: isSelected ? 'var(--clay-primary)' : 'rgba(120,124,170,0.6)' }}>
+                      {m.kunciMedan.replace(/_/g, ' ')}
+                    </p>
+                  </div>
+                )
+              })}
+
+              {/* Empty state */}
+              {medan.length === 0 && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center">
+                    <Move className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--clay-ink-soft)', opacity: 0.4 }} />
+                    <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>Tambah medan dari panel sebelah kanan</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Panel: Field List + Properties */}
+        <div className="w-full lg:w-80 space-y-4">
+          {/* Add Fields */}
+          <div className="clay-card p-4">
+            <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--clay-ink)' }}>Tambah Medan</h4>
+            <div className="space-y-1 max-h-48 overflow-y-auto clay-scroll">
+              {MEDAN_SENARAI.filter(m => !medan.some((f: any) => f.kunciMedan === m.kunci)).map(m => (
+                <button
+                  key={m.kunci}
+                  onClick={() => addField(m.kunci)}
+                  className="w-full text-left px-3 py-1.5 rounded-xl text-xs flex items-center gap-2 transition-all hover:scale-[1.02]"
+                  style={{
+                    background: 'var(--clay-bg)',
+                    color: 'var(--clay-ink-secondary)',
+                    border: '1px dashed var(--border)',
+                  }}
+                >
+                  <Plus className="w-3 h-3" style={{ color: 'var(--clay-primary)' }} />
+                  <span className="font-medium">{m.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Current Fields List */}
+          <div className="clay-card p-4">
+            <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--clay-ink)' }}>
+              Medan Templat ({medan.length})
+            </h4>
+            <div className="space-y-1 max-h-60 overflow-y-auto clay-scroll">
+              {medan.map((m: any, index: number) => {
+                const fieldDef = MEDAN_SENARAI.find(f => f.kunci === m.kunciMedan)
+                const isSelected = selectedField === index
+                return (
+                  <div
+                    key={index}
+                    className={`flex items-center gap-2 px-2 py-1.5 rounded-xl text-xs cursor-pointer transition-all ${isSelected ? '' : ''}`}
+                    style={{
+                      background: isSelected ? 'rgba(124,108,240,0.1)' : 'transparent',
+                      border: isSelected ? '1px solid rgba(124,108,240,0.3)' : '1px solid transparent',
+                      color: isSelected ? 'var(--clay-primary-dark)' : 'var(--clay-ink-secondary)',
+                    }}
+                    onClick={() => setSelectedField(index)}
+                  >
+                    <GripVertical className="w-3 h-3 opacity-40" />
+                    <span className="flex-1 font-medium truncate">{fieldDef?.label || m.kunciMedan}</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); removeField(index) }}
+                      className="p-0.5 rounded hover:bg-red-50 transition-colors"
+                      style={{ color: 'var(--clay-danger)' }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )
+              })}
+              {medan.length === 0 && (
+                <p className="text-xs text-center py-2" style={{ color: 'var(--clay-ink-soft)' }}>Tiada medan lagi</p>
+              )}
+            </div>
+          </div>
+
+          {/* Field Properties Editor */}
+          {selectedFieldData && (
+            <div className="clay-card p-4">
+              <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--clay-ink)' }}>Sifat Medan</h4>
+              <div className="space-y-3">
+                {/* Field name */}
+                <div>
+                  <label className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>Medan</label>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--clay-ink)' }}>
+                    {MEDAN_SENARAI.find(f => f.kunci === selectedFieldData.kunciMedan)?.label || selectedFieldData.kunciMedan}
+                  </p>
+                </div>
+
+                {/* Position */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>X (%)</label>
+                    <input
+                      type="number" min={0} max={100} step={0.5}
+                      value={Math.round(selectedFieldData.posXPeratus * 10) / 10}
+                      onChange={(e) => updateField(selectedField!, 'posXPeratus', parseFloat(e.target.value) || 0)}
+                      className="w-full mt-1 px-2 py-1 rounded-lg text-xs"
+                      style={{
+                        background: 'var(--clay-bg)',
+                        border: '1px solid var(--border)',
+                        color: 'var(--clay-ink)',
+                        boxShadow: 'var(--clay-inset)',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>Y (%)</label>
+                    <input
+                      type="number" min={0} max={100} step={0.5}
+                      value={Math.round(selectedFieldData.posYPeratus * 10) / 10}
+                      onChange={(e) => updateField(selectedField!, 'posYPeratus', parseFloat(e.target.value) || 0)}
+                      className="w-full mt-1 px-2 py-1 rounded-lg text-xs"
+                      style={{
+                        background: 'var(--clay-bg)',
+                        border: '1px solid var(--border)',
+                        color: 'var(--clay-ink)',
+                        boxShadow: 'var(--clay-inset)',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Width */}
+                <div>
+                  <label className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>Lebar (%)</label>
+                  <input
+                    type="range" min={5} max={90} step={1}
+                    value={selectedFieldData.lebarPeratus}
+                    onChange={(e) => updateField(selectedField!, 'lebarPeratus', parseFloat(e.target.value))}
+                    className="w-full mt-1 accent-[#7C6CF0]"
+                  />
+                  <span className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>{selectedFieldData.lebarPeratus}%</span>
+                </div>
+
+                {/* Font family */}
+                {selectedFieldData.jenisElemen !== 'qr' && (
+                  <>
+                    <div>
+                      <label className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>Fon</label>
+                      <select
+                        value={selectedFieldData.keluargaFon}
+                        onChange={(e) => updateField(selectedField!, 'keluargaFon', e.target.value)}
+                        className="w-full mt-1 px-2 py-1 rounded-lg text-xs"
+                        style={{
+                          background: 'var(--clay-bg)',
+                          border: '1px solid var(--border)',
+                          color: 'var(--clay-ink)',
+                          boxShadow: 'var(--clay-inset)',
+                        }}
+                      >
+                        {FON_SENARAI.map(f => <option key={f} value={f}>{f}</option>)}
+                      </select>
+                    </div>
+
+                    {/* Font size */}
+                    <div>
+                      <label className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>Saiz Fon (pt)</label>
+                      <input
+                        type="number" min={8} max={72} step={1}
+                        value={selectedFieldData.saizFon}
+                        onChange={(e) => updateField(selectedField!, 'saizFon', parseFloat(e.target.value) || 12)}
+                        className="w-full mt-1 px-2 py-1 rounded-lg text-xs"
+                        style={{
+                          background: 'var(--clay-bg)',
+                          border: '1px solid var(--border)',
+                          color: 'var(--clay-ink)',
+                          boxShadow: 'var(--clay-inset)',
+                        }}
+                      />
+                    </div>
+
+                    {/* Font color */}
+                    <div>
+                      <label className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>Warna Fon</label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <input
+                          type="color"
+                          value={selectedFieldData.warnaFon}
+                          onChange={(e) => updateField(selectedField!, 'warnaFon', e.target.value)}
+                          className="w-8 h-8 rounded-lg cursor-pointer"
+                          style={{ border: '1px solid var(--border)' }}
+                        />
+                        <input
+                          type="text"
+                          value={selectedFieldData.warnaFon}
+                          onChange={(e) => updateField(selectedField!, 'warnaFon', e.target.value)}
+                          className="flex-1 px-2 py-1 rounded-lg text-xs"
+                          style={{
+                            background: 'var(--clay-bg)',
+                            border: '1px solid var(--border)',
+                            color: 'var(--clay-ink)',
+                            fontFamily: 'monospace',
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Font style */}
+                    <div>
+                      <label className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>Gaya Fon</label>
+                      <div className="flex gap-1 mt-1">
+                        {GAYA_FON_SENARAI.map(g => (
+                          <button
+                            key={g.nilai}
+                            onClick={() => updateField(selectedField!, 'gayaFon', g.nilai)}
+                            className="px-2 py-1 rounded-lg text-xs font-medium transition-all"
+                            style={{
+                              background: selectedFieldData.gayaFon === g.nilai ? 'var(--clay-primary)' : 'var(--clay-bg)',
+                              color: selectedFieldData.gayaFon === g.nilai ? 'white' : 'var(--clay-ink-secondary)',
+                              border: `1px solid ${selectedFieldData.gayaFon === g.nilai ? 'var(--clay-primary)' : 'var(--border)'}`,
+                            }}
+                          >
+                            {g.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Alignment */}
+                    <div>
+                      <label className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>Penjajaran</label>
+                      <div className="flex gap-1 mt-1">
+                        {PENJAJARAN_SENARAI.map(p => (
+                          <button
+                            key={p.nilai}
+                            onClick={() => updateField(selectedField!, 'penjajaran', p.nilai)}
+                            className="p-1.5 rounded-lg transition-all"
+                            style={{
+                              background: selectedFieldData.penjajaran === p.nilai ? 'var(--clay-primary)' : 'var(--clay-bg)',
+                              color: selectedFieldData.penjajaran === p.nilai ? 'white' : 'var(--clay-ink-secondary)',
+                              border: `1px solid ${selectedFieldData.penjajaran === p.nilai ? 'var(--clay-primary)' : 'var(--border)'}`,
+                            }}
+                          >
+                            <p.icon className="w-3.5 h-3.5" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Auto-shrink */}
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-medium" style={{ color: 'var(--clay-ink-soft)' }}>Auto-Kecil</label>
+                      <Switch
+                        checked={selectedFieldData.autoKecil}
+                        onCheckedChange={(v) => updateField(selectedField!, 'autoKecil', v)}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
