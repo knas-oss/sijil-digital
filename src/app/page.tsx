@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -19,7 +20,8 @@ import {
   XCircle, AlertCircle, Loader2, BarChart3, FileBadge, LogIn,
   Plus, Edit2, Trash2, RefreshCw, ArrowLeft, Info, Save,
   GripVertical, Type, AlignLeft, AlignCenter, AlignRight,
-  Bold, Italic, Move, X, ZoomIn, ZoomOut
+  Bold, Italic, Move, X, ZoomIn, ZoomOut,
+  Share2, Copy, Check, ExternalLink, UserPlus, Mail, Phone
 } from 'lucide-react'
 
 // ============================================================
@@ -72,9 +74,19 @@ function formatDateShort(date: Date | string): string {
 }
 
 // ============================================================
-// Main Page Component
+// Main Page Component (wraps HomeContent in Suspense for useSearchParams)
 // ============================================================
 export default function Home() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--clay-bg)' }}><Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--clay-primary)' }} /></div>}>
+      <HomeContent />
+    </Suspense>
+  )
+}
+
+function HomeContent() {
+  const searchParams = useSearchParams()
+  const daftarKursusId = searchParams.get('daftar')
   const [view, setView] = useState<'public' | 'admin'>('public')
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null)
   const [adminTab, setAdminTab] = useState('dashboard')
@@ -125,7 +137,7 @@ export default function Home() {
       {/* Main Content */}
       <main className="flex-1 px-4 py-6">
         {view === 'public' ? (
-          <PublicPortal />
+          <PublicPortal daftarKursusId={daftarKursusId} />
         ) : adminUser ? (
           <AdminPortal user={adminUser} activeTab={adminTab} onTabChange={setAdminTab} onLogout={() => { setAdminUser(null); setView('public') }} />
         ) : (
@@ -151,7 +163,7 @@ export default function Home() {
 // ============================================================
 // PUBLIC PORTAL
 // ============================================================
-function PublicPortal() {
+function PublicPortal({ daftarKursusId }: { daftarKursusId: string | null }) {
   const [mykadInput, setMykadInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<{ bilangan: number; namaDipaparkan: string; noMykadFormat: string; sijil: SijilItem[] } | null>(null)
@@ -160,6 +172,76 @@ function PublicPortal() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
   const [pdfLoading, setPdfLoading] = useState(false)
   const { toast } = useToast()
+
+  // Registration form state
+  const [daftarMode, setDaftarMode] = useState(false)
+  const [daftarKursus, setDaftarKursus] = useState<any>(null)
+  const [daftarLoading, setDaftarLoading] = useState(false)
+  const [daftarSuccess, setDaftarSuccess] = useState(false)
+  const [daftarNama, setDaftarNama] = useState('')
+  const [daftarMykad, setDaftarMykad] = useState('')
+  const [daftarTelefon, setDaftarTelefon] = useState('')
+  const [daftarEmel, setDaftarEmel] = useState('')
+  const [daftarJantina, setDaftarJantina] = useState('')
+  const [daftarError, setDaftarError] = useState('')
+
+  useEffect(() => {
+    if (daftarKursusId) {
+      setDaftarMode(true)
+      setDaftarLoading(true)
+      fetch(`/api/awam/pendaftaran?kursusId=${daftarKursusId}`)
+        .then(r => r.json())
+        .then(d => {
+          if (d.berjaya) setDaftarKursus(d.data)
+          else setDaftarError(d.mesej || 'Kursus tidak dijumpai.')
+        })
+        .catch(() => setDaftarError('Ralat sambungan.'))
+        .finally(() => setDaftarLoading(false))
+    }
+  }, [daftarKursusId])
+
+  const handleDaftarMyKadChange = (value: string) => {
+    const digits = value.replace(/[^0-9]/g, '')
+    if (digits.length > 12) return
+    let formatted = digits
+    if (digits.length > 6) formatted = `${digits.slice(0, 6)}-${digits.slice(6)}`
+    if (digits.length > 8) formatted = `${digits.slice(0, 6)}-${digits.slice(6, 8)}-${digits.slice(8)}`
+    setDaftarMykad(formatted)
+  }
+
+  const handleDaftar = async () => {
+    const digits = daftarMykad.replace(/[^0-9]/g, '')
+    if (!daftarNama.trim() || digits.length !== 12) {
+      setDaftarError('Nama penuh dan nombor MyKad 12 digit wajib diisi.')
+      return
+    }
+    setDaftarLoading(true)
+    setDaftarError('')
+    try {
+      const res = await fetch('/api/awam/pendaftaran', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kursusId: daftarKursusId,
+          namaPenuh: daftarNama,
+          noMykad: digits,
+          noTelefon: daftarTelefon,
+          emel: daftarEmel,
+          jantina: daftarJantina,
+        }),
+      })
+      const data = await res.json()
+      if (data.berjaya) {
+        setDaftarSuccess(true)
+      } else {
+        setDaftarError(data.mesej || 'Gagal mendaftar.')
+      }
+    } catch {
+      setDaftarError('Ralat sambungan. Sila cuba sebentar lagi.')
+    } finally {
+      setDaftarLoading(false)
+    }
+  }
 
   // Format MyKad with dashes as user types
   const handleMyKadChange = (value: string) => {
@@ -268,6 +350,227 @@ function PublicPortal() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* ====== REGISTRATION MODE ====== */}
+      {daftarMode && (
+        <div className="space-y-6">
+          {/* Hero */}
+          <div className="clay-card-lg p-8 sm:p-12 text-center hero-gradient relative overflow-hidden">
+            <div className="absolute inset-0 opacity-5" style={{ background: 'radial-gradient(circle at 30% 40%, var(--clay-primary), transparent 50%)' }} />
+            <div className="relative z-10">
+              <img src="/logo-adtec.png" alt="Logo ADTEC" className="h-16 sm:h-20 mx-auto mb-4 object-contain clay-float" />
+              <h1 className="text-2xl sm:text-4xl font-bold mb-2" style={{ color: 'var(--clay-ink)' }}>
+                Pendaftaran Kursus
+              </h1>
+              <p className="text-lg sm:text-xl mb-1" style={{ color: 'var(--clay-primary-dark)' }}>
+                e-Sijil ADTEC Sandakan
+              </p>
+              <p className="text-sm max-w-lg mx-auto" style={{ color: 'var(--clay-ink-secondary)' }}>
+                Isikan maklumat anda untuk mendaftar kursus. Pendaftaran memerlukan kelulusan pentadbir.
+              </p>
+            </div>
+          </div>
+
+          {daftarLoading && !daftarKursus && !daftarError && (
+            <div className="clay-card p-8 text-center">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3" style={{ color: 'var(--clay-primary)' }} />
+              <p className="text-sm" style={{ color: 'var(--clay-ink-soft)' }}>Memuat maklumat kursus...</p>
+            </div>
+          )}
+
+          {daftarError && !daftarKursus && (
+            <div className="clay-card p-8 text-center">
+              <AlertCircle className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--clay-danger)' }} />
+              <h3 className="font-semibold text-lg mb-2" style={{ color: 'var(--clay-ink)' }}>Ralat</h3>
+              <p className="text-sm mb-4" style={{ color: 'var(--clay-danger)' }}>{daftarError}</p>
+              <button onClick={() => { window.location.href = '/' }} className="clay-btn-secondary text-sm px-5 py-2" style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}>
+                <ArrowLeft className="w-4 h-4 inline mr-1" /> Kembali ke e-Sijil
+              </button>
+            </div>
+          )}
+
+          {daftarSuccess && (
+            <div className="clay-card p-8 text-center">
+              <CheckCircle2 className="w-16 h-16 mx-auto mb-4" style={{ color: 'var(--clay-success)' }} />
+              <h3 className="font-bold text-xl mb-2" style={{ color: 'var(--clay-ink)' }}>Pendaftaran Berjaya Dihantar!</h3>
+              <p className="text-sm mb-4 max-w-md mx-auto" style={{ color: 'var(--clay-ink-secondary)' }}>
+                Permohonan pendaftaran anda telah dihantar. Sila tunggu kelulusan pentadbir sebelum anda dimasukkan sebagai peserta rasmi.
+              </p>
+              <div className="clay-card-sm p-4 max-w-sm mx-auto mb-4" style={{ background: 'rgba(79,196,161,0.08)' }}>
+                <p className="text-xs" style={{ color: 'var(--clay-success)' }}>
+                  <Info className="w-3.5 h-3.5 inline mr-1" />
+                  Anda akan dimaklumkan melalui e-mel atau telefon setelah pendaftaran diluluskan.
+                </p>
+              </div>
+              <button onClick={() => { window.location.href = '/' }} className="clay-btn text-sm px-5 py-2 flex items-center gap-2 mx-auto">
+                <ArrowLeft className="w-4 h-4" /> Kembali ke e-Sijil
+              </button>
+            </div>
+          )}
+
+          {daftarKursus && !daftarSuccess && (
+            <>
+              {/* Kursus Info Card */}
+              <div className="clay-card p-6">
+                <h3 className="font-semibold text-base mb-3 flex items-center gap-2" style={{ color: 'var(--clay-ink)' }}>
+                  <GraduationCap className="w-5 h-5" style={{ color: 'var(--clay-primary)' }} />
+                  Maklumat Kursus
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="clay-card-sm p-3">
+                    <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>Nama Kursus</p>
+                    <p className="font-semibold text-sm" style={{ color: 'var(--clay-ink)' }}>{daftarKursus.namaKursusBm}</p>
+                  </div>
+                  <div className="clay-card-sm p-3">
+                    <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>Kod Kursus</p>
+                    <p className="font-mono text-sm" style={{ color: 'var(--clay-primary)' }}>{daftarKursus.kodKursus}</p>
+                  </div>
+                  <div className="clay-card-sm p-3">
+                    <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>Kategori</p>
+                    <p className="text-sm" style={{ color: 'var(--clay-ink)' }}>{daftarKursus.kategori}</p>
+                  </div>
+                  <div className="clay-card-sm p-3">
+                    <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>Tarikh</p>
+                    <p className="text-sm" style={{ color: 'var(--clay-ink)' }}>{formatDateShort(daftarKursus.tarikhMula)} – {formatDateShort(daftarKursus.tarikhTamat)}</p>
+                  </div>
+                  {daftarKursus.tempat && (
+                    <div className="clay-card-sm p-3">
+                      <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>Tempat</p>
+                      <p className="text-sm" style={{ color: 'var(--clay-ink)' }}>{daftarKursus.tempat}</p>
+                    </div>
+                  )}
+                  {daftarKursus.penyelaras && (
+                    <div className="clay-card-sm p-3">
+                      <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>Penyelaras</p>
+                      <p className="text-sm" style={{ color: 'var(--clay-ink)' }}>{daftarKursus.penyelaras}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Registration Form Card */}
+              <div className="clay-card p-6 sm:p-8">
+                <h3 className="font-semibold text-base mb-4 flex items-center gap-2" style={{ color: 'var(--clay-ink)' }}>
+                  <UserPlus className="w-5 h-5" style={{ color: 'var(--clay-primary)' }} />
+                  Borang Pendaftaran
+                </h3>
+                <div className="space-y-4">
+                  {/* Nama Penuh */}
+                  <div>
+                    <label className="text-sm font-semibold mb-1 block" style={{ color: 'var(--clay-ink-secondary)' }}>
+                      Nama Penuh <span style={{ color: 'var(--clay-destructive)' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={daftarNama}
+                      onChange={e => setDaftarNama(e.target.value)}
+                      placeholder="NAMA PENUH SEPERTI DI MYKAD"
+                      className="w-full clay-input px-4 py-3 uppercase"
+                      style={{ background: 'var(--clay)', color: 'var(--clay-ink)' }}
+                    />
+                  </div>
+                  {/* No. MyKad */}
+                  <div>
+                    <label className="text-sm font-semibold mb-1 block" style={{ color: 'var(--clay-ink-secondary)' }}>
+                      No. MyKad <span style={{ color: 'var(--clay-destructive)' }}>*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={daftarMykad}
+                        onChange={e => handleDaftarMyKadChange(e.target.value)}
+                        placeholder="901231-12-5678"
+                        className="w-full clay-input px-6 py-3 text-center"
+                        style={{ background: 'var(--clay)', color: 'var(--clay-ink)', fontSize: '18px', letterSpacing: '2px' }}
+                        maxLength={14}
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+                        {daftarMykad.replace(/[^0-9]/g, '').length}/12
+                      </span>
+                    </div>
+                  </div>
+                  {/* No. Telefon & Emel */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-semibold mb-1 block" style={{ color: 'var(--clay-ink-secondary)' }}>No. Telefon</label>
+                      <div className="relative">
+                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--clay-ink-soft)' }} />
+                        <input
+                          type="tel"
+                          value={daftarTelefon}
+                          onChange={e => setDaftarTelefon(e.target.value)}
+                          placeholder="012-3456789"
+                          className="w-full clay-input pl-10 pr-4 py-3"
+                          style={{ background: 'var(--clay)', color: 'var(--clay-ink)' }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-semibold mb-1 block" style={{ color: 'var(--clay-ink-secondary)' }}>E-mel</label>
+                      <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--clay-ink-soft)' }} />
+                        <input
+                          type="email"
+                          value={daftarEmel}
+                          onChange={e => setDaftarEmel(e.target.value)}
+                          placeholder="contoh@emel.com"
+                          className="w-full clay-input pl-10 pr-4 py-3"
+                          style={{ background: 'var(--clay)', color: 'var(--clay-ink)' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  {/* Jantina */}
+                  <div>
+                    <label className="text-sm font-semibold mb-1 block" style={{ color: 'var(--clay-ink-secondary)' }}>Jantina</label>
+                    <Select value={daftarJantina} onValueChange={setDaftarJantina}>
+                      <SelectTrigger className="h-11" style={{ borderRadius: '16px', boxShadow: 'var(--clay-inset)', background: 'var(--clay)', border: '2px solid transparent' }}>
+                        <SelectValue placeholder="Pilih jantina" />
+                      </SelectTrigger>
+                      <SelectContent style={{ borderRadius: '16px' }}>
+                        <SelectItem value="lelaki">Lelaki</SelectItem>
+                        <SelectItem value="perempuan">Perempuan</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {daftarError && (
+                    <div className="rounded-xl p-3 text-sm" style={{ background: 'var(--clay-danger-bg)', color: 'var(--clay-danger)', borderRadius: '12px' }}>
+                      {daftarError}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleDaftar}
+                    disabled={daftarLoading || !daftarNama.trim() || daftarMykad.replace(/[^0-9]/g, '').length !== 12}
+                    className="clay-btn w-full flex items-center justify-center gap-2 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {daftarLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <UserPlus className="w-5 h-5" />}
+                    {daftarLoading ? 'Menghantar...' : 'Hantar Pendaftaran'}
+                  </button>
+
+                  <div className="flex items-start gap-2 p-3 rounded-xl" style={{ background: 'rgba(79,196,161,0.08)' }}>
+                    <Info className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--clay-success)' }} />
+                    <p className="text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>
+                      Pendaftaran anda perlu diluluskan oleh pentadbir sebelum dimasukkan sebagai peserta rasmi kursus ini.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Back link */}
+              <div className="text-center">
+                <button onClick={() => { window.location.href = '/' }} className="clay-btn-secondary text-sm px-5 py-2 inline-flex items-center gap-2" style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}>
+                  <ArrowLeft className="w-4 h-4" /> Kembali ke e-Sijil
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ====== NORMAL SEARCH MODE ====== */}
+      {!daftarMode && (
+      <>
       {/* Hero Section */}
       <div className="clay-card-lg p-8 sm:p-12 text-center hero-gradient relative overflow-hidden">
         <div className="absolute inset-0 opacity-5" style={{ background: 'radial-gradient(circle at 30% 40%, var(--clay-primary), transparent 50%)' }} />
@@ -488,6 +791,8 @@ function PublicPortal() {
           )}
         </DialogContent>
       </Dialog>
+      </>
+      )}
     </div>
   )
 }
@@ -1104,6 +1409,16 @@ function KursusTab({ user }: { user: AdminUser }) {
   const [fCatatan, setFCatatan] = useState('')
   const [fStatus, setFStatus] = useState('draf')
 
+  // Share/QR Code state
+  const [shareDialogOpen, setShareDialogOpen] = useState(false)
+  const [shareItem, setShareItem] = useState<any>(null)
+  const [qrDataUrl, setQrDataUrl] = useState('')
+  const [qrLoading, setQrLoading] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
+
+  // Pendaftaran Awam state
+  const [pendaftaranList, setPendaftaranList] = useState<any[]>([])
+
   const fetchData = () => {
     setLoading(true)
     fetch('/api/kursus').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
@@ -1141,10 +1456,84 @@ function KursusTab({ user }: { user: AdminUser }) {
     const res = await fetch(`/api/kursus?id=${item.id}`)
     const d = await res.json()
     if (d.berjaya) { setViewPeserta(d.data.peserta || []); setViewingItem(d.data) }
+    const pendaftaranRes = await fetch(`/api/pendaftaran-awam?kursusId=${item.id}`)
+    const pendaftaranData = await pendaftaranRes.json()
+    if (pendaftaranData.berjaya) setPendaftaranList(pendaftaranData.data)
     setViewLoading(false)
   }
 
   const openDeleteDialog = (item: any) => { setDeletingItem(item); setDeleteDialogOpen(true) }
+
+  const openShareDialog = async (item: any) => {
+    setShareItem(item)
+    setShareDialogOpen(true)
+    setQrLoading(true)
+    setLinkCopied(false)
+    const baseUrl = window.location.origin
+    const regLink = `${baseUrl}/?daftar=${item.id}`
+    try {
+      const QRCode = (await import('qrcode')).default
+      const dataUrl = await QRCode.toDataURL(regLink, {
+        width: 256,
+        margin: 2,
+        color: { dark: '#5B4ACF', light: '#F8F6FF' },
+      })
+      setQrDataUrl(dataUrl)
+    } catch {
+      setQrDataUrl('')
+    }
+    setQrLoading(false)
+  }
+
+  const copyLink = () => {
+    const baseUrl = window.location.origin
+    const regLink = `${baseUrl}/?daftar=${shareItem.id}`
+    navigator.clipboard.writeText(regLink)
+    setLinkCopied(true)
+    setTimeout(() => setLinkCopied(false), 2000)
+  }
+
+  const handleLulusPendaftaran = async (id: string) => {
+    try {
+      const res = await fetch('/api/pendaftaran-awam', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, tindakan: 'lulus' }) })
+      const result = await res.json()
+      if (result.berjaya) {
+        toast({ title: 'Diluluskan', description: 'Pendaftaran diluluskan dan peserta ditambah.' })
+        if (viewingItem) {
+          const kRes = await fetch(`/api/kursus?id=${viewingItem.id}`)
+          const kData = await kRes.json()
+          if (kData.berjaya) { setViewPeserta(kData.data.peserta || []); setViewingItem(kData.data) }
+          const pRes = await fetch(`/api/pendaftaran-awam?kursusId=${viewingItem.id}`)
+          const pData = await pRes.json()
+          if (pData.berjaya) setPendaftaranList(pData.data)
+        }
+        fetchData()
+      } else {
+        toast({ title: 'Ralat', description: result.mesej, variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Ralat', description: 'Gagal meluluskan pendaftaran.', variant: 'destructive' })
+    }
+  }
+
+  const handleTolakPendaftaran = async (id: string) => {
+    try {
+      const res = await fetch('/api/pendaftaran-awam', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, tindakan: 'tolak' }) })
+      const result = await res.json()
+      if (result.berjaya) {
+        toast({ title: 'Ditolak', description: 'Pendaftaran ditolak.' })
+        if (viewingItem) {
+          const pRes = await fetch(`/api/pendaftaran-awam?kursusId=${viewingItem.id}`)
+          const pData = await pRes.json()
+          if (pData.berjaya) setPendaftaranList(pData.data)
+        }
+      } else {
+        toast({ title: 'Ralat', description: result.mesej, variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Ralat', description: 'Gagal menolak pendaftaran.', variant: 'destructive' })
+    }
+  }
 
   const handleSave = async () => {
     if (!fKod.trim() || !fNamaBm.trim() || !fKategoriId || !fTarikhMula || !fTarikhTamat) {
@@ -1248,6 +1637,9 @@ function KursusTab({ user }: { user: AdminUser }) {
                   </td>
                   <td className="px-3 py-3 text-center">
                     <div className="flex items-center justify-center gap-1">
+                      <button onClick={() => openShareDialog(k)} className="p-1.5 rounded-lg transition-all hover:scale-110" style={{ background: 'rgba(79,196,161,0.15)', color: '#2AA68E' }} title="Kongsi Pautan Pendaftaran">
+                        <Share2 className="w-3.5 h-3.5" />
+                      </button>
                       <button onClick={() => openViewDialog(k)} className="p-1.5 rounded-lg transition-all hover:scale-110" style={{ background: 'rgba(79,196,161,0.1)', color: 'var(--clay-success)' }} title="Papar Peserta">
                         <Eye className="w-3.5 h-3.5" />
                       </button>
@@ -1438,6 +1830,55 @@ function KursusTab({ user }: { user: AdminUser }) {
                   </table>
                 </div>
               </div>
+
+              {/* Pendaftaran Menunggu Kelulusan */}
+              {pendaftaranList.filter((p: any) => p.status === 'menunggu').length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-sm flex items-center gap-2" style={{ color: 'var(--clay-ink)' }}>
+                      <Clock className="w-4 h-4" style={{ color: 'var(--clay-warning)' }} />
+                      Pendaftaran Menunggu Kelulusan ({pendaftaranList.filter((p: any) => p.status === 'menunggu').length})
+                    </h4>
+                  </div>
+                  <div className="rounded-xl overflow-hidden" style={{ boxShadow: 'var(--clay-shadow-sm)' }}>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr style={{ background: 'rgba(232,163,61,0.08)' }}>
+                          <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--clay-warning)' }}>#</th>
+                          <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--clay-warning)' }}>Nama</th>
+                          <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--clay-warning)' }}>No. MyKad</th>
+                          <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--clay-warning)' }}>Telefon</th>
+                          <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--clay-warning)' }}>Emel</th>
+                          <th className="px-3 py-2 text-center text-xs" style={{ color: 'var(--clay-warning)' }}>Tarikh</th>
+                          <th className="px-3 py-2 text-center text-xs" style={{ color: 'var(--clay-warning)' }}>Tindakan</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pendaftaranList.filter((p: any) => p.status === 'menunggu').map((p: any, idx: number) => (
+                          <tr key={p.id} style={{ background: idx % 2 === 0 ? 'var(--clay)' : 'rgba(232,163,61,0.03)' }}>
+                            <td className="px-3 py-2 text-xs" style={{ color: 'var(--clay-ink-soft)' }}>{idx + 1}</td>
+                            <td className="px-3 py-2 font-medium" style={{ color: 'var(--clay-ink)' }}>{p.namaPenuh}</td>
+                            <td className="px-3 py-2 font-mono text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>{p.noMykad}</td>
+                            <td className="px-3 py-2 text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>{p.noTelefon || '—'}</td>
+                            <td className="px-3 py-2 text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>{p.emel || '—'}</td>
+                            <td className="px-3 py-2 text-center text-xs" style={{ color: 'var(--clay-ink-soft)' }}>{formatDateShort(p.diciptaPada)}</td>
+                            <td className="px-3 py-2 text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                <button onClick={() => handleLulusPendaftaran(p.id)} className="p-1 rounded-lg transition-all hover:scale-110" style={{ background: 'var(--clay-success-bg)', color: 'var(--clay-success)' }} title="Luluskan">
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button onClick={() => handleTolakPendaftaran(p.id)} className="p-1 rounded-lg transition-all hover:scale-110" style={{ background: 'var(--clay-danger-bg)', color: 'var(--clay-danger)' }} title="Tolak">
+                                  <XCircle className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
@@ -1470,6 +1911,65 @@ function KursusTab({ user }: { user: AdminUser }) {
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
               {saving ? 'Memadam...' : 'Padam'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ====== SHARE / QR CODE DIALOG ====== */}
+      <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+        <DialogContent className="sm:max-w-md" style={{ background: 'var(--clay)', borderRadius: '24px', boxShadow: 'var(--clay-shadow-lg)', border: '1px solid rgba(255,255,255,0.6)' }}>
+          <DialogHeader>
+            <DialogTitle style={{ color: 'var(--clay-ink)' }} className="flex items-center gap-2">
+              <QrCode className="w-5 h-5" style={{ color: 'var(--clay-primary)' }} />
+              Pautan Pendaftaran Kursus
+            </DialogTitle>
+            <DialogDescription style={{ color: 'var(--clay-ink-soft)' }}>
+              Kongsi pautan atau QR code ini kepada peserta untuk mendaftar kursus <strong style={{ color: 'var(--clay-ink)' }}>{shareItem?.namaKursusBm}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {/* QR Code */}
+            <div className="clay-card-sm p-4 flex flex-col items-center">
+              {qrLoading ? (
+                <div className="w-48 h-48 flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--clay-primary)' }} />
+                </div>
+              ) : qrDataUrl ? (
+                <>
+                  <img src={qrDataUrl} alt="QR Code Pendaftaran" className="w-48 h-48 rounded-xl" />
+                  <p className="text-xs mt-2" style={{ color: 'var(--clay-ink-soft)' }}>Imbas QR code untuk mendaftar</p>
+                </>
+              ) : (
+                <p className="text-sm" style={{ color: 'var(--clay-danger)' }}>Gagal menjana QR code</p>
+              )}
+            </div>
+            {/* Link */}
+            <div className="clay-card-sm p-3">
+              <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink-soft)' }}>Pautan Pendaftaran</label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 px-3 py-2 rounded-xl text-xs font-mono break-all" style={{ background: 'var(--clay-inset-bg, rgba(124,108,240,0.06))', color: 'var(--clay-primary)', boxShadow: 'var(--clay-inset)' }}>
+                  {typeof window !== 'undefined' ? `${window.location.origin}/?daftar=${shareItem?.id}` : ''}
+                </div>
+                <button
+                  onClick={copyLink}
+                  className="p-2 rounded-xl transition-all hover:scale-105"
+                  style={{ background: linkCopied ? 'var(--clay-success-bg)' : 'var(--clay-primary)', color: linkCopied ? 'var(--clay-success)' : 'white', boxShadow: 'var(--clay-shadow-sm)' }}
+                  title="Salin Pautan"
+                >
+                  {linkCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            {/* Info */}
+            <div className="flex items-start gap-2 p-3 rounded-xl" style={{ background: 'rgba(79,196,161,0.08)' }}>
+              <Info className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--clay-success)' }} />
+              <p className="text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>
+                Peserta yang mendaftar melalui pautan ini perlu diluluskan oleh pentadbir sebelum dimasukkan sebagai peserta rasmi.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShareDialogOpen(false)} className="clay-btn-secondary text-sm px-4" style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}>Tutup</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

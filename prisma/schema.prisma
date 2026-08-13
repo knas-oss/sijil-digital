@@ -86,6 +86,7 @@ model Kursus {
   templatKhusus   TemplatSijil?   @relation("TemplatKhususKursus", fields: [templatKhususId], references: [id])
   diciptaOleh     Pengguna        @relation("KursusDicipta", fields: [diciptaOlehId], references: [id])
   peserta         Peserta[]
+  pendaftaranAwam PendaftaranAwam[]
   sijil           Sijil[]
 
   @@map("kursus")
@@ -117,6 +118,32 @@ model Peserta {
 
   @@unique([kursusId, noMykadHash])
   @@map("peserta")
+}
+
+// ============================================================
+// M4b: Pendaftaran Awam (Self-Registration via Link/QR)
+// ============================================================
+model PendaftaranAwam {
+  id              String   @id @default(cuid())
+  namaPenuh       String
+  noMykad         String   // 12 digit
+  noMykadHash     String   // SHA-256 hash
+  noTelefon       String?
+  emel            String?
+  jantina         String?  // lelaki | perempuan
+  status          String   @default("menunggu") // menunggu | diluluskan | ditolak
+  catatan         String?
+  diciptaPada     DateTime @default(now())
+  dikemaskiniPada DateTime @updatedAt
+
+  // Foreign Keys
+  kursusId        String
+
+  // Relations
+  kursus          Kursus   @relation(fields: [kursusId], references: [id])
+
+  @@unique([kursusId, noMykadHash])
+  @@map("pendaftaran_awam")
 }
 
 // ============================================================
