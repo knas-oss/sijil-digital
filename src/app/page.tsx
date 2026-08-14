@@ -2113,11 +2113,38 @@ function TemplatTab({ user }: { user: AdminUser }) {
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [editingTemplate, setEditingTemplate] = useState<any>(null)
+  const [statusLoading, setStatusLoading] = useState<string | null>(null)
   const { toast } = useToast()
+
+  const fetchData = useCallback(() => {
+    setLoading(true)
+    fetch('/api/templat').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
+  }, [])
 
   useEffect(() => {
     fetch('/api/templat').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
   }, [])
+
+  const handleToggleStatus = async (templateId: string, newStatus: string) => {
+    setStatusLoading(templateId)
+    try {
+      const res = await fetch('/api/templat', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templatId: templateId, status: newStatus }),
+      })
+      const result = await res.json()
+      if (result.berjaya) {
+        toast({ title: 'Status Dikemaskini', description: newStatus === 'aktif' ? 'Templat diaktifkan.' : 'Templat dinyahaktifkan.' })
+        fetchData()
+      } else {
+        toast({ title: 'Ralat', description: result.mesej || 'Gagal mengemaskini status.', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Ralat', description: 'Gagal mengemaskini status templat.', variant: 'destructive' })
+    }
+    setStatusLoading(null)
+  }
 
   if (loading) return <LoadingSpinner />
 
@@ -2246,14 +2273,37 @@ function TemplatTab({ user }: { user: AdminUser }) {
             </div>
             <h4 className="font-semibold text-sm mb-1" style={{ color: 'var(--clay-ink)' }}>{t.namaTemplat}</h4>
             <p className="text-xs mb-2" style={{ color: 'var(--clay-ink-soft)' }}>{t.keterangan || 'Tiada keterangan'}</p>
-            <div className="flex items-center justify-between">
-              <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
-                style={{
-                  background: t.status === 'aktif' ? 'var(--clay-success-bg)' : t.status === 'draf' ? 'var(--clay-warning-bg)' : 'rgba(124,108,240,0.08)',
-                  color: t.status === 'aktif' ? 'var(--clay-success)' : t.status === 'draf' ? 'var(--clay-warning)' : 'var(--clay-primary)'
-                }}>
-                {t.status === 'aktif' ? 'Aktif' : t.status === 'draf' ? 'Draf' : 'Arkib'}
-              </span>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleToggleStatus(t.id, 'aktif') }}
+                  disabled={statusLoading === t.id}
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 disabled:opacity-50"
+                  style={{
+                    background: t.status === 'aktif' ? 'var(--clay-success)' : 'transparent',
+                    color: t.status === 'aktif' ? 'white' : 'var(--clay-success)',
+                    border: t.status === 'aktif' ? '1.5px solid var(--clay-success)' : '1.5px solid var(--clay-success)',
+                    boxShadow: t.status === 'aktif' ? 'var(--clay-shadow-sm)' : 'none',
+                  }}
+                >
+                  {statusLoading === t.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                  Aktif
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleToggleStatus(t.id, 'arkib') }}
+                  disabled={statusLoading === t.id}
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 disabled:opacity-50"
+                  style={{
+                    background: t.status === 'arkib' || t.status === 'draf' ? 'var(--clay-ink-soft)' : 'transparent',
+                    color: t.status === 'arkib' || t.status === 'draf' ? 'white' : 'var(--clay-ink-soft)',
+                    border: t.status === 'arkib' || t.status === 'draf' ? '1.5px solid var(--clay-ink-soft)' : '1.5px solid var(--clay-ink-soft)',
+                    boxShadow: t.status === 'arkib' || t.status === 'draf' ? 'var(--clay-shadow-sm)' : 'none',
+                  }}
+                >
+                  {statusLoading === t.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
+                  Tidak Aktif
+                </button>
+              </div>
               <span className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
                 {t.orientasi === 'landskap' ? 'Landskap' : 'Potret'} · v{t.versi} · {t.medanTemplat?.length || 0} medan
               </span>

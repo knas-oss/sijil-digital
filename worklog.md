@@ -32,3 +32,27 @@ Stage Summary:
 - Feature: Public registration form at /?daftar=<kursusId>
 - Feature: Admin can approve/reject pending registrations in View Dialog
 - Design: All Claymorphism styled with purple QR codes
+
+---
+Task ID: 7
+Agent: Main Agent
+Task: Tambah butang Aktif dan Tidak Aktif pada Template di Galeri Templat Sijil
+
+Work Log:
+- Baca TemplatTab component (line 2112-2314) dan API /api/templat/route.ts
+- API sudah menyokong PUT dengan body.status (line 76)
+- Tambah state `statusLoading` dan handler `handleToggleStatus` ke TemplatTab
+- Tambah `fetchData` sebagai useCallback untuk refresh selepas toggle
+- Ganti status badge lama (Aktif/Draf/Arkib) dengan dua butang toggle:
+  - Butang "Aktif" (hijau, ikon CheckCircle2) - tebal jika status === 'aktif'
+  - Butang "Tidak Aktif" (kelabu, ikon XCircle) - tebal jika status === 'arkib' || 'draf'
+- Kedua-dua butang menggunakan e.stopPropagation() untuk mengelak klik membuka editor
+- Loading spinner ditunjukkan semasa status dikemaskini
+- Lint passes
+- API diuji via curl: PUT /api/templat dengan {templatId, status} berfungsi dengan sempurna (aktif ↔ arkib)
+
+Stage Summary:
+- Setiap kad templat kini mempunyai butang "Aktif" dan "Tidak Aktif"
+- Butang yang aktif ditonjolkan dengan warna latar belakang, butang lain sebagai outline
+- Klik butang menghantar PUT ke /api/templat dan refresh senarai
+- Reka bentuk Claymorphism konsisten dengan tema sedia ada
