@@ -299,10 +299,38 @@ export async function POST(request: NextRequest) {
     // --- Signature Area ---
     const sigY = 80
     
-    // Left signature: Pengarah
-    page.drawText('___________________________', {
-      x: 120, y: sigY + 25, size: 10, font: helvetica, color: rgb(0.5, 0.5, 0.5),
-    })
+    // Left signature: Pengarah (with digital signature if available)
+    const sigPengarahPath = sijil.templat?.laluanTandatanganPengarah
+    if (sigPengarahPath) {
+      try {
+        const fullPath = path.join(process.cwd(), 'public', sigPengarahPath)
+        if (fs.existsSync(fullPath)) {
+          const sigBytes = fs.readFileSync(fullPath)
+          const sigImage = await pdfDoc.embedPng(sigBytes)
+          const sigDims = sigImage.scale(1)
+          const sigMaxW = 160
+          const sigMaxH = 45
+          const sigScaleW = sigMaxW / sigDims.width
+          const sigScaleH = sigMaxH / sigDims.height
+          const sigScale = Math.min(sigScaleW, sigScaleH)
+          const sigW = sigDims.width * sigScale
+          const sigH = sigDims.height * sigScale
+          page.drawImage(sigImage, {
+            x: 145, y: sigY + 30,
+            width: sigW, height: sigH,
+          })
+        }
+      } catch (sigErr) {
+        // Signature embed failed, draw line instead
+        page.drawText('___________________________', {
+          x: 120, y: sigY + 25, size: 10, font: helvetica, color: rgb(0.5, 0.5, 0.5),
+        })
+      }
+    } else {
+      page.drawText('___________________________', {
+        x: 120, y: sigY + 25, size: 10, font: helvetica, color: rgb(0.5, 0.5, 0.5),
+      })
+    }
     page.drawText('Pengarah', {
       x: 145, y: sigY + 10, size: 10, font: helvetica, color: rgb(0.18, 0.19, 0.31),
     })
@@ -310,10 +338,38 @@ export async function POST(request: NextRequest) {
       x: 120, y: sigY - 3, size: 8, font: helvetica, color: rgb(0.36, 0.37, 0.5),
     })
 
-    // Right signature: Penyelaras
-    page.drawText('___________________________', {
-      x: width - 340, y: sigY + 25, size: 10, font: helvetica, color: rgb(0.5, 0.5, 0.5),
-    })
+    // Right signature: Penyelaras (with digital signature if available)
+    const sigPenyelarasPath = sijil.templat?.laluanTandatanganPenyelaras
+    if (sigPenyelarasPath) {
+      try {
+        const fullPath = path.join(process.cwd(), 'public', sigPenyelarasPath)
+        if (fs.existsSync(fullPath)) {
+          const sigBytes = fs.readFileSync(fullPath)
+          const sigImage = await pdfDoc.embedPng(sigBytes)
+          const sigDims = sigImage.scale(1)
+          const sigMaxW = 160
+          const sigMaxH = 45
+          const sigScaleW = sigMaxW / sigDims.width
+          const sigScaleH = sigMaxH / sigDims.height
+          const sigScale = Math.min(sigScaleW, sigScaleH)
+          const sigW = sigDims.width * sigScale
+          const sigH = sigDims.height * sigScale
+          page.drawImage(sigImage, {
+            x: width - 320, y: sigY + 30,
+            width: sigW, height: sigH,
+          })
+        }
+      } catch (sigErr) {
+        // Signature embed failed, draw line instead
+        page.drawText('___________________________', {
+          x: width - 340, y: sigY + 25, size: 10, font: helvetica, color: rgb(0.5, 0.5, 0.5),
+        })
+      }
+    } else {
+      page.drawText('___________________________', {
+        x: width - 340, y: sigY + 25, size: 10, font: helvetica, color: rgb(0.5, 0.5, 0.5),
+      })
+    }
     page.drawText('Penyelaras Program', {
       x: width - 320, y: sigY + 10, size: 10, font: helvetica, color: rgb(0.18, 0.19, 0.31),
     })

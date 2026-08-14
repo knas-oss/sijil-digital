@@ -50,3 +50,40 @@ Stage Summary:
 - Logo is embedded directly in PDF (not linked) for portability
 - Template preview in admin panel also shows the logo
 - All existing certificate elements shifted down proportionally
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Tambah menu upload tandatangan digital pengarah (.png) dalam Kanvas Templat Sijil
+
+Work Log:
+- Added laluanTandatanganPengarah and laluanTandatanganPenyelaras fields to TemplatSijil model in schema.prisma
+- Pushed schema changes to database (db:push)
+- Created /api/upload/tandatangan/route.ts API endpoint:
+  - POST: Upload PNG signature image (validates .png format, max 2MB, PNG header check)
+  - DELETE: Remove signature file
+  - Supports 'pengarah' and 'penyelaras' types
+  - Auto-cleans old signatures of same type
+- Updated /api/templat/route.ts PUT handler to save signature paths
+- Added signature upload UI in TemplateEditor right panel:
+  - "Tandatangan Digital" section with PenLine icon
+  - Upload buttons for Pengarah and Penyelaras
+  - Preview thumbnails with delete buttons
+  - Hidden file input with .png accept filter
+  - Loading states during upload
+- Added signature preview on template canvas:
+  - Left side: Tandatangan Pengarah (bottom 18%)
+  - Right side: Tandatangan Penyelaras (bottom 18%)
+  - Placeholder text when no signature uploaded
+- Updated PDF generation (jana-sijil/route.ts):
+  - Embeds digital signature PNG above signature line
+  - Falls back to line if signature fails to embed
+  - Scales signature proportionally (max 160w x 45h pts)
+- Added Upload, ImageIcon, PenLine icons to imports
+- Save handler in TemplateEditor now saves signature paths to template before saving fields
+
+Stage Summary:
+- Digital signature upload menu added to Kanvas Templat with .png-only validation
+- Both Pengarah and Penyelaras signatures supported
+- Signatures preview on canvas and are embedded in generated PDF certificates
+- API handles upload, validation, and cleanup of signature files

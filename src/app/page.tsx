@@ -21,7 +21,8 @@ import {
   Plus, Edit2, Trash2, RefreshCw, ArrowLeft, Info, Save,
   GripVertical, Type, AlignLeft, AlignCenter, AlignRight,
   Bold, Italic, Move, X, ZoomIn, ZoomOut,
-  Share2, Copy, Check, ExternalLink, UserPlus, Mail, Phone
+  Share2, Copy, Check, ExternalLink, UserPlus, Mail, Phone,
+  Upload, Image as ImageIcon, PenLine
 } from 'lucide-react'
 
 // ============================================================
@@ -2331,6 +2332,13 @@ function TemplateEditor({ template, onSave, onClose }: {
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
 
+  // Tandatangan digital
+  const [tandatanganPengarah, setTandatanganPengarah] = useState<string>(template.laluanTandatanganPengarah || '')
+  const [tandatanganPenyelaras, setTandatanganPenyelaras] = useState<string>(template.laluanTandatanganPenyelaras || '')
+  const [uploadingSig, setUploadingSig] = useState<string | null>(null) // 'pengarah' | 'penyelaras' | null
+  const pengarahInputRef = useRef<HTMLInputElement>(null)
+  const penyelarasInputRef = useRef<HTMLInputElement>(null)
+
   const isLandscape = template.orientasi === 'landskap'
 
   // Add a new field
@@ -2420,6 +2428,20 @@ function TemplateEditor({ template, onSave, onClose }: {
       return
     }
     setSaving(true)
+    // Save signature paths to template first (if not new)
+    if (template.id !== 'new') {
+      try {
+        await fetch('/api/templat', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            templatId: template.id,
+            laluanTandatanganPengarah: tandatanganPengarah || null,
+            laluanTandatanganPenyelaras: tandatanganPenyelaras || null,
+          }),
+        })
+      } catch {}
+    }
     await onSave(medan)
     setSaving(false)
   }
@@ -2563,6 +2585,26 @@ function TemplateEditor({ template, onSave, onClose }: {
                 )
               })}
 
+              {/* Signature preview on canvas */}
+              <div className="absolute bottom-[18%] left-[8%] right-[52%] flex flex-col items-center">
+                {tandatanganPengarah ? (
+                  <img src={tandatanganPengarah} alt="Tandatangan Pengarah" className="h-6 object-contain opacity-60" />
+                ) : (
+                  <p className="text-[4px] italic" style={{ color: 'rgba(120,124,170,0.3)' }}>Tandatangan Pengarah</p>
+                )}
+                <div className="mt-0.5" style={{ width: '80%', height: '1px', background: 'rgba(120,124,170,0.15)' }} />
+                <p className="text-[4px] mt-0.5" style={{ color: 'rgba(120,124,170,0.3)' }}>Pengarah</p>
+              </div>
+              <div className="absolute bottom-[18%] left-[52%] right-[8%] flex flex-col items-center">
+                {tandatanganPenyelaras ? (
+                  <img src={tandatanganPenyelaras} alt="Tandatangan Penyelaras" className="h-6 object-contain opacity-60" />
+                ) : (
+                  <p className="text-[4px] italic" style={{ color: 'rgba(120,124,170,0.3)' }}>Tandatangan Penyelaras</p>
+                )}
+                <div className="mt-0.5" style={{ width: '80%', height: '1px', background: 'rgba(120,124,170,0.15)' }} />
+                <p className="text-[4px] mt-0.5" style={{ color: 'rgba(120,124,170,0.3)' }}>Penyelaras Program</p>
+              </div>
+
               {/* Empty state */}
               {medan.length === 0 && (
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -2597,6 +2639,151 @@ function TemplateEditor({ template, onSave, onClose }: {
                   <span className="font-medium">{m.label}</span>
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Tandatangan Digital Upload */}
+          <div className="clay-card p-4">
+            <h4 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--clay-ink)' }}>
+              <PenLine className="w-4 h-4" style={{ color: 'var(--clay-primary)' }} />
+              Tandatangan Digital
+            </h4>
+            <p className="text-xs mb-3" style={{ color: 'var(--clay-ink-soft)' }}>Muat naik imej tandatangan (.png sahaja)</p>
+
+            {/* Tandatangan Pengarah */}
+            <div className="mb-3">
+              <label className="text-xs font-medium flex items-center gap-1.5 mb-1.5" style={{ color: 'var(--clay-ink-secondary)' }}>
+                <Award className="w-3 h-3" /> Pengarah
+              </label>
+              <input
+                ref={pengarahInputRef}
+                type="file"
+                accept=".png"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  if (!file.type.startsWith('image/png')) {
+                    toast({ title: 'Format Tidak Sah', description: 'Hanya fail .png sahaja dibenarkan.', variant: 'destructive' })
+                    return
+                  }
+                  setUploadingSig('pengarah')
+                  try {
+                    const formData = new FormData()
+                    formData.append('fail', file)
+                    formData.append('jenis', 'pengarah')
+                    const res = await fetch('/api/upload/tandatangan', { method: 'POST', body: formData })
+                    const result = await res.json()
+                    if (result.berjaya) {
+                      setTandatanganPengarah(result.data.laluan)
+                      toast({ title: 'Tandatangan Dimuat Naik', description: 'Tandatangan Pengarah berjaya dimuat naik.' })
+                    } else {
+                      toast({ title: 'Ralat', description: result.mesej || 'Gagal memuat naik.', variant: 'destructive' })
+                    }
+                  } catch {
+                    toast({ title: 'Ralat', description: 'Gagal memuat naik tandatangan.', variant: 'destructive' })
+                  }
+                  setUploadingSig(null)
+                  if (pengarahInputRef.current) pengarahInputRef.current.value = ''
+                }}
+              />
+              {tandatanganPengarah ? (
+                <div className="relative rounded-xl overflow-hidden" style={{ background: 'var(--clay-bg)', border: '1px solid var(--border)' }}>
+                  <img src={tandatanganPengarah} alt="Tandatangan Pengarah" className="w-full h-16 object-contain p-2" />
+                  <button
+                    onClick={async () => {
+                      try { await fetch(`/api/upload/tandatangan?laluan=${encodeURIComponent(tandatanganPengarah)}`, { method: 'DELETE' }) } catch {}
+                      setTandatanganPengarah('')
+                    }}
+                    className="absolute top-1 right-1 p-1 rounded-lg transition-all"
+                    style={{ background: 'rgba(226,109,142,0.15)', color: 'var(--clay-danger)' }}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => pengarahInputRef.current?.click()}
+                  disabled={uploadingSig === 'pengarah'}
+                  className="w-full py-3 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition-all hover:scale-[1.01] disabled:opacity-50"
+                  style={{
+                    background: 'var(--clay-bg)',
+                    border: '2px dashed var(--border)',
+                    color: 'var(--clay-ink-soft)',
+                  }}
+                >
+                  {uploadingSig === 'pengarah' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                  {uploadingSig === 'pengarah' ? 'Memuat naik...' : 'Muat Naik .png'}
+                </button>
+              )}
+            </div>
+
+            {/* Tandatangan Penyelaras */}
+            <div>
+              <label className="text-xs font-medium flex items-center gap-1.5 mb-1.5" style={{ color: 'var(--clay-ink-secondary)' }}>
+                <Users className="w-3 h-3" /> Penyelaras
+              </label>
+              <input
+                ref={penyelarasInputRef}
+                type="file"
+                accept=".png"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  if (!file.type.startsWith('image/png')) {
+                    toast({ title: 'Format Tidak Sah', description: 'Hanya fail .png sahaja dibenarkan.', variant: 'destructive' })
+                    return
+                  }
+                  setUploadingSig('penyelaras')
+                  try {
+                    const formData = new FormData()
+                    formData.append('fail', file)
+                    formData.append('jenis', 'penyelaras')
+                    const res = await fetch('/api/upload/tandatangan', { method: 'POST', body: formData })
+                    const result = await res.json()
+                    if (result.berjaya) {
+                      setTandatanganPenyelaras(result.data.laluan)
+                      toast({ title: 'Tandatangan Dimuat Naik', description: 'Tandatangan Penyelaras berjaya dimuat naik.' })
+                    } else {
+                      toast({ title: 'Ralat', description: result.mesej || 'Gagal memuat naik.', variant: 'destructive' })
+                    }
+                  } catch {
+                    toast({ title: 'Ralat', description: 'Gagal memuat naik tandatangan.', variant: 'destructive' })
+                  }
+                  setUploadingSig(null)
+                  if (penyelarasInputRef.current) penyelarasInputRef.current.value = ''
+                }}
+              />
+              {tandatanganPenyelaras ? (
+                <div className="relative rounded-xl overflow-hidden" style={{ background: 'var(--clay-bg)', border: '1px solid var(--border)' }}>
+                  <img src={tandatanganPenyelaras} alt="Tandatangan Penyelaras" className="w-full h-16 object-contain p-2" />
+                  <button
+                    onClick={async () => {
+                      try { await fetch(`/api/upload/tandatangan?laluan=${encodeURIComponent(tandatanganPenyelaras)}`, { method: 'DELETE' }) } catch {}
+                      setTandatanganPenyelaras('')
+                    }}
+                    className="absolute top-1 right-1 p-1 rounded-lg transition-all"
+                    style={{ background: 'rgba(226,109,142,0.15)', color: 'var(--clay-danger)' }}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => penyelarasInputRef.current?.click()}
+                  disabled={uploadingSig === 'penyelaras'}
+                  className="w-full py-3 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition-all hover:scale-[1.01] disabled:opacity-50"
+                  style={{
+                    background: 'var(--clay-bg)',
+                    border: '2px dashed var(--border)',
+                    color: 'var(--clay-ink-soft)',
+                  }}
+                >
+                  {uploadingSig === 'penyelaras' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                  {uploadingSig === 'penyelaras' ? 'Memuat naik...' : 'Muat Naik .png'}
+                </button>
+              )}
             </div>
           </div>
 

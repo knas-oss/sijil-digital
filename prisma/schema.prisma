@@ -160,7 +160,9 @@ model TemplatSijil {
   lebarPx       Int      @default(3508)
   tinggiPx      Int      @default(2480)
   versi         Int      @default(1)
-  status        String   @default("draf") // draf | aktif | arkib
+  status        String   @default("draf") // draf | aktif | tidak_aktif | arkib
+  laluanTandatanganPengarah String? // path ke fail tandatangan digital pengarah (.png)
+  laluanTandatanganPenyelaras String? // path ke fail tandatangan digital penyelaras (.png)
   diciptaPada   DateTime @default(now())
   dikemaskiniPada DateTime @updatedAt
 
