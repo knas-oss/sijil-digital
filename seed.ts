@@ -234,7 +234,7 @@ async function main() {
       telefonHubungan: '089-222444',
       namaPengarah: 'TS. DR. MOHD YUSRI BIN MOHD YUSOF',
       laluanLogo: '/logo-adtec.png',
-      teksPengaki: 'Sijil ini dikeluarkan oleh Advanced Technology Training Centre (ADTEC), Jabatan Tenaga Manusia, Kementerian Sumber Manusia, Malaysia.',
+      teksPengaki: 'Sijil ini dikeluarkan oleh Kolej Teknologi Termaju (ADTEC) JTM Kampus Sandakan, Jabatan Tenaga Manusia, Kementerian Sumber Manusia, Malaysia.',
     }
   })
 

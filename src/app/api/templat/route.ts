@@ -75,6 +75,14 @@ export async function PUT(request: NextRequest) {
       if (body.saizKertas !== undefined) updateData.saizKertas = body.saizKertas
       if (body.status !== undefined) updateData.status = body.status
 
+      // If setting template to 'aktif', deactivate all others first (only one active at a time)
+      if (body.status === 'aktif') {
+        await db.templatSijil.updateMany({
+          where: { status: 'aktif', id: { not: body.templatId } },
+          data: { status: 'tidak_aktif' },
+        })
+      }
+
       const templat = await db.templatSijil.update({
         where: { id: body.templatId },
         data: updateData,

@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
 import QRCode from 'qrcode'
+import fs from 'fs'
+import path from 'path'
 
 export async function POST(request: NextRequest) {
   try {
@@ -104,26 +106,51 @@ export async function POST(request: NextRequest) {
       opacity: 0.3,
     })
 
-    // --- Header: ADTEC Logo area ---
-    // Institution name at top
+    // --- Header: Logo & Institution Name ---
+    // Embed official logo at the top
+    const logoShift = 45 // vertical shift to make room for logo
+    try {
+      const logoPath = path.join(process.cwd(), 'public', 'logo-rasmi.png')
+      if (fs.existsSync(logoPath)) {
+        const logoBytes = fs.readFileSync(logoPath)
+        const logoImage = await pdfDoc.embedPng(logoBytes)
+        const logoDims = logoImage.scale(1)
+        // Scale logo: max height 50pts, maintain aspect ratio
+        const logoMaxH = 50
+        const logoScale = logoMaxH / logoDims.height
+        const logoW = logoDims.width * logoScale
+        const logoH = logoMaxH
+        page.drawImage(logoImage, {
+          x: width / 2 - logoW / 2,
+          y: height - 18 - logoH,
+          width: logoW,
+          height: logoH,
+        })
+      }
+    } catch (logoErr) {
+      // Logo embedding failed, skip
+      console.error('Logo embed error:', logoErr)
+    }
+
+    // Institution name (shifted down for logo)
     const instSize = 11
-    page.drawText('ADVANCED TECHNOLOGY TRAINING CENTRE (ADTEC)', {
-      x: width / 2 - helveticaBold.widthOfTextAtSize('ADVANCED TECHNOLOGY TRAINING CENTRE (ADTEC)', instSize) / 2,
-      y: height - 55,
+    page.drawText('KOLEJ TEKNOLOGI TERMAJU (ADTEC)', {
+      x: width / 2 - helveticaBold.widthOfTextAtSize('KOLEJ TEKNOLOGI TERMAJU (ADTEC)', instSize) / 2,
+      y: height - 55 - logoShift,
       size: instSize,
       font: helveticaBold,
       color: rgb(0.18, 0.19, 0.31),
     })
     page.drawText('JABATAN TENAGA MANUSIA, KEMENTERIAN SUMBER MANUSIA', {
       x: width / 2 - helvetica.widthOfTextAtSize('JABATAN TENAGA MANUSIA, KEMENTERIAN SUMBER MANUSIA', 9) / 2,
-      y: height - 70,
+      y: height - 70 - logoShift,
       size: 9,
       font: helvetica,
       color: rgb(0.36, 0.37, 0.5),
     })
-    page.drawText('KAMPUS SANDAKAN, SABAH', {
-      x: width / 2 - helvetica.widthOfTextAtSize('KAMPUS SANDAKAN, SABAH', 9) / 2,
-      y: height - 83,
+    page.drawText('JTM KAMPUS SANDAKAN, SABAH', {
+      x: width / 2 - helvetica.widthOfTextAtSize('JTM KAMPUS SANDAKAN, SABAH', 9) / 2,
+      y: height - 83 - logoShift,
       size: 9,
       font: helvetica,
       color: rgb(0.36, 0.37, 0.5),
@@ -131,8 +158,8 @@ export async function POST(request: NextRequest) {
 
     // Separator line
     page.drawLine({
-      start: { x: 80, y: height - 95 },
-      end: { x: width - 80, y: height - 95 },
+      start: { x: 80, y: height - 95 - logoShift },
+      end: { x: width - 80, y: height - 95 - logoShift },
       thickness: 1.5,
       color: rgb(0.486, 0.424, 0.941),
       opacity: 0.5,
@@ -143,7 +170,7 @@ export async function POST(request: NextRequest) {
     const title = 'SIJIL PENYERTAAN'
     page.drawText(title, {
       x: width / 2 - timesBold.widthOfTextAtSize(title, titleSize) / 2,
-      y: height - 140,
+      y: height - 140 - logoShift,
       size: titleSize,
       font: timesBold,
       color: rgb(0.18, 0.19, 0.31),
@@ -152,14 +179,14 @@ export async function POST(request: NextRequest) {
     const subtitle = 'CERTIFICATE OF PARTICIPATION'
     page.drawText(subtitle, {
       x: width / 2 - timesItalic.widthOfTextAtSize(subtitle, 14) / 2,
-      y: height - 160,
+      y: height - 160 - logoShift,
       size: 14,
       font: timesItalic,
       color: rgb(0.36, 0.37, 0.5),
     })
 
     // --- Body Text ---
-    const bodyY = height - 200
+    const bodyY = height - 200 - logoShift
     const bodyCenter = width / 2
 
     // "Adalah dengan ini disahkan bahawa"
@@ -279,7 +306,7 @@ export async function POST(request: NextRequest) {
     page.drawText('Pengarah', {
       x: 145, y: sigY + 10, size: 10, font: helvetica, color: rgb(0.18, 0.19, 0.31),
     })
-    page.drawText('ADTEC JTM Kampus Sandakan', {
+    page.drawText('Kolej Teknologi Termaju (ADTEC)', {
       x: 120, y: sigY - 3, size: 8, font: helvetica, color: rgb(0.36, 0.37, 0.5),
     })
 
@@ -313,7 +340,7 @@ export async function POST(request: NextRequest) {
     }
 
     // --- Footer ---
-    const footerText = 'Sijil ini dikeluarkan oleh ADTEC JTM Kampus Sandakan, JTM, Kementerian Sumber Manusia.'
+    const footerText = 'Sijil ini dikeluarkan oleh Kolej Teknologi Termaju (ADTEC) JTM Kampus Sandakan, Kementerian Sumber Manusia.'
     page.drawText(footerText, {
       x: bodyCenter - helvetica.widthOfTextAtSize(footerText, 7) / 2,
       y: 28,

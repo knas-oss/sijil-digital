@@ -2135,7 +2135,7 @@ function TemplatTab({ user }: { user: AdminUser }) {
       })
       const result = await res.json()
       if (result.berjaya) {
-        toast({ title: 'Status Dikemaskini', description: newStatus === 'aktif' ? 'Templat diaktifkan.' : 'Templat dinyahaktifkan.' })
+        toast({ title: 'Status Dikemaskini', description: newStatus === 'aktif' ? 'Templat diaktifkan. Templat lain dinyahaktifkan secara automatik.' : 'Templat dinyahaktifkan.' })
         fetchData()
       } else {
         toast({ title: 'Ralat', description: result.mesej || 'Gagal mengemaskini status.', variant: 'destructive' })
@@ -2290,14 +2290,14 @@ function TemplatTab({ user }: { user: AdminUser }) {
                   Aktif
                 </button>
                 <button
-                  onClick={(e) => { e.stopPropagation(); handleToggleStatus(t.id, 'arkib') }}
+                  onClick={(e) => { e.stopPropagation(); handleToggleStatus(t.id, 'tidak_aktif') }}
                   disabled={statusLoading === t.id}
                   className="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 disabled:opacity-50"
                   style={{
-                    background: t.status === 'arkib' || t.status === 'draf' ? 'var(--clay-ink-soft)' : 'transparent',
-                    color: t.status === 'arkib' || t.status === 'draf' ? 'white' : 'var(--clay-ink-soft)',
-                    border: t.status === 'arkib' || t.status === 'draf' ? '1.5px solid var(--clay-ink-soft)' : '1.5px solid var(--clay-ink-soft)',
-                    boxShadow: t.status === 'arkib' || t.status === 'draf' ? 'var(--clay-shadow-sm)' : 'none',
+                    background: t.status !== 'aktif' ? 'var(--clay-ink-soft)' : 'transparent',
+                    color: t.status !== 'aktif' ? 'white' : 'var(--clay-ink-soft)',
+                    border: t.status !== 'aktif' ? '1.5px solid var(--clay-ink-soft)' : '1.5px solid var(--clay-ink-soft)',
+                    boxShadow: t.status !== 'aktif' ? 'var(--clay-shadow-sm)' : 'none',
                   }}
                 >
                   {statusLoading === t.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
@@ -2490,8 +2490,9 @@ function TemplateEditor({ template, onSave, onClose }: {
               }} />
 
               {/* Certificate header preview */}
-              <div className="absolute top-0 left-0 right-0 text-center pt-3">
-                <p className="text-[7px] font-bold tracking-wider" style={{ color: 'rgba(47,49,80,0.4)' }}>ADVANCED TECHNOLOGY TRAINING CENTRE (ADTEC)</p>
+              <div className="absolute top-0 left-0 right-0 text-center pt-2">
+                <img src="/logo-rasmi.png" alt="Logo Rasmi ADTEC" className="h-8 mx-auto mb-1 object-contain" />
+                <p className="text-[7px] font-bold tracking-wider" style={{ color: 'rgba(47,49,80,0.4)' }}>KOLEJ TEKNOLOGI TERMAJU (ADTEC)</p>
                 <p className="text-[5px]" style={{ color: 'rgba(47,49,80,0.25)' }}>JABATAN TENAGA MANUSIA, KEMENTERIAN SUMBER MANUSIA</p>
                 <div className="mx-auto mt-1" style={{ width: '60%', height: '1px', background: 'rgba(124,108,240,0.2)' }} />
                 <p className="text-[9px] font-bold mt-2" style={{ color: 'rgba(47,49,80,0.35)' }}>SIJIL PENYERTAAN</p>
