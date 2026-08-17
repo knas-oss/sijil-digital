@@ -2115,6 +2115,8 @@ function TemplatTab({ user }: { user: AdminUser }) {
   const [loading, setLoading] = useState(true)
   const [editingTemplate, setEditingTemplate] = useState<any>(null)
   const [statusLoading, setStatusLoading] = useState<string | null>(null)
+  const [orientasiFilter, setOrientasiFilter] = useState<string>('semua') // semua | landskap | potret
+  const [showNewDialog, setShowNewDialog] = useState(false)
   const { toast } = useToast()
 
   const fetchData = useCallback(() => {
@@ -2207,31 +2209,175 @@ function TemplatTab({ user }: { user: AdminUser }) {
     )
   }
 
+  // Filter templates by orientation
+  const filteredData = orientasiFilter === 'semua' ? data : data.filter((t: any) => t.orientasi === orientasiFilter)
+  const landskapCount = data.filter((t: any) => t.orientasi === 'landskap').length
+  const potretCount = data.filter((t: any) => t.orientasi === 'potret').length
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="font-semibold" style={{ color: 'var(--clay-ink)' }}>Galeri Templat Sijil</h3>
         <Button
-          onClick={() => {
-            setEditingTemplate({
-              id: 'new',
-              namaTemplat: 'Templat Baharu',
-              keterangan: '',
-              orientasi: 'landskap',
-              saizKertas: 'a4',
-              medanTemplat: [],
-              status: 'draf',
-              versi: 1,
-            })
-          }}
+          onClick={() => setShowNewDialog(true)}
           className="clay-btn text-sm px-4 py-2 flex items-center gap-2"
           style={{ background: 'var(--clay-primary)', color: 'white', borderRadius: '20px', boxShadow: 'var(--clay-shadow-sm)' }}
         >
           <Plus className="w-4 h-4" /> Templat Baharu
         </Button>
       </div>
+
+      {/* Orientation Filter Tabs */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          onClick={() => setOrientasiFilter('semua')}
+          className="px-4 py-2 rounded-2xl text-sm font-semibold transition-all flex items-center gap-2"
+          style={{
+            background: orientasiFilter === 'semua' ? 'var(--clay-primary)' : 'var(--clay-bg)',
+            color: orientasiFilter === 'semua' ? 'white' : 'var(--clay-ink-secondary)',
+            border: `1.5px solid ${orientasiFilter === 'semua' ? 'var(--clay-primary)' : 'var(--border)'}`,
+            boxShadow: orientasiFilter === 'semua' ? 'var(--clay-shadow-sm)' : 'none',
+          }}
+        >
+          <LayoutDashboard className="w-4 h-4" />
+          Semua
+          <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px]" style={{ background: orientasiFilter === 'semua' ? 'rgba(255,255,255,0.2)' : 'rgba(124,108,240,0.1)' }}>
+            {data.length}
+          </span>
+        </button>
+        <button
+          onClick={() => setOrientasiFilter('landskap')}
+          className="px-4 py-2 rounded-2xl text-sm font-semibold transition-all flex items-center gap-2"
+          style={{
+            background: orientasiFilter === 'landskap' ? 'var(--clay-primary)' : 'var(--clay-bg)',
+            color: orientasiFilter === 'landskap' ? 'white' : 'var(--clay-ink-secondary)',
+            border: `1.5px solid ${orientasiFilter === 'landskap' ? 'var(--clay-primary)' : 'var(--border)'}`,
+            boxShadow: orientasiFilter === 'landskap' ? 'var(--clay-shadow-sm)' : 'none',
+          }}
+        >
+          {/* Landscape icon: wide rectangle */}
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <rect x="1" y="3" width="14" height="10" rx="2" />
+          </svg>
+          Landskap
+          <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px]" style={{ background: orientasiFilter === 'landskap' ? 'rgba(255,255,255,0.2)' : 'rgba(124,108,240,0.1)' }}>
+            {landskapCount}
+          </span>
+        </button>
+        <button
+          onClick={() => setOrientasiFilter('potret')}
+          className="px-4 py-2 rounded-2xl text-sm font-semibold transition-all flex items-center gap-2"
+          style={{
+            background: orientasiFilter === 'potret' ? 'var(--clay-primary)' : 'var(--clay-bg)',
+            color: orientasiFilter === 'potret' ? 'white' : 'var(--clay-ink-secondary)',
+            border: `1.5px solid ${orientasiFilter === 'potret' ? 'var(--clay-primary)' : 'var(--border)'}`,
+            boxShadow: orientasiFilter === 'potret' ? 'var(--clay-shadow-sm)' : 'none',
+          }}
+        >
+          {/* Portrait icon: tall rectangle */}
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <rect x="3" y="1" width="10" height="14" rx="2" />
+          </svg>
+          Potret
+          <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px]" style={{ background: orientasiFilter === 'potret' ? 'rgba(255,255,255,0.2)' : 'rgba(124,108,240,0.1)' }}>
+            {potretCount}
+          </span>
+        </button>
+      </div>
+
+      {/* New Template Dialog */}
+      {showNewDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }}>
+          <div className="clay-card-lg p-6 max-w-md w-full mx-4" style={{ borderRadius: '24px' }}>
+            <h3 className="text-lg font-bold mb-2" style={{ color: 'var(--clay-ink)' }}>Pilih Orientasi Templat</h3>
+            <p className="text-sm mb-5" style={{ color: 'var(--clay-ink-soft)' }}>Pilih susun atur templat sijil yang ingin dicipta:</p>
+            <div className="grid grid-cols-2 gap-4 mb-5">
+              {/* Landscape Option */}
+              <button
+                onClick={() => {
+                  setEditingTemplate({
+                    id: 'new',
+                    namaTemplat: 'Templat Landskap',
+                    keterangan: '',
+                    orientasi: 'landskap',
+                    saizKertas: 'a4',
+                    medanTemplat: [],
+                    status: 'draf',
+                    versi: 1,
+                  })
+                  setShowNewDialog(false)
+                }}
+                className="clay-card p-5 flex flex-col items-center gap-3 transition-all hover:scale-[1.03]"
+                style={{ borderRadius: '20px', border: '2px solid var(--clay-primary)' }}
+              >
+                {/* Landscape preview shape */}
+                <div className="rounded-lg flex items-center justify-center" style={{
+                  width: '80px', height: '56px',
+                  background: 'linear-gradient(135deg, #f8f9ff, #eef0fa)',
+                  border: '2px dashed var(--clay-primary)',
+                  aspectRatio: '297/210',
+                }}>
+                  <svg width="28" height="20" viewBox="0 0 28 20" fill="none" stroke="var(--clay-primary)" strokeWidth="1.5" opacity="0.6">
+                    <rect x="1" y="1" width="26" height="18" rx="3" />
+                    <line x1="1" y1="6" x2="27" y2="6" />
+                    <line x1="8" y1="6" x2="8" y2="19" />
+                  </svg>
+                </div>
+                <div className="text-center">
+                  <p className="font-bold text-sm" style={{ color: 'var(--clay-ink)' }}>Landskap</p>
+                  <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>A4 Mendatar (297×210mm)</p>
+                </div>
+              </button>
+              {/* Portrait Option */}
+              <button
+                onClick={() => {
+                  setEditingTemplate({
+                    id: 'new',
+                    namaTemplat: 'Templat Potret',
+                    keterangan: '',
+                    orientasi: 'potret',
+                    saizKertas: 'a4',
+                    medanTemplat: [],
+                    status: 'draf',
+                    versi: 1,
+                  })
+                  setShowNewDialog(false)
+                }}
+                className="clay-card p-5 flex flex-col items-center gap-3 transition-all hover:scale-[1.03]"
+                style={{ borderRadius: '20px', border: '2px solid var(--clay-success)' }}
+              >
+                {/* Portrait preview shape */}
+                <div className="rounded-lg flex items-center justify-center" style={{
+                  width: '56px', height: '80px',
+                  background: 'linear-gradient(135deg, #f0faf6, #e8f5f0)',
+                  border: '2px dashed var(--clay-success)',
+                  aspectRatio: '210/297',
+                }}>
+                  <svg width="20" height="28" viewBox="0 0 20 28" fill="none" stroke="var(--clay-success)" strokeWidth="1.5" opacity="0.6">
+                    <rect x="1" y="1" width="18" height="26" rx="3" />
+                    <line x1="1" y1="6" x2="19" y2="6" />
+                    <line x1="7" y1="6" x2="7" y2="27" />
+                  </svg>
+                </div>
+                <div className="text-center">
+                  <p className="font-bold text-sm" style={{ color: 'var(--clay-ink)' }}>Potret</p>
+                  <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>A4 Menegak (210×297mm)</p>
+                </div>
+              </button>
+            </div>
+            <button
+              onClick={() => setShowNewDialog(false)}
+              className="w-full py-2.5 rounded-2xl text-sm font-semibold transition-all"
+              style={{ background: 'var(--clay-bg)', color: 'var(--clay-ink-soft)', border: '1.5px solid var(--border)' }}
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {data.map((t: any) => (
+        {filteredData.map((t: any) => (
           <div key={t.id} className="clay-card p-5 cursor-pointer group" onClick={() => setEditingTemplate(t)}>
             {/* Template preview with field positions */}
             <div className="rounded-xl mb-4 relative overflow-hidden"
@@ -2274,6 +2420,24 @@ function TemplatTab({ user }: { user: AdminUser }) {
             </div>
             <h4 className="font-semibold text-sm mb-1" style={{ color: 'var(--clay-ink)' }}>{t.namaTemplat}</h4>
             <p className="text-xs mb-2" style={{ color: 'var(--clay-ink-soft)' }}>{t.keterangan || 'Tiada keterangan'}</p>
+            {/* Orientation badge */}
+            <div className="flex items-center gap-1.5 mb-2">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                style={{
+                  background: t.orientasi === 'landskap' ? 'rgba(124,108,240,0.1)' : 'rgba(34,197,94,0.1)',
+                  color: t.orientasi === 'landskap' ? 'var(--clay-primary)' : 'var(--clay-success)',
+                  border: `1px solid ${t.orientasi === 'landskap' ? 'rgba(124,108,240,0.25)' : 'rgba(34,197,94,0.25)'}`,
+                }}
+              >
+                {t.orientasi === 'landskap' ? (
+                  <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="3" width="14" height="10" rx="2" /></svg>
+                ) : (
+                  <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="1" width="10" height="14" rx="2" /></svg>
+                )}
+                {t.orientasi === 'landskap' ? 'Landskap' : 'Potret'}
+              </span>
+              <span className="text-[10px]" style={{ color: 'var(--clay-ink-soft)' }}>A4 · v{t.versi} · {t.medanTemplat?.length || 0} medan</span>
+            </div>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
                 <button
@@ -2305,8 +2469,8 @@ function TemplatTab({ user }: { user: AdminUser }) {
                   Tidak Aktif
                 </button>
               </div>
-              <span className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
-                {t.orientasi === 'landskap' ? 'Landskap' : 'Potret'} · v{t.versi} · {t.medanTemplat?.length || 0} medan
+              <span className="text-[10px]" style={{ color: 'var(--clay-ink-soft)' }}>
+                v{t.versi} · {t.medanTemplat?.length || 0} medan
               </span>
             </div>
           </div>

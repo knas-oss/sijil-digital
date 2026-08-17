@@ -87,3 +87,35 @@ Stage Summary:
 - Both Pengarah and Penyelaras signatures supported
 - Signatures preview on canvas and are embedded in generated PDF certificates
 - API handles upload, validation, and cleanup of signature files
+
+---
+Task ID: 5
+Agent: Main Agent
+Task: Tambah pilihan templat sijil orientasi Potret/Landskap dalam Galeri Templat Sijil
+
+Work Log:
+- Added orientasiFilter state to TemplatTab ('semua' | 'landskap' | 'potret')
+- Added showNewDialog state for new template orientation selection dialog
+- Created orientation filter tabs in gallery header:
+  - "Semua" button with LayoutDashboard icon + count badge
+  - "Landskap" button with wide rectangle SVG icon + count badge
+  - "Potret" button with tall rectangle SVG icon + count badge
+  - Active tab highlighted with clay-primary style
+- Added filteredData logic to filter templates by selected orientation
+- Created orientation selection dialog when clicking "Templat Baharu":
+  - Modal overlay with two visual options
+  - Landscape option: wide preview shape, dashed purple border, "A4 Mendatar (297×210mm)"
+  - Portrait option: tall preview shape, dashed green border, "A4 Menegak (210×297mm)"
+  - "Batal" button to close dialog
+  - Each option sets orientasi and namaTemplat accordingly
+- Added orientation badge on each template card:
+  - Visual pill badge with SVG icon (wide/tall rectangle)
+  - Color-coded: purple for Landskap, green for Potret
+  - Shows alongside version and field count
+- Removed redundant orientation text from bottom status line
+
+Stage Summary:
+- Admin can filter template gallery by orientation (All/Landscape/Portrait)
+- New template creation starts with orientation selection dialog
+- Each template card shows clear orientation badge
+- Count badges on filter tabs show number of templates per orientation
