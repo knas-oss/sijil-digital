@@ -2378,7 +2378,12 @@ function TemplatTab({ user }: { user: AdminUser }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredData.map((t: any) => (
-          <div key={t.id} className="clay-card p-5 cursor-pointer group" onClick={() => setEditingTemplate(t)}>
+          <div key={t.id} className="clay-card p-5 cursor-pointer group transition-all" 
+            style={{ 
+              border: t.status === 'aktif' ? '2px solid var(--clay-success)' : undefined,
+              boxShadow: t.status === 'aktif' ? '0 0 0 3px rgba(34,197,94,0.12)' : undefined,
+            }}
+            onClick={() => setEditingTemplate(t)}>
             {/* Template preview with field positions */}
             <div className="rounded-xl mb-4 relative overflow-hidden"
               style={{
@@ -2386,6 +2391,14 @@ function TemplatTab({ user }: { user: AdminUser }) {
                 aspectRatio: t.orientasi === 'landskap' ? '297/210' : '210/297',
                 border: '2px dashed var(--border)',
               }}>
+              {/* Active badge on preview */}
+              {t.status === 'aktif' && (
+                <div className="absolute top-2 right-2 z-20 px-2 py-0.5 rounded-full text-[9px] font-bold flex items-center gap-1"
+                  style={{ background: 'var(--clay-success)', color: 'white', boxShadow: '0 1px 4px rgba(34,197,94,0.3)' }}
+                >
+                  <CheckCircle2 className="w-2.5 h-2.5" /> Aktif
+                </div>
+              )}
               {/* Render field positions as dots */}
               {(t.medanTemplat || []).map((m: any, i: number) => (
                 <div key={i}
@@ -2439,35 +2452,25 @@ function TemplatTab({ user }: { user: AdminUser }) {
               <span className="text-[10px]" style={{ color: 'var(--clay-ink-soft)' }}>A4 · v{t.versi} · {t.medanTemplat?.length || 0} medan</span>
             </div>
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleToggleStatus(t.id, 'aktif') }}
-                  disabled={statusLoading === t.id}
-                  className="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 disabled:opacity-50"
-                  style={{
-                    background: t.status === 'aktif' ? 'var(--clay-success)' : 'transparent',
-                    color: t.status === 'aktif' ? 'white' : 'var(--clay-success)',
-                    border: t.status === 'aktif' ? '1.5px solid var(--clay-success)' : '1.5px solid var(--clay-success)',
-                    boxShadow: t.status === 'aktif' ? 'var(--clay-shadow-sm)' : 'none',
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={t.status === 'aktif'}
+                  onCheckedChange={(checked) => {
+                    handleToggleStatus(t.id, checked ? 'aktif' : 'tidak_aktif')
                   }}
-                >
-                  {statusLoading === t.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
-                  Aktif
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleToggleStatus(t.id, 'tidak_aktif') }}
                   disabled={statusLoading === t.id}
-                  className="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 disabled:opacity-50"
-                  style={{
-                    background: t.status !== 'aktif' ? 'var(--clay-ink-soft)' : 'transparent',
-                    color: t.status !== 'aktif' ? 'white' : 'var(--clay-ink-soft)',
-                    border: t.status !== 'aktif' ? '1.5px solid var(--clay-ink-soft)' : '1.5px solid var(--clay-ink-soft)',
-                    boxShadow: t.status !== 'aktif' ? 'var(--clay-shadow-sm)' : 'none',
-                  }}
-                >
-                  {statusLoading === t.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
-                  Tidak Aktif
-                </button>
+                  className="scale-110"
+                />
+                <span className="text-xs font-semibold" style={{ color: t.status === 'aktif' ? 'var(--clay-success)' : 'var(--clay-ink-soft)' }}>
+                  {statusLoading === t.id ? (
+                    <Loader2 className="w-3 h-3 animate-spin inline mr-1" />
+                  ) : t.status === 'aktif' ? (
+                    <CheckCircle2 className="w-3 h-3 inline mr-1" />
+                  ) : (
+                    <XCircle className="w-3 h-3 inline mr-1" />
+                  )}
+                  {t.status === 'aktif' ? 'Aktif' : 'Tidak Aktif'}
+                </span>
               </div>
               <span className="text-[10px]" style={{ color: 'var(--clay-ink-soft)' }}>
                 v{t.versi} · {t.medanTemplat?.length || 0} medan

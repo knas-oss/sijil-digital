@@ -119,3 +119,26 @@ Stage Summary:
 - New template creation starts with orientation selection dialog
 - Each template card shows clear orientation badge
 - Count badges on filter tabs show number of templates per orientation
+
+---
+Task ID: 6
+Agent: Main Agent
+Task: Betulkan fungsi togol Aktif/Tidak Aktif templat - tidak berfungsi untuk aktifkan templat lain
+
+Work Log:
+- Diagnosed issue: old design used two small buttons ("Aktif" and "Tidak Aktif") that were hard to click and easily intercepted by the card's onClick (opening editor)
+- Replaced two-button design with a single Switch toggle component (shadcn/ui Switch)
+- Switch checked state maps to t.status === 'aktif'
+- onCheckedChange calls handleToggleStatus with 'aktif' or 'tidak_aktif'
+- Added status text label next to switch with icon (CheckCircle2 for aktif, XCircle for tidak_aktif, Loader2 for loading)
+- Added green border and glow on active template card for clear visual distinction
+- Added "✓ Aktif" badge on top-right corner of active template's preview thumbnail
+- Tested API endpoint directly: PUT /api/templat with {templatId, status: 'aktif'} correctly deactivates other templates and activates the target
+- Verified Prisma logic: updateMany for deactivation + update for activation works atomically
+- Lint passes
+
+Stage Summary:
+- Toggle now uses Switch component (single toggle) instead of two small buttons
+- Active template cards have green border glow and "Aktif" badge on preview
+- API backend confirmed working correctly for template activation/deactivation
+- UX significantly improved: clear toggle, clear visual feedback
