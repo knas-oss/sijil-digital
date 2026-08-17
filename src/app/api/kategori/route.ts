@@ -6,7 +6,7 @@ export async function GET() {
   try {
     const kategori = await db.kategoriProgram.findMany({
       orderBy: { namaKategori: 'asc' },
-      include: { _count: { select: { kursus: true } } },
+      include: { _count: { select: { kursus: true } }, templatLalai: true },
     })
     return NextResponse.json({ berjaya: true, data: kategori })
   } catch (error) {
@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
         keterangan: body.keterangan || null,
         warnaLabel: body.warnaLabel || '#7C6CF0',
         status: body.status || 'aktif',
+        templatLalaiId: body.templatLalaiId || null,
       },
     })
     return NextResponse.json({ berjaya: true, data: kategori })
@@ -69,6 +70,7 @@ export async function PUT(request: NextRequest) {
     if (body.keterangan !== undefined) updateData.keterangan = body.keterangan || null
     if (body.warnaLabel !== undefined) updateData.warnaLabel = body.warnaLabel
     if (body.status !== undefined) updateData.status = body.status
+    if (body.templatLalaiId !== undefined) updateData.templatLalaiId = body.templatLalaiId || null
 
     const kategori = await db.kategoriProgram.update({
       where: { id: body.id },

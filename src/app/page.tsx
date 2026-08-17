@@ -1062,6 +1062,8 @@ function KategoriTab() {
   const [formKeterangan, setFormKeterangan] = useState('')
   const [formWarna, setFormWarna] = useState('#7C6CF0')
   const [formStatus, setFormStatus] = useState('aktif')
+  const [formTemplatLalaiId, setFormTemplatLalaiId] = useState('')
+  const [templatList, setTemplatList] = useState<any[]>([])
 
   const fetchData = () => {
     setLoading(true)
@@ -1070,6 +1072,7 @@ function KategoriTab() {
 
   useEffect(() => {
     fetch('/api/kategori').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
+    fetch('/api/templat').then(r => r.json()).then(d => { if (d.berjaya) setTemplatList(d.data) })
   }, [])
 
   const openAddDialog = () => {
@@ -1079,6 +1082,7 @@ function KategoriTab() {
     setFormKeterangan('')
     setFormWarna('#7C6CF0')
     setFormStatus('aktif')
+    setFormTemplatLalaiId('')
     setDialogOpen(true)
   }
 
@@ -1089,6 +1093,7 @@ function KategoriTab() {
     setFormKeterangan(item.keterangan || '')
     setFormWarna(item.warnaLabel)
     setFormStatus(item.status)
+    setFormTemplatLalaiId(item.templatLalaiId || '')
     setDialogOpen(true)
   }
 
@@ -1109,8 +1114,8 @@ function KategoriTab() {
         method: isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(isEdit
-          ? { id: editingItem.id, kodKategori: formKod.trim(), namaKategori: formNama.trim(), keterangan: formKeterangan.trim(), warnaLabel: formWarna, status: formStatus }
-          : { kodKategori: formKod.trim(), namaKategori: formNama.trim(), keterangan: formKeterangan.trim(), warnaLabel: formWarna, status: formStatus }
+          ? { id: editingItem.id, kodKategori: formKod.trim(), namaKategori: formNama.trim(), keterangan: formKeterangan.trim(), warnaLabel: formWarna, status: formStatus, templatLalaiId: formTemplatLalaiId || null }
+          : { kodKategori: formKod.trim(), namaKategori: formNama.trim(), keterangan: formKeterangan.trim(), warnaLabel: formWarna, status: formStatus, templatLalaiId: formTemplatLalaiId || null }
         ),
       })
       const result = await res.json()
@@ -1175,6 +1180,7 @@ function KategoriTab() {
                 <th className="px-4 py-3 text-left">Nama Kategori</th>
                 <th className="px-4 py-3 text-left">Keterangan</th>
                 <th className="px-4 py-3 text-center">Kursus</th>
+                <th className="px-4 py-3 text-center">Templat Lalai</th>
                 <th className="px-4 py-3 text-center">Status</th>
                 <th className="px-4 py-3 text-center">Warna</th>
                 <th className="px-4 py-3 text-center rounded-tr-xl">Tindakan</th>
@@ -1187,6 +1193,9 @@ function KategoriTab() {
                   <td className="px-4 py-3" style={{ color: 'var(--clay-ink)' }}>{k.namaKategori}</td>
                   <td className="px-4 py-3 text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>{k.keterangan || '-'}</td>
                   <td className="px-4 py-3 text-center" style={{ color: 'var(--clay-ink-secondary)' }}>{k._count?.kursus || 0}</td>
+                  <td className="px-4 py-3 text-center text-xs" style={{ color: k.templatLalai ? 'var(--clay-success)' : 'var(--clay-ink-soft)' }}>
+                    {k.templatLalai ? k.templatLalai.namaTemplat : '—'}
+                  </td>
                   <td className="px-4 py-3 text-center">
                     <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
                       style={{ background: k.status === 'aktif' ? 'var(--clay-success-bg)' : 'var(--clay-warning-bg)', color: k.status === 'aktif' ? 'var(--clay-success)' : 'var(--clay-warning)' }}>
@@ -1220,7 +1229,7 @@ function KategoriTab() {
               ))}
               {data.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center" style={{ color: 'var(--clay-ink-soft)' }}>
+                  <td colSpan={8} className="px-4 py-8 text-center" style={{ color: 'var(--clay-ink-soft)' }}>
                     Tiada kategori. Klik &quot;Tambah Kategori&quot; untuk menambah.
                   </td>
                 </tr>
@@ -1300,6 +1309,22 @@ function KategoriTab() {
                   style={{ background: 'transparent' }}
                 />
               </div>
+            </div>
+            {/* Templat Lalai (Default Template) */}
+            <div>
+              <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Templat Sijil Lalai</label>
+              <Select value={formTemplatLalaiId || '_none_'} onValueChange={v => setFormTemplatLalaiId(v === '_none_' ? '' : v)}>
+                <SelectTrigger className="h-10" style={{ borderRadius: '16px', boxShadow: 'var(--clay-inset)', background: 'var(--clay)', border: '2px solid transparent' }}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent style={{ borderRadius: '16px' }}>
+                  <SelectItem value="_none_">— Tiada templat lalai —</SelectItem>
+                  {templatList.filter((t: any) => t.status === 'aktif').map((t: any) => (
+                    <SelectItem key={t.id} value={t.id}>{t.namaTemplat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs mt-1" style={{ color: 'var(--clay-ink-soft)' }}>Templat sijil default untuk semua kursus dalam kategori ini</p>
             </div>
             {/* Status */}
             <div>
