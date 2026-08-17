@@ -166,3 +166,18 @@ Stage Summary:
 - Signature PNG files saved to /public/signatures/ directory
 - PDF generation (jana-sijil) reads signatures from public/ paths, so uploaded signatures will embed correctly in certificates
 - Auto-cleanup of old signatures prevents disk bloat
+
+---
+Task ID: 8
+Agent: Main Agent
+Task: Buangkan garisan pada Penyelaras Program dan tukar kepada Cop Rasmi dalam Galeri Templat Sijil
+
+Work Log:
+- Updated PDF generation (jana-sijil/route.ts): removed underline line (___________________________) for Penyelaras signature area, changed text from "Penyelaras Program" to "Cop Rasmi"
+- Updated template preview (page.tsx): removed signature line div under Penyelaras signature, changed label from "Penyelaras Program" to "Cop Rasmi"
+- Lint passes, no browser errors, "Cop Rasmi" confirmed visible on template editor canvas
+
+Stage Summary:
+- Right signature area now shows "Cop Rasmi" instead of "Penyelaras Program"
+- No underline/line drawn below the signature area for Cop Rasmi
+- Changes applied to both PDF generation and template preview

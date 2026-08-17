@@ -360,17 +360,10 @@ export async function POST(request: NextRequest) {
           })
         }
       } catch (sigErr) {
-        // Signature embed failed, draw line instead
-        page.drawText('___________________________', {
-          x: width - 340, y: sigY + 25, size: 10, font: helvetica, color: rgb(0.5, 0.5, 0.5),
-        })
+        // Signature embed failed, skip line
       }
-    } else {
-      page.drawText('___________________________', {
-        x: width - 340, y: sigY + 25, size: 10, font: helvetica, color: rgb(0.5, 0.5, 0.5),
-      })
     }
-    page.drawText('Penyelaras Program', {
+    page.drawText('Cop Rasmi', {
       x: width - 320, y: sigY + 10, size: 10, font: helvetica, color: rgb(0.18, 0.19, 0.31),
     })
 

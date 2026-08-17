@@ -2768,8 +2768,7 @@ function TemplateEditor({ template, onSave, onClose }: {
                 ) : (
                   <p className="text-[4px] italic" style={{ color: 'rgba(120,124,170,0.3)' }}>Tandatangan Penyelaras</p>
                 )}
-                <div className="mt-0.5" style={{ width: '80%', height: '1px', background: 'rgba(120,124,170,0.15)' }} />
-                <p className="text-[4px] mt-0.5" style={{ color: 'rgba(120,124,170,0.3)' }}>Penyelaras Program</p>
+                <p className="text-[4px] mt-0.5" style={{ color: 'rgba(120,124,170,0.3)' }}>Cop Rasmi</p>
               </div>
 
               {/* Empty state */}
