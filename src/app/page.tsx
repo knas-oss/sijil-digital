@@ -2876,7 +2876,7 @@ function TemplateEditor({ template, onSave, onClose }: {
                     const res = await fetch('/api/upload/tandatangan', { method: 'POST', body: formData })
                     const result = await res.json()
                     if (result.berjaya) {
-                      setTandatanganPengarah(result.data.laluan)
+                      setTandatanganPengarah(result.laluan)
                       toast({ title: 'Tandatangan Dimuat Naik', description: 'Tandatangan Pengarah berjaya dimuat naik.' })
                     } else {
                       toast({ title: 'Ralat', description: result.mesej || 'Gagal memuat naik.', variant: 'destructive' })
@@ -2996,7 +2996,7 @@ function TemplateEditor({ template, onSave, onClose }: {
                     const res = await fetch('/api/upload/tandatangan', { method: 'POST', body: formData })
                     const result = await res.json()
                     if (result.berjaya) {
-                      setTandatanganPenyelaras(result.data.laluan)
+                      setTandatanganPenyelaras(result.laluan)
                       toast({ title: 'Tandatangan Dimuat Naik', description: 'Tandatangan Penyelaras berjaya dimuat naik.' })
                     } else {
                       toast({ title: 'Ralat', description: result.mesej || 'Gagal memuat naik.', variant: 'destructive' })

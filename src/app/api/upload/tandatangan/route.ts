@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
-    const file = formData.get('file') as File | null
+    const file = (formData.get('file') || formData.get('fail')) as File | null
 
     if (!file) {
       return NextResponse.json({ berjaya: false, mesej: 'Fail diperlukan.' }, { status: 400 })
