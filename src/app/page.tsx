@@ -3243,9 +3243,22 @@ function SijilTab() {
   const [kursusList, setKursusList] = useState<any[]>([])
   const [selectedKursus, setSelectedKursus] = useState<string>('')
   const [sijilList, setSijilList] = useState<any[]>([])
+  const [pesertaList, setPesertaList] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const { toast } = useToast()
+
+  const loadData = (kursusId: string) => {
+    setLoading(true)
+    // Fetch both certificates and participants for this course
+    Promise.all([
+      fetch(`/api/sijil?kursusId=${kursusId}`).then(r => r.json()),
+      fetch(`/api/peserta?kursusId=${kursusId}`).then(r => r.json()),
+    ]).then(([sijilData, pesertaData]) => {
+      if (sijilData.berjaya) setSijilList(sijilData.data)
+      if (pesertaData.berjaya) setPesertaList(pesertaData.data)
+    }).finally(() => setLoading(false))
+  }
 
   useEffect(() => {
     fetch('/api/kursus').then(r => r.json()).then(d => {
@@ -3254,9 +3267,9 @@ function SijilTab() {
         if (d.data.length > 0) {
           const firstId = d.data[0].id
           setSelectedKursus(firstId)
-          fetch(`/api/sijil?kursusId=${firstId}`).then(r2 => r2.json()).then(d2 => {
-            if (d2.berjaya) setSijilList(d2.data)
-          }).finally(() => setLoading(false))
+          loadData(firstId)
+        } else {
+          setLoading(false)
         }
       }
     })
@@ -3264,10 +3277,7 @@ function SijilTab() {
 
   const handleKursusChange = (id: string) => {
     setSelectedKursus(id)
-    setLoading(true)
-    fetch(`/api/sijil?kursusId=${id}`).then(r => r.json()).then(d => {
-      if (d.berjaya) setSijilList(d.data)
-    }).finally(() => setLoading(false))
+    loadData(id)
   }
 
   const handleBulkGenerate = async () => {
@@ -3281,15 +3291,49 @@ function SijilTab() {
       const data = await res.json()
       if (data.berjaya) {
         toast({ title: 'Sijil Dijana', description: `${data.bilDijana} sijil berjaya dijana.` })
-        // Refresh
-        fetch(`/api/sijil?kursusId=${selectedKursus}`).then(r => r.json()).then(d => {
-          if (d.berjaya) setSijilList(d.data)
-        })
+        loadData(selectedKursus)
+      } else {
+        toast({ title: 'Ralat', description: data.mesej || 'Gagal menjana sijil.', variant: 'destructive' })
       }
     } catch {
-      toast({ title: 'Ralat', description: 'Galah menjana sijil.', variant: 'destructive' })
+      toast({ title: 'Ralat', description: 'Gagal menjana sijil.', variant: 'destructive' })
     } finally {
       setGenerating(false)
+    }
+  }
+
+  // Combine participants with their certificate status
+  const pesertaWithSijil = pesertaList.map((p: any) => {
+    const existingSijil = sijilList.find((s: any) => s.pesertaId === p.id)
+    return {
+      ...p,
+      sijil: existingSijil || null,
+      hasSijil: !!existingSijil,
+    }
+  })
+
+  const eligibleCount = pesertaWithSijil.filter((p: any) => p.statusKelayakan === 'layak' && !p.hasSijil).length
+  const generatedCount = pesertaWithSijil.filter((p: any) => p.hasSijil).length
+
+  const handleDownloadSijil = async (sijilId: string) => {
+    try {
+      const res = await fetch('/api/awam/jana-sijil', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sijilId }),
+      })
+      if (res.ok) {
+        const blob = await res.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'sijil.pdf'
+        a.click()
+        window.URL.revokeObjectURL(url)
+        loadData(selectedKursus)
+      }
+    } catch {
+      toast({ title: 'Ralat', description: 'Gagal memuat turun sijil.', variant: 'destructive' })
     }
   }
 
@@ -3297,19 +3341,26 @@ function SijilTab() {
     <div className="space-y-4">
       <div className="clay-card p-5">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <h3 className="font-semibold" style={{ color: 'var(--clay-ink)' }}>Senarai Sijil</h3>
+          <h3 className="font-semibold" style={{ color: 'var(--clay-ink)' }}>Senarai Peserta &amp; Sijil</h3>
           <select value={selectedKursus} onChange={(e) => handleKursusChange(e.target.value)}
             className="clay-input px-4 py-2 text-sm flex-1 sm:max-w-sm"
             style={{ background: 'var(--clay)', color: 'var(--clay-ink)' }}>
             {kursusList.map((k: any) => <option key={k.id} value={k.id}>{k.namaKursusBm}</option>)}
           </select>
-          <button onClick={handleBulkGenerate} disabled={generating}
+          <button onClick={handleBulkGenerate} disabled={generating || eligibleCount === 0}
             className="clay-btn text-sm flex items-center gap-2"
-            style={{ borderRadius: '16px' }}>
+            style={{ borderRadius: '16px', opacity: eligibleCount === 0 ? 0.5 : 1 }}>
             {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-            Jana Semua Sijil
+            Jana Semua Sijil ({eligibleCount} layak)
           </button>
         </div>
+        {pesertaWithSijil.length > 0 && (
+          <div className="flex gap-4 mt-3 text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>
+            <span>Jumlah peserta: <strong>{pesertaWithSijil.length}</strong></span>
+            <span>Sijil dijana: <strong style={{ color: 'var(--clay-success)' }}>{generatedCount}</strong></span>
+            <span>Menunggu: <strong style={{ color: 'var(--clay-primary)' }}>{eligibleCount}</strong></span>
+          </div>
+        )}
       </div>
 
       {loading ? <LoadingSpinner /> : (
@@ -3321,30 +3372,56 @@ function SijilTab() {
                   <th className="px-3 py-3 text-left rounded-tl-xl">No. Siri</th>
                   <th className="px-3 py-3 text-left">Nama Peserta</th>
                   <th className="px-3 py-3 text-left">No. MyKad</th>
-                  <th className="px-3 py-3 text-center">Status</th>
-                  <th className="px-3 py-3 text-center rounded-tr-xl">Muat Turun</th>
+                  <th className="px-3 py-3 text-center">Kelayakan</th>
+                  <th className="px-3 py-3 text-center">Status Sijil</th>
+                  <th className="px-3 py-3 text-center rounded-tr-xl">Tindakan</th>
                 </tr>
               </thead>
               <tbody>
-                {sijilList.map((s: any, i: number) => (
-                  <tr key={s.id} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(124,108,240,0.04)' }}>
-                    <td className="px-3 py-3 font-mono text-xs" style={{ color: 'var(--clay-primary)' }}>{s.noSiri}</td>
-                    <td className="px-3 py-3" style={{ color: 'var(--clay-ink)' }}>{s.peserta?.namaPenuh}</td>
+                {pesertaWithSijil.map((p: any, i: number) => (
+                  <tr key={p.id} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(124,108,240,0.04)' }}>
+                    <td className="px-3 py-3 font-mono text-xs" style={{ color: p.hasSijil ? 'var(--clay-primary)' : 'var(--clay-ink-soft)' }}>
+                      {p.hasSijil ? p.sijil.noSiri : '—'}
+                    </td>
+                    <td className="px-3 py-3" style={{ color: 'var(--clay-ink)' }}>{p.namaPenuh}</td>
                     <td className="px-3 py-3 font-mono text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>
-                      {s.peserta?.noMykad ? `${s.peserta.noMykad.slice(0,6)}-${s.peserta.noMykad.slice(6,8)}-${s.peserta.noMykad.slice(8)}` : '-'}
+                      {p.noMykad ? `${p.noMykad.slice(0,6)}-${p.noMykad.slice(6,8)}-${p.noMykad.slice(8)}` : '-'}
                     </td>
                     <td className="px-3 py-3 text-center">
                       <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
-                        style={{ background: s.status === 'sah' ? 'var(--clay-success-bg)' : 'var(--clay-danger-bg)', color: s.status === 'sah' ? 'var(--clay-success)' : 'var(--clay-danger)' }}>
-                        {s.status === 'sah' ? 'Sah' : 'Dibatalkan'}
+                        style={{ background: p.statusKelayakan === 'layak' ? 'var(--clay-success-bg)' : 'var(--clay-danger-bg)', color: p.statusKelayakan === 'layak' ? 'var(--clay-success)' : 'var(--clay-danger)' }}>
+                        {p.statusKelayakan === 'layak' ? 'Layak' : 'Tidak Layak'}
                       </span>
                     </td>
-                    <td className="px-3 py-3 text-center" style={{ color: 'var(--clay-ink-soft)' }}>{s.bilMuatTurun}</td>
+                    <td className="px-3 py-3 text-center">
+                      {p.hasSijil ? (
+                        <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+                          style={{ background: p.sijil.status === 'sah' ? 'var(--clay-success-bg)' : 'var(--clay-danger-bg)', color: p.sijil.status === 'sah' ? 'var(--clay-success)' : 'var(--clay-danger)' }}>
+                          {p.sijil.status === 'sah' ? 'Sah' : 'Dibatalkan'}
+                        </span>
+                      ) : (
+                        <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+                          style={{ background: 'rgba(124,108,240,0.1)', color: 'var(--clay-primary)' }}>
+                          Belum Dijana
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      {p.hasSijil && p.sijil.status === 'sah' ? (
+                        <button onClick={() => handleDownloadSijil(p.sijil.id)}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors hover:opacity-80"
+                          style={{ background: 'var(--clay-primary)', color: 'white' }}>
+                          <Download className="w-3 h-3" /> PDF
+                        </button>
+                      ) : (
+                        <span style={{ color: 'var(--clay-ink-soft)' }} className="text-xs">—</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
-                {sijilList.length === 0 && (
-                  <tr><td colSpan={5} className="px-3 py-8 text-center" style={{ color: 'var(--clay-ink-soft)' }}>
-                    Tiada sijil lagi. Klik &quot;Jana Semua Sijil&quot; untuk menjana sijil bagi peserta yang layak.
+                {pesertaWithSijil.length === 0 && (
+                  <tr><td colSpan={6} className="px-3 py-8 text-center" style={{ color: 'var(--clay-ink-soft)' }}>
+                    Tiada peserta didaftarkan untuk kursus ini. Sila tambah peserta terlebih dahulu.
                   </td></tr>
                 )}
               </tbody>
