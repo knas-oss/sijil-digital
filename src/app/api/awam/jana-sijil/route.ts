@@ -298,34 +298,48 @@ export async function POST(request: NextRequest) {
 
     // --- Signature Area ---
     const sigY = 80
-    
-    // Left signature: Pengarah (with digital signature if available)
-    const sigPengarahPath = sijil.templat?.laluanTandatanganPengarah
-    if (sigPengarahPath) {
+
+    // Helper: embed signature image from either file path or base64 data URL
+    const embedSignature = async (sigPath: string | null | undefined): Promise<any> => {
+      if (!sigPath) return null
       try {
-        const fullPath = path.join(process.cwd(), 'public', sigPengarahPath)
+        // Base64 data URL (from upload API — works on Vercel)
+        if (sigPath.startsWith('data:image/')) {
+          const base64Data = sigPath.split(',')[1]
+          const sigBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0))
+          if (sigPath.includes('image/png')) {
+            return await pdfDoc.embedPng(sigBytes)
+          } else {
+            return await pdfDoc.embedJpg(sigBytes)
+          }
+        }
+        // File path (local development)
+        const fullPath = path.join(process.cwd(), 'public', sigPath)
         if (fs.existsSync(fullPath)) {
           const sigBytes = fs.readFileSync(fullPath)
-          const sigImage = await pdfDoc.embedPng(sigBytes)
-          const sigDims = sigImage.scale(1)
-          const sigMaxW = 160
-          const sigMaxH = 45
-          const sigScaleW = sigMaxW / sigDims.width
-          const sigScaleH = sigMaxH / sigDims.height
-          const sigScale = Math.min(sigScaleW, sigScaleH)
-          const sigW = sigDims.width * sigScale
-          const sigH = sigDims.height * sigScale
-          page.drawImage(sigImage, {
-            x: 145, y: sigY + 30,
-            width: sigW, height: sigH,
-          })
+          if (sigPath.endsWith('.png')) {
+            return await pdfDoc.embedPng(sigBytes)
+          } else {
+            return await pdfDoc.embedJpg(sigBytes)
+          }
         }
       } catch (sigErr) {
-        // Signature embed failed, draw line instead
-        page.drawText('___________________________', {
-          x: 120, y: sigY + 25, size: 10, font: helvetica, color: rgb(0.5, 0.5, 0.5),
-        })
+        console.error('Signature embed error:', sigErr)
       }
+      return null
+    }
+    
+    // Left signature: Pengarah (with digital signature if available)
+    const sigPengarahImage = await embedSignature(sijil.templat?.laluanTandatanganPengarah)
+    if (sigPengarahImage) {
+      const sigDims = sigPengarahImage.scale(1)
+      const sigMaxW = 160
+      const sigMaxH = 45
+      const sigScale = Math.min(sigMaxW / sigDims.width, sigMaxH / sigDims.height)
+      page.drawImage(sigPengarahImage, {
+        x: 145, y: sigY + 30,
+        width: sigDims.width * sigScale, height: sigDims.height * sigScale,
+      })
     } else {
       page.drawText('___________________________', {
         x: 120, y: sigY + 25, size: 10, font: helvetica, color: rgb(0.5, 0.5, 0.5),
@@ -350,29 +364,16 @@ export async function POST(request: NextRequest) {
     })
 
     // Right signature: Cop Rasmi (with digital signature if available)
-    const sigPenyelarasPath = sijil.templat?.laluanTandatanganPenyelaras
-    if (sigPenyelarasPath) {
-      try {
-        const fullPath = path.join(process.cwd(), 'public', sigPenyelarasPath)
-        if (fs.existsSync(fullPath)) {
-          const sigBytes = fs.readFileSync(fullPath)
-          const sigImage = await pdfDoc.embedPng(sigBytes)
-          const sigDims = sigImage.scale(1)
-          const sigMaxW = 180
-          const sigMaxH = 50
-          const sigScaleW = sigMaxW / sigDims.width
-          const sigScaleH = sigMaxH / sigDims.height
-          const sigScale = Math.min(sigScaleW, sigScaleH)
-          const sigW = sigDims.width * sigScale
-          const sigH = sigDims.height * sigScale
-          page.drawImage(sigImage, {
-            x: width - 270, y: sigY + 30,
-            width: sigW, height: sigH,
-          })
-        }
-      } catch (sigErr) {
-        // Signature embed failed, skip line
-      }
+    const sigPenyelarasImage = await embedSignature(sijil.templat?.laluanTandatanganPenyelaras)
+    if (sigPenyelarasImage) {
+      const sigDims = sigPenyelarasImage.scale(1)
+      const sigMaxW = 180
+      const sigMaxH = 50
+      const sigScale = Math.min(sigMaxW / sigDims.width, sigMaxH / sigDims.height)
+      page.drawImage(sigPenyelarasImage, {
+        x: width - 270, y: sigY + 30,
+        width: sigDims.width * sigScale, height: sigDims.height * sigScale,
+      })
     }
     // Cop Rasmi (centre-aligned, size 9)
     const copRasmiText = 'Cop Rasmi'
