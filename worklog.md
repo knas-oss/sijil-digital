@@ -181,3 +181,31 @@ Stage Summary:
 - Right signature area now shows "Cop Rasmi" instead of "Penyelaras Program"
 - No underline/line drawn below the signature area for Cop Rasmi
 - Changes applied to both PDF generation and template preview
+
+---
+Task ID: 9
+Agent: Main Agent
+Task: Tambah Jawatan Penandatangan (editable) dan Nama Penandatangan di bawah tandatangan Pengarah dalam Templat Sijil
+
+Work Log:
+- Added `jawatanPenandatangan` and `namaPenandatangan` fields to TemplatSijil model in schema.prisma
+- Ran db:push to sync schema to database
+- Updated /api/templat PUT handler to accept and save jawatanPenandatangan and namaPenandatangan
+- Added state variables in TemplateEditor: jawatanPenandatangan, namaPenandatangan, jawatanCustom, jawatanMode
+- Added editable UI in right panel under Tandatangan Digital:
+  - Dropdown select with preset options: Pengarah, Timbalan Pengarah Latihan, Timbalan Pengarah Operasi, Lain-lain
+  - When "Lain-lain" selected, shows custom text input
+  - Input field for Nama Penandatangan (e.g. Hj. Ahmad bin Abdullah)
+- Updated template canvas preview: shows dynamic jawatan text, nama if provided, and institution name
+- Updated handleSave to include jawatanPenandatangan and namaPenandatangan in PUT request
+- Updated PDF generation (jana-sijil/route.ts): draws dynamic jawatan text, nama penandatangan if available, adjusts institution name Y position
+- Tested API: PUT /api/templat with jawatanPenandatangan and namaPenandatangan saves correctly
+- Tested API: GET /api/templat returns new fields correctly
+- Lint passes
+
+Stage Summary:
+- Jawatan Penandatangan is editable via dropdown (Pengarah/Timbalan Pengarah Latihan/Timbalan Pengarah Operasi) or custom text
+- Nama Penandatangan is a free-text input field
+- Both fields saved to database and rendered in PDF certificates
+- Canvas preview shows jawatan and nama dynamically
+- Institution name "Kolej Teknologi Termaju (ADTEC)" shifted down when nama is present

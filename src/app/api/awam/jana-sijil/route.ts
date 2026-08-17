@@ -331,11 +331,19 @@ export async function POST(request: NextRequest) {
         x: 120, y: sigY + 25, size: 10, font: helvetica, color: rgb(0.5, 0.5, 0.5),
       })
     }
-    page.drawText('Pengarah', {
+    const jawatanText = sijil.templat?.jawatanPenandatangan || 'Pengarah'
+    page.drawText(jawatanText, {
       x: 145, y: sigY + 10, size: 10, font: helvetica, color: rgb(0.18, 0.19, 0.31),
     })
+    // Draw nama penandatangan if available
+    const namaText = sijil.templat?.namaPenandatangan
+    if (namaText) {
+      page.drawText(namaText, {
+        x: 145, y: sigY - 3, size: 8, font: helvetica, color: rgb(0.36, 0.37, 0.5),
+      })
+    }
     page.drawText('Kolej Teknologi Termaju (ADTEC)', {
-      x: 120, y: sigY - 3, size: 8, font: helvetica, color: rgb(0.36, 0.37, 0.5),
+      x: 120, y: sigY - (namaText ? 16 : 3), size: 8, font: helvetica, color: rgb(0.36, 0.37, 0.5),
     })
 
     // Right signature: Penyelaras (with digital signature if available)

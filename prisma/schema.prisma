@@ -163,6 +163,8 @@ model TemplatSijil {
   status        String   @default("draf") // draf | aktif | tidak_aktif | arkib
   laluanTandatanganPengarah String? // path ke fail tandatangan digital pengarah (.png)
   laluanTandatanganPenyelaras String? // path ke fail tandatangan digital penyelaras (.png)
+  jawatanPenandatangan String? // jawatan penandatangan kiri (e.g. Pengarah, Timbalan Pengarah Latihan)
+  namaPenandatangan String? // nama penuh penandatangan kiri
   diciptaPada   DateTime @default(now())
   dikemaskiniPada DateTime @updatedAt
 

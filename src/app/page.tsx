@@ -2502,6 +2502,13 @@ function TemplateEditor({ template, onSave, onClose }: {
   // Tandatangan digital
   const [tandatanganPengarah, setTandatanganPengarah] = useState<string>(template.laluanTandatanganPengarah || '')
   const [tandatanganPenyelaras, setTandatanganPenyelaras] = useState<string>(template.laluanTandatanganPenyelaras || '')
+  const [jawatanPenandatangan, setJawatanPenandatangan] = useState<string>(template.jawatanPenandatangan || 'Pengarah')
+  const [namaPenandatangan, setNamaPenandatangan] = useState<string>(template.namaPenandatangan || '')
+  const [jawatanCustom, setJawatanCustom] = useState<string>('')
+  const [jawatanMode, setJawatanMode] = useState<string>(() => {
+    const preset = ['Pengarah', 'Timbalan Pengarah Latihan', 'Timbalan Pengarah Operasi']
+    return preset.includes(template.jawatanPenandatangan || 'Pengarah') ? 'preset' : 'custom'
+  })
   const [uploadingSig, setUploadingSig] = useState<string | null>(null) // 'pengarah' | 'penyelaras' | null
   const pengarahInputRef = useRef<HTMLInputElement>(null)
   const penyelarasInputRef = useRef<HTMLInputElement>(null)
@@ -2605,6 +2612,8 @@ function TemplateEditor({ template, onSave, onClose }: {
             templatId: template.id,
             laluanTandatanganPengarah: tandatanganPengarah || null,
             laluanTandatanganPenyelaras: tandatanganPenyelaras || null,
+            jawatanPenandatangan: jawatanPenandatangan || null,
+            namaPenandatangan: namaPenandatangan || null,
           }),
         })
       } catch {}
@@ -2760,7 +2769,9 @@ function TemplateEditor({ template, onSave, onClose }: {
                   <p className="text-[4px] italic" style={{ color: 'rgba(120,124,170,0.3)' }}>Tandatangan Pengarah</p>
                 )}
                 <div className="mt-0.5" style={{ width: '80%', height: '1px', background: 'rgba(120,124,170,0.15)' }} />
-                <p className="text-[4px] mt-0.5" style={{ color: 'rgba(120,124,170,0.3)' }}>Pengarah</p>
+                <p className="text-[4px] mt-0.5" style={{ color: 'rgba(120,124,170,0.3)' }}>{jawatanPenandatangan || 'Pengarah'}</p>
+                {namaPenandatangan && <p className="text-[3px] mt-0.5" style={{ color: 'rgba(120,124,170,0.25)' }}>{namaPenandatangan}</p>}
+                <p className="text-[3px] mt-0.5" style={{ color: 'rgba(120,124,170,0.25)' }}>Kolej Teknologi Termaju (ADTEC)</p>
               </div>
               <div className="absolute bottom-[18%] left-[52%] right-[8%] flex flex-col items-center">
                 {tandatanganPenyelaras ? (
@@ -2882,6 +2893,58 @@ function TemplateEditor({ template, onSave, onClose }: {
                   {uploadingSig === 'pengarah' ? 'Memuat naik...' : 'Muat Naik .png'}
                 </button>
               )}
+            </div>
+
+            {/* Jawatan & Nama Penandatangan */}
+            <div className="space-y-2 mt-1 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+              <label className="text-xs font-medium flex items-center gap-1.5" style={{ color: 'var(--clay-ink-secondary)' }}>
+                <Edit2 className="w-3 h-3" /> Jawatan Penandatangan
+              </label>
+              <select
+                value={jawatanMode === 'custom' ? '__custom__' : jawatanPenandatangan}
+                onChange={(e) => {
+                  if (e.target.value === '__custom__') {
+                    setJawatanMode('custom')
+                    setJawatanCustom(jawatanPenandatangan)
+                  } else {
+                    setJawatanMode('preset')
+                    setJawatanPenandatangan(e.target.value)
+                  }
+                }}
+                className="w-full text-xs rounded-xl px-3 py-2 outline-none transition-all"
+                style={{
+                  background: 'var(--clay-bg)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--clay-ink)',
+                }}
+              >
+                <option value="Pengarah">Pengarah</option>
+                <option value="Timbalan Pengarah Latihan">Timbalan Pengarah Latihan</option>
+                <option value="Timbalan Pengarah Operasi">Timbalan Pengarah Operasi</option>
+                <option value="__custom__">Lain-lain...</option>
+              </select>
+              {jawatanMode === 'custom' && (
+                <Input
+                  value={jawatanCustom}
+                  placeholder="Taip jawatan penandatangan..."
+                  onChange={(e) => {
+                    setJawatanCustom(e.target.value)
+                    setJawatanPenandatangan(e.target.value)
+                  }}
+                  className="text-xs rounded-xl"
+                  style={{ background: 'var(--clay-bg)', border: '1px solid var(--border)', color: 'var(--clay-ink)' }}
+                />
+              )}
+              <label className="text-xs font-medium flex items-center gap-1.5 mt-2" style={{ color: 'var(--clay-ink-secondary)' }}>
+                <Award className="w-3 h-3" /> Nama Penandatangan
+              </label>
+              <Input
+                value={namaPenandatangan}
+                placeholder="Cth: Hj. Ahmad bin Abdullah"
+                onChange={(e) => setNamaPenandatangan(e.target.value)}
+                className="text-xs rounded-xl"
+                style={{ background: 'var(--clay-bg)', border: '1px solid var(--border)', color: 'var(--clay-ink)' }}
+              />
             </div>
 
             {/* Tandatangan Penyelaras */}

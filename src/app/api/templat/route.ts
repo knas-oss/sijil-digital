@@ -76,6 +76,8 @@ export async function PUT(request: NextRequest) {
       if (body.status !== undefined) updateData.status = body.status
       if (body.laluanTandatanganPengarah !== undefined) updateData.laluanTandatanganPengarah = body.laluanTandatanganPengarah
       if (body.laluanTandatanganPenyelaras !== undefined) updateData.laluanTandatanganPenyelaras = body.laluanTandatanganPenyelaras
+      if (body.jawatanPenandatangan !== undefined) updateData.jawatanPenandatangan = body.jawatanPenandatangan
+      if (body.namaPenandatangan !== undefined) updateData.namaPenandatangan = body.namaPenandatangan
 
       // If setting template to 'aktif', deactivate all others first (only one active at a time)
       if (body.status === 'aktif') {
