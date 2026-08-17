@@ -1,0 +1,2002 @@
+     1→'use client'
+     2→
+     3→import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react'
+     4→import { useSearchParams } from 'next/navigation'
+     5→import { Button } from '@/components/ui/button'
+     6→import { Input } from '@/components/ui/input'
+     7→import { Card, CardContent } from '@/components/ui/card'
+     8→import { Badge } from '@/components/ui/badge'
+     9→import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
+    10→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    11→import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+    12→import { Separator } from '@/components/ui/separator'
+    13→import { ScrollArea } from '@/components/ui/scroll-area'
+    14→import { Switch } from '@/components/ui/switch'
+    15→import { useToast } from '@/hooks/use-toast'
+    16→import {
+    17→  Search, Download, Printer, Eye, Shield, LogOut, LayoutDashboard,
+    18→  FolderOpen, GraduationCap, Users, FileText, Activity, Settings,
+    19→  ChevronRight, Calendar, Clock, Award, QrCode, CheckCircle2,
+    20→  XCircle, AlertCircle, Loader2, BarChart3, FileBadge, LogIn,
+    21→  Plus, Edit2, Trash2, RefreshCw, ArrowLeft, Info, Save,
+    22→  GripVertical, Type, AlignLeft, AlignCenter, AlignRight,
+    23→  Bold, Italic, Move, X, ZoomIn, ZoomOut,
+    24→  Share2, Copy, Check, ExternalLink, UserPlus, Mail, Phone,
+    25→  Upload, Image as ImageIcon, PenLine
+    26→} from 'lucide-react'
+    27→
+    28→// ============================================================
+    29→// Types
+    30→// ============================================================
+    31→interface SijilItem {
+    32→  id: string | null
+    33→  noSiri: string | null
+    34→  status: string
+    35→  namaKursus: string
+    36→  namaKursusBi: string | null
+    37→  kodKursus: string
+    38→  kategori: string
+    39→  kategoriKod: string
+    40→  kategoriWarna: string
+    41→  tarikhMula: string
+    42→  tarikhTamat: string
+    43→  dijanaPada: string | null
+    44→}
+    45→
+    46→interface AdminUser {
+    47→  id: string
+    48→  namaPenuh: string
+    49→  emel: string
+    50→  peranan: string
+    51→}
+    52→
+    53→interface StatsData {
+    54→  jumlahKursusAktif: number
+    55→  jumlahPeserta: number
+    56→  jumlahSijilDijana: number
+    57→  sijilBulanIni: number
+    58→  categoryBreakdown: { nama: string; warna: string; bil: number }[]
+    59→  monthlyStats: { bulan: string; bil: number }[]
+    60→  kursusRecent: any[]
+    61→}
+    62→
+    63→// ============================================================
+    64→// Utility: Format date to BM
+    65→// ============================================================
+    66→function formatDateBM(date: Date | string): string {
+    67→  const d = typeof date === 'string' ? new Date(date) : date
+    68→  const months = ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember']
+    69→  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`
+    70→}
+    71→
+    72→function formatDateShort(date: Date | string): string {
+    73→  const d = typeof date === 'string' ? new Date(date) : date
+    74→  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    75→}
+    76→
+    77→// ============================================================
+    78→// Main Page Component (wraps HomeContent in Suspense for useSearchParams)
+    79→// ============================================================
+    80→export default function Home() {
+    81→  return (
+    82→    <Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--clay-bg)' }}><Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--clay-primary)' }} /></div>}>
+    83→      <HomeContent />
+    84→    </Suspense>
+    85→  )
+    86→}
+    87→
+    88→function HomeContent() {
+    89→  const searchParams = useSearchParams()
+    90→  const daftarKursusId = searchParams.get('daftar')
+    91→  const [view, setView] = useState<'public' | 'admin'>('public')
+    92→  const [adminUser, setAdminUser] = useState<AdminUser | null>(null)
+    93→  const [adminTab, setAdminTab] = useState('dashboard')
+    94→
+    95→  return (
+    96→    <div className="min-h-screen flex flex-col" style={{ background: 'var(--clay-bg)' }}>
+    97→      {/* Header */}
+    98→      <header className="clay-card-sm mx-4 mt-4 px-6 py-3 flex items-center justify-between">
+    99→        <div className="flex items-center gap-3">
+   100→          <img src="/logo-adtec.png" alt="Logo ADTEC JTM Kampus Sandakan" className="h-10 sm:h-12 object-contain" />
+   101→          <div className="hidden sm:block">
+   102→            <h1 className="text-sm font-bold" style={{ color: 'var(--clay-ink)' }}>e-Sijil ADTEC Sandakan</h1>
+   103→            <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>Sistem Cetak Sijil Digital Dinamik</p>
+   104→          </div>
+   105→        </div>
+   106→        <div className="flex items-center gap-2">
+   107→          {view === 'public' ? (
+   108→            <Button
+   109→              onClick={() => setView('admin')}
+   110→              className="clay-btn-secondary text-sm px-4 py-2 flex items-center gap-2"
+   111→              variant="outline"
+   112→              style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '20px', boxShadow: 'var(--clay-shadow-sm)' }}
+   113→            >
+   114→              <Shield className="w-4 h-4" />
+   115→              <span className="hidden sm:inline">Portal Pentadbir</span>
+   116→            </Button>
+   117→          ) : (
+   118→            <div className="flex items-center gap-2">
+   119→              {adminUser && (
+   120→                <span className="text-xs px-3 py-1 rounded-full" style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)' }}>
+   121→                  {adminUser.namaPenuh}
+   122→                </span>
+   123→              )}
+   124→              <Button
+   125→                onClick={() => { setView('public'); setAdminUser(null) }}
+   126→                variant="outline"
+   127→                className="text-sm px-4 py-2 flex items-center gap-2"
+   128→                style={{ background: 'var(--clay)', color: 'var(--clay-ink-secondary)', borderRadius: '20px', boxShadow: 'var(--clay-shadow-sm)' }}
+   129→              >
+   130→                <ArrowLeft className="w-4 h-4" />
+   131→                <span className="hidden sm:inline">Portal Awam</span>
+   132→              </Button>
+   133→            </div>
+   134→          )}
+   135→        </div>
+   136→      </header>
+   137→
+   138→      {/* Main Content */}
+   139→      <main className="flex-1 px-4 py-6">
+   140→        {view === 'public' ? (
+   141→          <PublicPortal daftarKursusId={daftarKursusId} />
+   142→        ) : adminUser ? (
+   143→          <AdminPortal user={adminUser} activeTab={adminTab} onTabChange={setAdminTab} onLogout={() => { setAdminUser(null); setView('public') }} />
+   144→        ) : (
+   145→          <AdminLogin onLogin={(user) => { setAdminUser(user); setAdminTab('dashboard') }} />
+   146→        )}
+   147→      </main>
+   148→
+   149→      {/* Footer */}
+   150→      <footer className="mt-auto px-4 pb-4">
+   151→        <div className="clay-card-sm px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-2">
+   152→          <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+   153→            © 2026 ADTEC JTM Kampus Sandakan — Jabatan Tenaga Manusia, Kementerian Sumber Manusia
+   154→          </p>
+   155→          <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+   156→            e-Sijil v1.0 · SCS-ADTEC-SDK
+   157→          </p>
+   158→        </div>
+   159→      </footer>
+   160→    </div>
+   161→  )
+   162→}
+   163→
+   164→// ============================================================
+   165→// PUBLIC PORTAL
+   166→// ============================================================
+   167→function PublicPortal({ daftarKursusId }: { daftarKursusId: string | null }) {
+   168→  const [mykadInput, setMykadInput] = useState('')
+   169→  const [loading, setLoading] = useState(false)
+   170→  const [results, setResults] = useState<{ bilangan: number; namaDipaparkan: string; noMykadFormat: string; sijil: SijilItem[] } | null>(null)
+   171→  const [error, setError] = useState('')
+   172→  const [previewSijil, setPreviewSijil] = useState<SijilItem | null>(null)
+   173→  const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+   174→  const [pdfLoading, setPdfLoading] = useState(false)
+   175→  const { toast } = useToast()
+   176→
+   177→  // Registration form state
+   178→  const [daftarMode, setDaftarMode] = useState(false)
+   179→  const [daftarKursus, setDaftarKursus] = useState<any>(null)
+   180→  const [daftarLoading, setDaftarLoading] = useState(false)
+   181→  const [daftarSuccess, setDaftarSuccess] = useState(false)
+   182→  const [daftarNama, setDaftarNama] = useState('')
+   183→  const [daftarMykad, setDaftarMykad] = useState('')
+   184→  const [daftarTelefon, setDaftarTelefon] = useState('')
+   185→  const [daftarEmel, setDaftarEmel] = useState('')
+   186→  const [daftarJantina, setDaftarJantina] = useState('')
+   187→  const [daftarError, setDaftarError] = useState('')
+   188→
+   189→  useEffect(() => {
+   190→    if (daftarKursusId) {
+   191→      setDaftarMode(true)
+   192→      setDaftarLoading(true)
+   193→      fetch(`/api/awam/pendaftaran?kursusId=${daftarKursusId}`)
+   194→        .then(r => r.json())
+   195→        .then(d => {
+   196→          if (d.berjaya) setDaftarKursus(d.data)
+   197→          else setDaftarError(d.mesej || 'Kursus tidak dijumpai.')
+   198→        })
+   199→        .catch(() => setDaftarError('Ralat sambungan.'))
+   200→        .finally(() => setDaftarLoading(false))
+   201→    }
+   202→  }, [daftarKursusId])
+   203→
+   204→  const handleDaftarMyKadChange = (value: string) => {
+   205→    const digits = value.replace(/[^0-9]/g, '')
+   206→    if (digits.length > 12) return
+   207→    let formatted = digits
+   208→    if (digits.length > 6) formatted = `${digits.slice(0, 6)}-${digits.slice(6)}`
+   209→    if (digits.length > 8) formatted = `${digits.slice(0, 6)}-${digits.slice(6, 8)}-${digits.slice(8)}`
+   210→    setDaftarMykad(formatted)
+   211→  }
+   212→
+   213→  const handleDaftar = async () => {
+   214→    const digits = daftarMykad.replace(/[^0-9]/g, '')
+   215→    if (!daftarNama.trim() || digits.length !== 12) {
+   216→      setDaftarError('Nama penuh dan nombor MyKad 12 digit wajib diisi.')
+   217→      return
+   218→    }
+   219→    setDaftarLoading(true)
+   220→    setDaftarError('')
+   221→    try {
+   222→      const res = await fetch('/api/awam/pendaftaran', {
+   223→        method: 'POST',
+   224→        headers: { 'Content-Type': 'application/json' },
+   225→        body: JSON.stringify({
+   226→          kursusId: daftarKursusId,
+   227→          namaPenuh: daftarNama,
+   228→          noMykad: digits,
+   229→          noTelefon: daftarTelefon,
+   230→          emel: daftarEmel,
+   231→          jantina: daftarJantina,
+   232→        }),
+   233→      })
+   234→      const data = await res.json()
+   235→      if (data.berjaya) {
+   236→        setDaftarSuccess(true)
+   237→      } else {
+   238→        setDaftarError(data.mesej || 'Gagal mendaftar.')
+   239→      }
+   240→    } catch {
+   241→      setDaftarError('Ralat sambungan. Sila cuba sebentar lagi.')
+   242→    } finally {
+   243→      setDaftarLoading(false)
+   244→    }
+   245→  }
+   246→
+   247→  // Format MyKad with dashes as user types
+   248→  const handleMyKadChange = (value: string) => {
+   249→    const digits = value.replace(/[^0-9]/g, '')
+   250→    if (digits.length > 12) return
+   251→    let formatted = digits
+   252→    if (digits.length > 6) formatted = `${digits.slice(0, 6)}-${digits.slice(6)}`
+   253→    if (digits.length > 8) formatted = `${digits.slice(0, 6)}-${digits.slice(6, 8)}-${digits.slice(8)}`
+   254→    setMykadInput(formatted)
+   255→  }
+   256→
+   257→  const handleSearch = async () => {
+   258→    const digits = mykadInput.replace(/[^0-9]/g, '')
+   259→    if (digits.length !== 12) {
+   260→      setError('Nombor MyKad mesti mengandungi 12 digit.')
+   261→      return
+   262→    }
+   263→    setLoading(true)
+   264→    setError('')
+   265→    setResults(null)
+   266→    try {
+   267→      const res = await fetch('/api/awam/carian', {
+   268→        method: 'POST',
+   269→        headers: { 'Content-Type': 'application/json' },
+   270→        body: JSON.stringify({ no_mykad: digits }),
+   271→      })
+   272→      const data = await res.json()
+   273→      if (data.berjaya) {
+   274→        setResults(data)
+   275→      } else {
+   276→        setError(data.mesej || 'Tiada rekod ditemui.')
+   277→      }
+   278→    } catch {
+   279→      setError('Ralat sambungan. Sila cuba sebentar lagi.')
+   280→    } finally {
+   281→      setLoading(false)
+   282→    }
+   283→  }
+   284→
+   285→  const handleDownload = async (sijilId: string) => {
+   286→    setPdfLoading(true)
+   287→    try {
+   288→      const res = await fetch('/api/awam/jana-sijil', {
+   289→        method: 'POST',
+   290→        headers: { 'Content-Type': 'application/json' },
+   291→        body: JSON.stringify({ sijilId }),
+   292→      })
+   293→      if (!res.ok) throw new Error('Gagal menjana sijil')
+   294→      const blob = await res.blob()
+   295→      const url = URL.createObjectURL(blob)
+   296→      setPdfUrl(url)
+   297→      const a = document.createElement('a')
+   298→      a.href = url
+   299→      a.download = 'Sijil_ADTEC_Sandakan.pdf'
+   300→      a.click()
+   301→      toast({ title: 'Sijil Dimuat Turun', description: 'Fail PDF sijil telah dimuat turun.' })
+   302→    } catch {
+   303→      toast({ title: 'Ralat', description: 'Gagal menjana sijil. Sila cuba lagi.', variant: 'destructive' })
+   304→    } finally {
+   305→      setPdfLoading(false)
+   306→    }
+   307→  }
+   308→
+   309→  const handlePreview = async (sijil: SijilItem) => {
+   310→    if (!sijil.id) return
+   311→    setPreviewSijil(sijil)
+   312→    setPdfLoading(true)
+   313→    try {
+   314→      const res = await fetch('/api/awam/jana-sijil', {
+   315→        method: 'POST',
+   316→        headers: { 'Content-Type': 'application/json' },
+   317→        body: JSON.stringify({ sijilId: sijil.id }),
+   318→      })
+   319→      if (!res.ok) throw new Error('Gagal')
+   320→      const blob = await res.blob()
+   321→      const url = URL.createObjectURL(blob)
+   322→      setPdfUrl(url)
+   323→    } catch {
+   324→      toast({ title: 'Ralat', description: 'Gagal pratonton sijil.', variant: 'destructive' })
+   325→    } finally {
+   326→      setPdfLoading(false)
+   327→    }
+   328→  }
+   329→
+   330→  const handlePrint = async (sijilId: string) => {
+   331→    setPdfLoading(true)
+   332→    try {
+   333→      const res = await fetch('/api/awam/jana-sijil', {
+   334→        method: 'POST',
+   335→        headers: { 'Content-Type': 'application/json' },
+   336→        body: JSON.stringify({ sijilId }),
+   337→      })
+   338→      if (!res.ok) throw new Error('Gagal')
+   339→      const blob = await res.blob()
+   340→      const url = URL.createObjectURL(blob)
+   341→      const printWindow = window.open(url, '_blank')
+   342→      if (printWindow) {
+   343→        printWindow.onload = () => { printWindow.print() }
+   344→      }
+   345→    } catch {
+   346→      toast({ title: 'Ralat', description: 'Gagal mencetak sijil.', variant: 'destructive' })
+   347→    } finally {
+   348→      setPdfLoading(false)
+   349→    }
+   350→  }
+   351→
+   352→  return (
+   353→    <div className="max-w-4xl mx-auto space-y-6">
+   354→      {/* ====== REGISTRATION MODE ====== */}
+   355→      {daftarMode && (
+   356→        <div className="space-y-6">
+   357→          {/* Hero */}
+   358→          <div className="clay-card-lg p-8 sm:p-12 text-center hero-gradient relative overflow-hidden">
+   359→            <div className="absolute inset-0 opacity-5" style={{ background: 'radial-gradient(circle at 30% 40%, var(--clay-primary), transparent 50%)' }} />
+   360→            <div className="relative z-10">
+   361→              <img src="/logo-adtec.png" alt="Logo ADTEC" className="h-16 sm:h-20 mx-auto mb-4 object-contain clay-float" />
+   362→              <h1 className="text-2xl sm:text-4xl font-bold mb-2" style={{ color: 'var(--clay-ink)' }}>
+   363→                Pendaftaran Kursus
+   364→              </h1>
+   365→              <p className="text-lg sm:text-xl mb-1" style={{ color: 'var(--clay-primary-dark)' }}>
+   366→                e-Sijil ADTEC Sandakan
+   367→              </p>
+   368→              <p className="text-sm max-w-lg mx-auto" style={{ color: 'var(--clay-ink-secondary)' }}>
+   369→                Isikan maklumat anda untuk mendaftar kursus. Pendaftaran memerlukan kelulusan pentadbir.
+   370→              </p>
+   371→            </div>
+   372→          </div>
+   373→
+   374→          {daftarLoading && !daftarKursus && !daftarError && (
+   375→            <div className="clay-card p-8 text-center">
+   376→              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3" style={{ color: 'var(--clay-primary)' }} />
+   377→              <p className="text-sm" style={{ color: 'var(--clay-ink-soft)' }}>Memuat maklumat kursus...</p>
+   378→            </div>
+   379→          )}
+   380→
+   381→          {daftarError && !daftarKursus && (
+   382→            <div className="clay-card p-8 text-center">
+   383→              <AlertCircle className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--clay-danger)' }} />
+   384→              <h3 className="font-semibold text-lg mb-2" style={{ color: 'var(--clay-ink)' }}>Ralat</h3>
+   385→              <p className="text-sm mb-4" style={{ color: 'var(--clay-danger)' }}>{daftarError}</p>
+   386→              <button onClick={() => { window.location.href = '/' }} className="clay-btn-secondary text-sm px-5 py-2" style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}>
+   387→                <ArrowLeft className="w-4 h-4 inline mr-1" /> Kembali ke e-Sijil
+   388→              </button>
+   389→            </div>
+   390→          )}
+   391→
+   392→          {daftarSuccess && (
+   393→            <div className="clay-card p-8 text-center">
+   394→              <CheckCircle2 className="w-16 h-16 mx-auto mb-4" style={{ color: 'var(--clay-success)' }} />
+   395→              <h3 className="font-bold text-xl mb-2" style={{ color: 'var(--clay-ink)' }}>Pendaftaran Berjaya Dihantar!</h3>
+   396→              <p className="text-sm mb-4 max-w-md mx-auto" style={{ color: 'var(--clay-ink-secondary)' }}>
+   397→                Permohonan pendaftaran anda telah dihantar. Sila tunggu kelulusan pentadbir sebelum anda dimasukkan sebagai peserta rasmi.
+   398→              </p>
+   399→              <div className="clay-card-sm p-4 max-w-sm mx-auto mb-4" style={{ background: 'rgba(79,196,161,0.08)' }}>
+   400→                <p className="text-xs" style={{ color: 'var(--clay-success)' }}>
+   401→                  <Info className="w-3.5 h-3.5 inline mr-1" />
+   402→                  Anda akan dimaklumkan melalui e-mel atau telefon setelah pendaftaran diluluskan.
+   403→                </p>
+   404→              </div>
+   405→              <button onClick={() => { window.location.href = '/' }} className="clay-btn text-sm px-5 py-2 flex items-center gap-2 mx-auto">
+   406→                <ArrowLeft className="w-4 h-4" /> Kembali ke e-Sijil
+   407→              </button>
+   408→            </div>
+   409→          )}
+   410→
+   411→          {daftarKursus && !daftarSuccess && (
+   412→            <>
+   413→              {/* Kursus Info Card */}
+   414→              <div className="clay-card p-6">
+   415→                <h3 className="font-semibold text-base mb-3 flex items-center gap-2" style={{ color: 'var(--clay-ink)' }}>
+   416→                  <GraduationCap className="w-5 h-5" style={{ color: 'var(--clay-primary)' }} />
+   417→                  Maklumat Kursus
+   418→                </h3>
+   419→                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   420→                  <div className="clay-card-sm p-3">
+   421→                    <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>Nama Kursus</p>
+   422→                    <p className="font-semibold text-sm" style={{ color: 'var(--clay-ink)' }}>{daftarKursus.namaKursusBm}</p>
+   423→                  </div>
+   424→                  <div className="clay-card-sm p-3">
+   425→                    <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>Kod Kursus</p>
+   426→                    <p className="font-mono text-sm" style={{ color: 'var(--clay-primary)' }}>{daftarKursus.kodKursus}</p>
+   427→                  </div>
+   428→                  <div className="clay-card-sm p-3">
+   429→                    <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>Kategori</p>
+   430→                    <p className="text-sm" style={{ color: 'var(--clay-ink)' }}>{daftarKursus.kategori}</p>
+   431→                  </div>
+   432→                  <div className="clay-card-sm p-3">
+   433→                    <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>Tarikh</p>
+   434→                    <p className="text-sm" style={{ color: 'var(--clay-ink)' }}>{formatDateShort(daftarKursus.tarikhMula)} – {formatDateShort(daftarKursus.tarikhTamat)}</p>
+   435→                  </div>
+   436→                  {daftarKursus.tempat && (
+   437→                    <div className="clay-card-sm p-3">
+   438→                      <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>Tempat</p>
+   439→                      <p className="text-sm" style={{ color: 'var(--clay-ink)' }}>{daftarKursus.tempat}</p>
+   440→                    </div>
+   441→                  )}
+   442→                  {daftarKursus.penyelaras && (
+   443→                    <div className="clay-card-sm p-3">
+   444→                      <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>Penyelaras</p>
+   445→                      <p className="text-sm" style={{ color: 'var(--clay-ink)' }}>{daftarKursus.penyelaras}</p>
+   446→                    </div>
+   447→                  )}
+   448→                </div>
+   449→              </div>
+   450→
+   451→              {/* Registration Form Card */}
+   452→              <div className="clay-card p-6 sm:p-8">
+   453→                <h3 className="font-semibold text-base mb-4 flex items-center gap-2" style={{ color: 'var(--clay-ink)' }}>
+   454→                  <UserPlus className="w-5 h-5" style={{ color: 'var(--clay-primary)' }} />
+   455→                  Borang Pendaftaran
+   456→                </h3>
+   457→                <div className="space-y-4">
+   458→                  {/* Nama Penuh */}
+   459→                  <div>
+   460→                    <label className="text-sm font-semibold mb-1 block" style={{ color: 'var(--clay-ink-secondary)' }}>
+   461→                      Nama Penuh <span style={{ color: 'var(--clay-destructive)' }}>*</span>
+   462→                    </label>
+   463→                    <input
+   464→                      type="text"
+   465→                      value={daftarNama}
+   466→                      onChange={e => setDaftarNama(e.target.value)}
+   467→                      placeholder="NAMA PENUH SEPERTI DI MYKAD"
+   468→                      className="w-full clay-input px-4 py-3 uppercase"
+   469→                      style={{ background: 'var(--clay)', color: 'var(--clay-ink)' }}
+   470→                    />
+   471→                  </div>
+   472→                  {/* No. MyKad */}
+   473→                  <div>
+   474→                    <label className="text-sm font-semibold mb-1 block" style={{ color: 'var(--clay-ink-secondary)' }}>
+   475→                      No. MyKad <span style={{ color: 'var(--clay-destructive)' }}>*</span>
+   476→                    </label>
+   477→                    <div className="relative">
+   478→                      <input
+   479→                        type="text"
+   480→                        value={daftarMykad}
+   481→                        onChange={e => handleDaftarMyKadChange(e.target.value)}
+   482→                        placeholder="901231-12-5678"
+   483→                        className="w-full clay-input px-6 py-3 text-center"
+   484→                        style={{ background: 'var(--clay)', color: 'var(--clay-ink)', fontSize: '18px', letterSpacing: '2px' }}
+   485→                        maxLength={14}
+   486→                      />
+   487→                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+   488→                        {daftarMykad.replace(/[^0-9]/g, '').length}/12
+   489→                      </span>
+   490→                    </div>
+   491→                  </div>
+   492→                  {/* No. Telefon & Emel */}
+   493→                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   494→                    <div>
+   495→                      <label className="text-sm font-semibold mb-1 block" style={{ color: 'var(--clay-ink-secondary)' }}>No. Telefon</label>
+   496→                      <div className="relative">
+   497→                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--clay-ink-soft)' }} />
+   498→                        <input
+   499→                          type="tel"
+   500→                          value={daftarTelefon}
+   501→                          onChange={e => setDaftarTelefon(e.target.value)}
+   502→                          placeholder="012-3456789"
+   503→                          className="w-full clay-input pl-10 pr-4 py-3"
+   504→                          style={{ background: 'var(--clay)', color: 'var(--clay-ink)' }}
+   505→                        />
+   506→                      </div>
+   507→                    </div>
+   508→                    <div>
+   509→                      <label className="text-sm font-semibold mb-1 block" style={{ color: 'var(--clay-ink-secondary)' }}>E-mel</label>
+   510→                      <div className="relative">
+   511→                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--clay-ink-soft)' }} />
+   512→                        <input
+   513→                          type="email"
+   514→                          value={daftarEmel}
+   515→                          onChange={e => setDaftarEmel(e.target.value)}
+   516→                          placeholder="contoh@emel.com"
+   517→                          className="w-full clay-input pl-10 pr-4 py-3"
+   518→                          style={{ background: 'var(--clay)', color: 'var(--clay-ink)' }}
+   519→                        />
+   520→                      </div>
+   521→                    </div>
+   522→                  </div>
+   523→                  {/* Jantina */}
+   524→                  <div>
+   525→                    <label className="text-sm font-semibold mb-1 block" style={{ color: 'var(--clay-ink-secondary)' }}>Jantina</label>
+   526→                    <Select value={daftarJantina} onValueChange={setDaftarJantina}>
+   527→                      <SelectTrigger className="h-11" style={{ borderRadius: '16px', boxShadow: 'var(--clay-inset)', background: 'var(--clay)', border: '2px solid transparent' }}>
+   528→                        <SelectValue placeholder="Pilih jantina" />
+   529→                      </SelectTrigger>
+   530→                      <SelectContent style={{ borderRadius: '16px' }}>
+   531→                        <SelectItem value="lelaki">Lelaki</SelectItem>
+   532→                        <SelectItem value="perempuan">Perempuan</SelectItem>
+   533→                      </SelectContent>
+   534→                    </Select>
+   535→                  </div>
+   536→
+   537→                  {daftarError && (
+   538→                    <div className="rounded-xl p-3 text-sm" style={{ background: 'var(--clay-danger-bg)', color: 'var(--clay-danger)', borderRadius: '12px' }}>
+   539→                      {daftarError}
+   540→                    </div>
+   541→                  )}
+   542→
+   543→                  <button
+   544→                    onClick={handleDaftar}
+   545→                    disabled={daftarLoading || !daftarNama.trim() || daftarMykad.replace(/[^0-9]/g, '').length !== 12}
+   546→                    className="clay-btn w-full flex items-center justify-center gap-2 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+   547→                  >
+   548→                    {daftarLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <UserPlus className="w-5 h-5" />}
+   549→                    {daftarLoading ? 'Menghantar...' : 'Hantar Pendaftaran'}
+   550→                  </button>
+   551→
+   552→                  <div className="flex items-start gap-2 p-3 rounded-xl" style={{ background: 'rgba(79,196,161,0.08)' }}>
+   553→                    <Info className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--clay-success)' }} />
+   554→                    <p className="text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>
+   555→                      Pendaftaran anda perlu diluluskan oleh pentadbir sebelum dimasukkan sebagai peserta rasmi kursus ini.
+   556→                    </p>
+   557→                  </div>
+   558→                </div>
+   559→              </div>
+   560→
+   561→              {/* Back link */}
+   562→              <div className="text-center">
+   563→                <button onClick={() => { window.location.href = '/' }} className="clay-btn-secondary text-sm px-5 py-2 inline-flex items-center gap-2" style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}>
+   564→                  <ArrowLeft className="w-4 h-4" /> Kembali ke e-Sijil
+   565→                </button>
+   566→              </div>
+   567→            </>
+   568→          )}
+   569→        </div>
+   570→      )}
+   571→
+   572→      {/* ====== NORMAL SEARCH MODE ====== */}
+   573→      {!daftarMode && (
+   574→      <>
+   575→      {/* Hero Section */}
+   576→      <div className="clay-card-lg p-8 sm:p-12 text-center hero-gradient relative overflow-hidden">
+   577→        <div className="absolute inset-0 opacity-5" style={{ background: 'radial-gradient(circle at 30% 40%, var(--clay-primary), transparent 50%)' }} />
+   578→        <div className="relative z-10">
+   579→          <img src="/logo-adtec.png" alt="Logo ADTEC" className="h-16 sm:h-20 mx-auto mb-4 object-contain clay-float" />
+   580→          <h1 className="text-2xl sm:text-4xl font-bold mb-2" style={{ color: 'var(--clay-ink)' }}>
+   581→            e-Sijil ADTEC Sandakan
+   582→          </h1>
+   583→          <p className="text-lg sm:text-xl mb-1" style={{ color: 'var(--clay-primary-dark)' }}>
+   584→            Sistem Cetak Sijil Digital Dinamik
+   585→          </p>
+   586→          <p className="text-sm max-w-lg mx-auto" style={{ color: 'var(--clay-ink-secondary)' }}>
+   587→            Dapatkan sijil rasmi anda dalam masa kurang 1 minit — hanya dengan memasukkan nombor MyKad.
+   588→          </p>
+   589→        </div>
+   590→      </div>
+   591→
+   592→      {/* Search Section */}
+   593→      <div className="clay-card p-6 sm:p-8">
+   594→        <div className="text-center mb-4">
+   595→          <h2 className="text-lg font-semibold mb-1" style={{ color: 'var(--clay-ink)' }}>
+   596→            Semak Sijil Anda
+   597→          </h2>
+   598→          <p className="text-sm" style={{ color: 'var(--clay-ink-soft)' }}>
+   599→            Masukkan nombor MyKad 12 digit untuk mencari sijil yang layak
+   600→          </p>
+   601→        </div>
+   602→        <div className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto">
+   603→          <div className="flex-1 relative">
+   604→            <input
+   605→              type="text"
+   606→              value={mykadInput}
+   607→              onChange={(e) => handleMyKadChange(e.target.value)}
+   608→              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+   609→              placeholder="901231-12-5678"
+   610→              className="w-full clay-input mykad-input px-6 text-center"
+   611→              style={{ background: 'var(--clay)', color: 'var(--clay-ink)', fontSize: '20px', letterSpacing: '2px' }}
+   612→              maxLength={14}
+   613→            />
+   614→            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+   615→              {mykadInput.replace(/[^0-9]/g, '').length}/12
+   616→            </span>
+   617→          </div>
+   618→          <button
+   619→            onClick={handleSearch}
+   620→            disabled={loading || mykadInput.replace(/[^0-9]/g, '').length !== 12}
+   621→            className="clay-btn flex items-center justify-center gap-2 px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+   622→          >
+   623→            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+   624→            Semak
+   625→          </button>
+   626→        </div>
+   627→        {error && (
+   628→          <div className="mt-4 text-center">
+   629→            <p className="text-sm px-4 py-2 inline-block rounded-full" style={{ background: 'var(--clay-danger-bg)', color: 'var(--clay-danger)' }}>
+   630→              {error}
+   631→            </p>
+   632→          </div>
+   633→        )}
+   634→      </div>
+   635→
+   636→      {/* Results */}
+   637→      {results && (
+   638→        <div className="space-y-4">
+   639→          <div className="flex items-center justify-between px-2">
+   640→            <div>
+   641→              <h3 className="font-semibold" style={{ color: 'var(--clay-ink)' }}>
+   642→                {results.namaDipaparkan}
+   643→              </h3>
+   644→              <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+   645→                MyKad: {results.noMykadFormat} · {results.bilangan} sijil ditemui
+   646→              </p>
+   647→            </div>
+   648→            <Badge variant="secondary" className="clay-badge" style={{ color: 'var(--clay-success)' }}>
+   649→              <CheckCircle2 className="w-3 h-3 mr-1" /> Rekod Ditemui
+   650→            </Badge>
+   651→          </div>
+   652→
+   653→          {results.sijil.map((s, idx) => (
+   654→            <div key={idx} className="clay-card p-5 relative overflow-hidden">
+   655→              {/* Category color strip */}
+   656→              <div className="absolute left-0 top-3 bottom-3 w-2 rounded-r" style={{ background: s.kategoriWarna }} />
+   657→              
+   658→              <div className="pl-4">
+   659→                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+   660→                  <div className="flex-1">
+   661→                    <h4 className="font-semibold text-base mb-1" style={{ color: 'var(--clay-ink)' }}>
+   662→                      {s.namaKursus}
+   663→                    </h4>
+   664→                    {s.namaKursusBi && (
+   665→                      <p className="text-sm italic mb-2" style={{ color: 'var(--clay-ink-secondary)' }}>
+   666→                        {s.namaKursusBi}
+   667→                      </p>
+   668→                    )}
+   669→                    <div className="flex flex-wrap items-center gap-2 mb-2">
+   670→                      <Badge className="text-xs" style={{ background: s.kategoriWarna + '20', color: s.kategoriWarna, borderRadius: '12px' }}>
+   671→                        {s.kategori}
+   672→                      </Badge>
+   673→                      {s.status === 'sah' && (
+   674→                        <Badge className="text-xs" style={{ background: 'var(--clay-success-bg)', color: 'var(--clay-success)', borderRadius: '12px' }}>
+   675→                          <CheckCircle2 className="w-3 h-3 mr-1" /> Sedia
+   676→                        </Badge>
+   677→                      )}
+   678→                      {s.status === 'dibatalkan' && (
+   679→                        <Badge className="text-xs" style={{ background: 'var(--clay-danger-bg)', color: 'var(--clay-danger)', borderRadius: '12px' }}>
+   680→                          <XCircle className="w-3 h-3 mr-1" /> Dibatalkan
+   681→                        </Badge>
+   682→                      )}
+   683→                      {s.status === 'menunggu' && (
+   684→                        <Badge className="text-xs" style={{ background: 'var(--clay-warning-bg)', color: 'var(--clay-warning)', borderRadius: '12px' }}>
+   685→                          <Clock className="w-3 h-3 mr-1" /> Menunggu
+   686→                        </Badge>
+   687→                      )}
+   688→                    </div>
+   689→                    <div className="flex flex-wrap gap-3 text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+   690→                      <span className="flex items-center gap-1">
+   691→                        <Calendar className="w-3 h-3" />
+   692→                        {formatDateShort(s.tarikhMula)} – {formatDateShort(s.tarikhTamat)}
+   693→                      </span>
+   694→                      {s.noSiri && (
+   695→                        <span className="flex items-center gap-1">
+   696→                          <QrCode className="w-3 h-3" />
+   697→                          {s.noSiri}
+   698→                        </span>
+   699→                      )}
+   700→                    </div>
+   701→                  </div>
+   702→
+   703→                  {/* Action Buttons */}
+   704→                  {s.id && s.status === 'sah' && (
+   705→                    <div className="flex gap-2 self-start">
+   706→                      <button
+   707→                        onClick={() => handlePreview(s)}
+   708→                        className="clay-btn-secondary text-xs px-3 py-2 flex items-center gap-1"
+   709→                        style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)', fontSize: '12px' }}
+   710→                      >
+   711→                        <Eye className="w-3.5 h-3.5" /> Pratonton
+   712→                      </button>
+   713→                      <button
+   714→                        onClick={() => handleDownload(s.id!)}
+   715→                        disabled={pdfLoading}
+   716→                        className="clay-btn text-xs px-3 py-2 flex items-center gap-1"
+   717→                        style={{ borderRadius: '16px', fontSize: '12px' }}
+   718→                      >
+   719→                        {pdfLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+   720→                        Muat Turun
+   721→                      </button>
+   722→                      <button
+   723→                        onClick={() => handlePrint(s.id!)}
+   724→                        className="clay-btn-secondary text-xs px-3 py-2 flex items-center gap-1"
+   725→                        style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)', fontSize: '12px' }}
+   726→                      >
+   727→                        <Printer className="w-3.5 h-3.5" /> Cetak
+   728→                      </button>
+   729→                    </div>
+   730→                  )}
+   731→                </div>
+   732→              </div>
+   733→            </div>
+   734→          ))}
+   735→        </div>
+   736→      )}
+   737→
+   738→      {/* Info Section */}
+   739→      {!results && !loading && (
+   740→        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+   741→          {[
+   742→            { icon: Search, title: 'Cari', desc: 'Masukkan nombor MyKad 12 digit' },
+   743→            { icon: FileBadge, title: 'Semak', desc: 'Sistem papar senarai sijil layak' },
+   744→            { icon: Download, title: 'Muat Turun', desc: 'Jana PDF sijil sedia cetak' },
+   745→          ].map((step, i) => (
+   746→            <div key={i} className="clay-card p-5 text-center">
+   747→              <div className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center"
+   748→                style={{ background: 'var(--clay-primary)', color: 'white', boxShadow: 'var(--clay-shadow-sm)' }}>
+   749→                <step.icon className="w-6 h-6" />
+   750→              </div>
+   751→              <h3 className="font-semibold text-sm mb-1" style={{ color: 'var(--clay-ink)' }}>{step.title}</h3>
+   752→              <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>{step.desc}</p>
+   753→            </div>
+   754→          ))}
+   755→        </div>
+   756→      )}
+   757→
+   758→      {/* Preview Dialog */}
+   759→      <Dialog open={!!previewSijil} onOpenChange={() => { setPreviewSijil(null); if (pdfUrl) URL.revokeObjectURL(pdfUrl); setPdfUrl(null) }}>
+   760→        <DialogContent className="max-w-4xl" style={{ borderRadius: '32px', boxShadow: 'var(--clay-shadow-lg)' }}>
+   761→          <DialogHeader>
+   762→            <DialogTitle className="flex items-center gap-2">
+   763→              <Eye className="w-5 h-5" style={{ color: 'var(--clay-primary)' }} />
+   764→              Pratonton Sijil
+   765→            </DialogTitle>
+   766→          </DialogHeader>
+   767→          <div className="mt-2" style={{ minHeight: '400px' }}>
+   768→            {pdfLoading ? (
+   769→              <div className="flex items-center justify-center h-64">
+   770→                <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--clay-primary)' }} />
+   771→              </div>
+   772→            ) : pdfUrl ? (
+   773→              <iframe src={pdfUrl} className="w-full border-0 rounded-2xl" style={{ height: '500px', background: 'white' }} />
+   774→            ) : null}
+   775→          </div>
+   776→          {previewSijil && previewSijil.id && (
+   777→            <div className="flex justify-end gap-2 mt-2">
+   778→              <button
+   779→                onClick={() => handleDownload(previewSijil.id!)}
+   780→                className="clay-btn flex items-center gap-2 text-sm"
+   781→              >
+   782→                <Download className="w-4 h-4" /> Muat Turun PDF
+   783→              </button>
+   784→              <button
+   785→                onClick={() => handlePrint(previewSijil.id!)}
+   786→                className="clay-btn-secondary flex items-center gap-2 text-sm"
+   787→                style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)' }}
+   788→              >
+   789→                <Printer className="w-4 h-4" /> Cetak
+   790→              </button>
+   791→            </div>
+   792→          )}
+   793→        </DialogContent>
+   794→      </Dialog>
+   795→      </>
+   796→      )}
+   797→    </div>
+   798→  )
+   799→}
+   800→
+   801→// ============================================================
+   802→// ADMIN LOGIN
+   803→// ============================================================
+   804→function AdminLogin({ onLogin }: { onLogin: (user: AdminUser) => void }) {
+   805→  const [emel, setEmel] = useState('')
+   806→  const [kataLaluan, setKataLaluan] = useState('')
+   807→  const [loading, setLoading] = useState(false)
+   808→  const [error, setError] = useState('')
+   809→  const { toast } = useToast()
+   810→
+   811→  const handleLogin = async () => {
+   812→    setLoading(true)
+   813→    setError('')
+   814→    try {
+   815→      const res = await fetch('/api/auth/login', {
+   816→        method: 'POST',
+   817→        headers: { 'Content-Type': 'application/json' },
+   818→        body: JSON.stringify({ emel, kataLaluan }),
+   819→      })
+   820→      const data = await res.json()
+   821→      if (data.berjaya) {
+   822→        onLogin(data.pengguna)
+   823→        toast({ title: 'Log Masuk Berjaya', description: `Selamat datang, ${data.pengguna.namaPenuh}` })
+   824→      } else {
+   825→        setError(data.mesej)
+   826→      }
+   827→    } catch {
+   828→      setError('Ralat sambungan.')
+   829→    } finally {
+   830→      setLoading(false)
+   831→    }
+   832→  }
+   833→
+   834→  return (
+   835→    <div className="max-w-md mx-auto">
+   836→      <div className="clay-card-lg p-8">
+   837→        <div className="text-center mb-6">
+   838→          <img src="/logo-adtec.png" alt="ADTEC" className="h-16 mx-auto mb-4" />
+   839→          <h2 className="text-xl font-bold" style={{ color: 'var(--clay-ink)' }}>Log Masuk Pentadbir</h2>
+   840→          <p className="text-sm" style={{ color: 'var(--clay-ink-soft)' }}>Portal Pengurusan e-Sijil</p>
+   841→        </div>
+   842→        <div className="space-y-4">
+   843→          <div>
+   844→            <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--clay-ink-secondary)' }}>E-mel Rasmi</label>
+   845→            <input
+   846→              type="email"
+   847→              value={emel}
+   848→              onChange={(e) => setEmel(e.target.value)}
+   849→              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+   850→              placeholder="admin@adtec.gov.my"
+   851→              className="w-full clay-input px-4 py-3"
+   852→              style={{ background: 'var(--clay)', color: 'var(--clay-ink)' }}
+   853→            />
+   854→          </div>
+   855→          <div>
+   856→            <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--clay-ink-secondary)' }}>Kata Laluan</label>
+   857→            <input
+   858→              type="password"
+   859→              value={kataLaluan}
+   860→              onChange={(e) => setKataLaluan(e.target.value)}
+   861→              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+   862→              placeholder="••••••••••••"
+   863→              className="w-full clay-input px-4 py-3"
+   864→              style={{ background: 'var(--clay)', color: 'var(--clay-ink)' }}
+   865→            />
+   866→          </div>
+   867→          {error && <p className="text-sm text-center" style={{ color: 'var(--clay-danger)' }}>{error}</p>}
+   868→          <button
+   869→            onClick={handleLogin}
+   870→            disabled={loading || !emel || !kataLaluan}
+   871→            className="clay-btn w-full flex items-center justify-center gap-2"
+   872→          >
+   873→            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />}
+   874→            Log Masuk
+   875→          </button>
+   876→          <p className="text-xs text-center mt-2" style={{ color: 'var(--clay-ink-soft)' }}>
+   877→            Demo: admin@adtec.gov.my / Admin@2026
+   878→          </p>
+   879→        </div>
+   880→      </div>
+   881→    </div>
+   882→  )
+   883→}
+   884→
+   885→// ============================================================
+   886→// ADMIN PORTAL
+   887→// ============================================================
+   888→function AdminPortal({ user, activeTab, onTabChange, onLogout }: {
+   889→  user: AdminUser
+   890→  activeTab: string
+   891→  onTabChange: (tab: string) => void
+   892→  onLogout: () => void
+   893→}) {
+   894→  const tabs = [
+   895→    { id: 'dashboard', label: 'Papan Pemuka', icon: LayoutDashboard },
+   896→    { id: 'kategori', label: 'Kategori', icon: FolderOpen },
+   897→    { id: 'kursus', label: 'Kursus', icon: GraduationCap },
+   898→    { id: 'peserta', label: 'Peserta', icon: Users },
+   899→    { id: 'templat', label: 'Templat', icon: FileText },
+   900→    { id: 'sijil', label: 'Sijil', icon: Award },
+   901→    { id: 'audit', label: 'Log Audit', icon: Activity },
+   902→    { id: 'tetapan', label: 'Tetapan', icon: Settings },
+   903→  ]
+   904→
+   905→  return (
+   906→    <div className="max-w-6xl mx-auto">
+   907→      {/* Admin Tabs */}
+   908→      <div className="clay-card-sm p-2 mb-6 overflow-x-auto">
+   909→        <div className="flex gap-1 min-w-max">
+   910→          {tabs.map((tab) => {
+   911→            const isActive = activeTab === tab.id
+   912→            return (
+   913→              <button
+   914→                key={tab.id}
+   915→                onClick={() => onTabChange(tab.id)}
+   916→                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap"
+   917→                style={{
+   918→                  background: isActive ? 'var(--clay-primary)' : 'transparent',
+   919→                  color: isActive ? 'white' : 'var(--clay-ink-secondary)',
+   920→                  boxShadow: isActive ? 'var(--clay-shadow-sm)' : 'none',
+   921→                }}
+   922→              >
+   923→                <tab.icon className="w-4 h-4" />
+   924→                {tab.label}
+   925→              </button>
+   926→            )
+   927→          })}
+   928→        </div>
+   929→      </div>
+   930→
+   931→      {/* Tab Content */}
+   932→      {activeTab === 'dashboard' && <DashboardTab />}
+   933→      {activeTab === 'kategori' && <KategoriTab />}
+   934→      {activeTab === 'kursus' && <KursusTab user={user} />}
+   935→      {activeTab === 'peserta' && <PesertaTab />}
+   936→      {activeTab === 'templat' && <TemplatTab user={user} />}
+   937→      {activeTab === 'sijil' && <SijilTab />}
+   938→      {activeTab === 'audit' && <AuditTab />}
+   939→      {activeTab === 'tetapan' && <TetapanTab />}
+   940→    </div>
+   941→  )
+   942→}
+   943→
+   944→// ============================================================
+   945→// DASHBOARD TAB
+   946→// ============================================================
+   947→function DashboardTab() {
+   948→  const [stats, setStats] = useState<StatsData | null>(null)
+   949→  const [loading, setLoading] = useState(true)
+   950→
+   951→  useEffect(() => {
+   952→    fetch('/api/laporan/statistik')
+   953→      .then(r => r.json())
+   954→      .then(d => { if (d.berjaya) setStats(d.data) })
+   955→      .finally(() => setLoading(false))
+   956→  }, [])
+   957→
+   958→  if (loading) return <LoadingSpinner />
+   959→
+   960→  const statCards = stats ? [
+   961→    { label: 'KURSUS AKTIF', value: stats.jumlahKursusAktif, color: 'var(--clay-primary)' },
+   962→    { label: 'JUMLAH PESERTA', value: stats.jumlahPeserta, color: 'var(--clay-success)' },
+   963→    { label: 'SIJIL DIJANA', value: stats.jumlahSijilDijana, color: 'var(--clay-primary-dark)' },
+   964→    { label: 'SIJIL BULAN INI', value: stats.sijilBulanIni, color: 'var(--clay-warning)' },
+   965→  ] : []
+   966→
+   967→  return (
+   968→    <div className="space-y-6">
+   969→      {/* Stats Cards */}
+   970→      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+   971→        {statCards.map((s, i) => (
+   972→          <div key={i} className="clay-card p-5 text-center">
+   973→            <p className="text-3xl font-extrabold" style={{ color: s.color }}>{s.value}</p>
+   974→            <p className="text-xs font-semibold mt-1 uppercase tracking-wider" style={{ color: 'var(--clay-ink-soft)' }}>{s.label}</p>
+   975→          </div>
+   976→        ))}
+   977→      </div>
+   978→
+   979→      {/* Charts Area */}
+   980→      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   981→        {/* Monthly Chart */}
+   982→        <div className="clay-card p-5">
+   983→          <h3 className="font-semibold text-sm mb-3" style={{ color: 'var(--clay-ink)' }}>Sijil Mengikut Bulan</h3>
+   984→          <div className="flex items-end gap-1 h-40">
+   985→            {stats?.monthlyStats.map((m, i) => {
+   986→              const max = Math.max(...(stats?.monthlyStats.map(x => x.bil) || [1]), 1)
+   987→              const h = Math.max((m.bil / max) * 100, 2)
+   988→              return (
+   989→                <div key={i} className="flex-1 flex flex-col items-center gap-1">
+   990→                  <span className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>{m.bil || ''}</span>
+   991→                  <div className="w-full rounded-t-lg transition-all" style={{ height: `${h}%`, background: 'var(--clay-primary)', minHeight: '4px', opacity: 0.7 + (i / 12) * 0.3 }} />
+   992→                  <span className="text-[9px] -rotate-45 origin-top-left" style={{ color: 'var(--clay-ink-soft)' }}>{m.bulan}</span>
+   993→                </div>
+   994→              )
+   995→            })}
+   996→          </div>
+   997→        </div>
+   998→
+   999→        {/* Category Breakdown */}
+  1000→        <div className="clay-card p-5">
+  1001→          <h3 className="font-semibold text-sm mb-3" style={{ color: 'var(--clay-ink)' }}>Sijil Mengikut Kategori</h3>
+  1002→          <div className="space-y-3">
+  1003→            {stats?.categoryBreakdown.map((c, i) => {
+  1004→              const max = Math.max(...(stats?.categoryBreakdown.map(x => x.bil) || [1]), 1)
+  1005→              return (
+  1006→                <div key={i}>
+  1007→                  <div className="flex justify-between text-xs mb-1">
+  1008→                    <span style={{ color: 'var(--clay-ink-secondary)' }}>{c.nama}</span>
+  1009→                    <span className="font-semibold" style={{ color: c.warna }}>{c.bil}</span>
+  1010→                  </div>
+  1011→                  <div className="h-2 rounded-full" style={{ background: 'var(--clay)' }}>
+  1012→                    <div className="h-full rounded-full transition-all" style={{ width: `${(c.bil / max) * 100}%`, background: c.warna }} />
+  1013→                  </div>
+  1014→                </div>
+  1015→              )
+  1016→            })}
+  1017→            {(!stats?.categoryBreakdown.length) && (
+  1018→              <p className="text-sm text-center py-4" style={{ color: 'var(--clay-ink-soft)' }}>Tiada data lagi</p>
+  1019→            )}
+  1020→          </div>
+  1021→        </div>
+  1022→      </div>
+  1023→
+  1024→      {/* Recent Courses */}
+  1025→      <div className="clay-card p-5">
+  1026→        <h3 className="font-semibold text-sm mb-3" style={{ color: 'var(--clay-ink)' }}>Kursus Terkini</h3>
+  1027→        <div className="space-y-2">
+  1028→          {stats?.kursusRecent.map((k: any) => (
+  1029→            <div key={k.id} className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(124,108,240,0.04)' }}>
+  1030→              <div>
+  1031→                <p className="text-sm font-medium" style={{ color: 'var(--clay-ink)' }}>{k.namaKursusBm}</p>
+  1032→                <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>{k.kodKursus} · {k.kategori?.namaKategori}</p>
+  1033→              </div>
+  1034→              <div className="flex gap-3 text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+  1035→                <span>{k._count?.peserta || 0} peserta</span>
+  1036→                <span>{k._count?.sijil || 0} sijil</span>
+  1037→              </div>
+  1038→            </div>
+  1039→          ))}
+  1040→        </div>
+  1041→      </div>
+  1042→    </div>
+  1043→  )
+  1044→}
+  1045→
+  1046→// ============================================================
+  1047→// KATEGORI TAB
+  1048→// ============================================================
+  1049→function KategoriTab() {
+  1050→  const [data, setData] = useState<any[]>([])
+  1051→  const [loading, setLoading] = useState(true)
+  1052→  const [dialogOpen, setDialogOpen] = useState(false)
+  1053→  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  1054→  const [editingItem, setEditingItem] = useState<any>(null)
+  1055→  const [deletingItem, setDeletingItem] = useState<any>(null)
+  1056→  const [saving, setSaving] = useState(false)
+  1057→  const { toast } = useToast()
+  1058→
+  1059→  // Form state
+  1060→  const [formKod, setFormKod] = useState('')
+  1061→  const [formNama, setFormNama] = useState('')
+  1062→  const [formKeterangan, setFormKeterangan] = useState('')
+  1063→  const [formWarna, setFormWarna] = useState('#7C6CF0')
+  1064→  const [formStatus, setFormStatus] = useState('aktif')
+  1065→
+  1066→  const fetchData = () => {
+  1067→    setLoading(true)
+  1068→    fetch('/api/kategori').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
+  1069→  }
+  1070→
+  1071→  useEffect(() => {
+  1072→    fetch('/api/kategori').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
+  1073→  }, [])
+  1074→
+  1075→  const openAddDialog = () => {
+  1076→    setEditingItem(null)
+  1077→    setFormKod('')
+  1078→    setFormNama('')
+  1079→    setFormKeterangan('')
+  1080→    setFormWarna('#7C6CF0')
+  1081→    setFormStatus('aktif')
+  1082→    setDialogOpen(true)
+  1083→  }
+  1084→
+  1085→  const openEditDialog = (item: any) => {
+  1086→    setEditingItem(item)
+  1087→    setFormKod(item.kodKategori)
+  1088→    setFormNama(item.namaKategori)
+  1089→    setFormKeterangan(item.keterangan || '')
+  1090→    setFormWarna(item.warnaLabel)
+  1091→    setFormStatus(item.status)
+  1092→    setDialogOpen(true)
+  1093→  }
+  1094→
+  1095→  const openDeleteDialog = (item: any) => {
+  1096→    setDeletingItem(item)
+  1097→    setDeleteDialogOpen(true)
+  1098→  }
+  1099→
+  1100→  const handleSave = async () => {
+  1101→    if (!formKod.trim() || !formNama.trim()) {
+  1102→      toast({ title: 'Ralat', description: 'Kod dan Nama Kategori wajib diisi.', variant: 'destructive' })
+  1103→      return
+  1104→    }
+  1105→    setSaving(true)
+  1106→    try {
+  1107→      const isEdit = !!editingItem
+  1108→      const res = await fetch('/api/kategori', {
+  1109→        method: isEdit ? 'PUT' : 'POST',
+  1110→        headers: { 'Content-Type': 'application/json' },
+  1111→        body: JSON.stringify(isEdit
+  1112→          ? { id: editingItem.id, kodKategori: formKod.trim(), namaKategori: formNama.trim(), keterangan: formKeterangan.trim(), warnaLabel: formWarna, status: formStatus }
+  1113→          : { kodKategori: formKod.trim(), namaKategori: formNama.trim(), keterangan: formKeterangan.trim(), warnaLabel: formWarna, status: formStatus }
+  1114→        ),
+  1115→      })
+  1116→      const result = await res.json()
+  1117→      if (result.berjaya) {
+  1118→        toast({ title: isEdit ? 'Kategori Dikemaskini' : 'Kategori Ditambah', description: isEdit ? 'Kategori berjaya dikemaskini.' : 'Kategori baharu berjaya ditambah.' })
+  1119→        setDialogOpen(false)
+  1120→        fetchData()
+  1121→      } else {
+  1122→        toast({ title: 'Ralat', description: result.mesej, variant: 'destructive' })
+  1123→      }
+  1124→    } catch {
+  1125→      toast({ title: 'Ralat', description: 'Gagal menyimpan kategori.', variant: 'destructive' })
+  1126→    }
+  1127→    setSaving(false)
+  1128→  }
+  1129→
+  1130→  const handleDelete = async () => {
+  1131→    if (!deletingItem) return
+  1132→    setSaving(true)
+  1133→    try {
+  1134→      const res = await fetch(`/api/kategori?id=${deletingItem.id}`, { method: 'DELETE' })
+  1135→      const result = await res.json()
+  1136→      if (result.berjaya) {
+  1137→        toast({ title: 'Kategori Dipadam', description: 'Kategori berjaya dipadam.' })
+  1138→        setDeleteDialogOpen(false)
+  1139→        setDeletingItem(null)
+  1140→        fetchData()
+  1141→      } else {
+  1142→        toast({ title: 'Ralat', description: result.mesej, variant: 'destructive' })
+  1143→      }
+  1144→    } catch {
+  1145→      toast({ title: 'Ralat', description: 'Gagal memadam kategori.', variant: 'destructive' })
+  1146→    }
+  1147→    setSaving(false)
+  1148→  }
+  1149→
+  1150→  if (loading) return <LoadingSpinner />
+  1151→
+  1152→  const colorPresets = ['#7C6CF0', '#4FC4A1', '#E8A33D', '#E26D8E', '#5B9BD5', '#70AD47', '#FFC000', '#ED7D31', '#A5A5A5', '#4472C4']
+  1153→
+  1154→  return (
+  1155→    <div className="space-y-4">
+  1156→      {/* Header */}
+  1157→      <div className="flex items-center justify-between">
+  1158→        <h3 className="font-semibold" style={{ color: 'var(--clay-ink)' }}>Pengurusan Kategori Program</h3>
+  1159→        <Button
+  1160→          onClick={openAddDialog}
+  1161→          className="clay-btn text-sm px-4 py-2 flex items-center gap-2"
+  1162→          style={{ background: 'var(--clay-primary)', color: 'white', borderRadius: '20px', boxShadow: 'var(--clay-shadow-sm)' }}
+  1163→        >
+  1164→          <Plus className="w-4 h-4" /> Tambah Kategori
+  1165→        </Button>
+  1166→      </div>
+  1167→
+  1168→      {/* Table */}
+  1169→      <div className="clay-card p-0 overflow-hidden">
+  1170→        <div className="overflow-x-auto">
+  1171→          <table className="w-full text-sm">
+  1172→            <thead>
+  1173→              <tr style={{ background: 'var(--clay-primary)', color: 'white' }}>
+  1174→                <th className="px-4 py-3 text-left rounded-tl-xl">Kod</th>
+  1175→                <th className="px-4 py-3 text-left">Nama Kategori</th>
+  1176→                <th className="px-4 py-3 text-left">Keterangan</th>
+  1177→                <th className="px-4 py-3 text-center">Kursus</th>
+  1178→                <th className="px-4 py-3 text-center">Status</th>
+  1179→                <th className="px-4 py-3 text-center">Warna</th>
+  1180→                <th className="px-4 py-3 text-center rounded-tr-xl">Tindakan</th>
+  1181→              </tr>
+  1182→            </thead>
+  1183→            <tbody>
+  1184→              {data.map((k, i) => (
+  1185→                <tr key={k.id} className="group" style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(124,108,240,0.04)' }}>
+  1186→                  <td className="px-4 py-3 font-mono font-semibold" style={{ color: 'var(--clay-primary)' }}>{k.kodKategori}</td>
+  1187→                  <td className="px-4 py-3" style={{ color: 'var(--clay-ink)' }}>{k.namaKategori}</td>
+  1188→                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>{k.keterangan || '-'}</td>
+  1189→                  <td className="px-4 py-3 text-center" style={{ color: 'var(--clay-ink-secondary)' }}>{k._count?.kursus || 0}</td>
+  1190→                  <td className="px-4 py-3 text-center">
+  1191→                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+  1192→                      style={{ background: k.status === 'aktif' ? 'var(--clay-success-bg)' : 'var(--clay-warning-bg)', color: k.status === 'aktif' ? 'var(--clay-success)' : 'var(--clay-warning)' }}>
+  1193→                      {k.status === 'aktif' ? 'Aktif' : 'Arkib'}
+  1194→                    </span>
+  1195→                  </td>
+  1196→                  <td className="px-4 py-3 text-center">
+  1197→                    <span className="inline-block w-5 h-5 rounded-full" style={{ background: k.warnaLabel }} />
+  1198→                  </td>
+  1199→                  <td className="px-4 py-3 text-center">
+  1200→                    <div className="flex items-center justify-center gap-1">
+  1201→                      <button
+  1202→                        onClick={() => openEditDialog(k)}
+  1203→                        className="p-1.5 rounded-lg transition-all hover:scale-110"
+  1204→                        style={{ background: 'rgba(124,108,240,0.1)', color: 'var(--clay-primary)' }}
+  1205→                        title="Kemaskini"
+  1206→                      >
+  1207→                        <Edit2 className="w-3.5 h-3.5" />
+  1208→                      </button>
+  1209→                      <button
+  1210→                        onClick={() => openDeleteDialog(k)}
+  1211→                        className="p-1.5 rounded-lg transition-all hover:scale-110"
+  1212→                        style={{ background: 'rgba(226,109,142,0.1)', color: 'var(--clay-destructive)' }}
+  1213→                        title="Padam"
+  1214→                      >
+  1215→                        <Trash2 className="w-3.5 h-3.5" />
+  1216→                      </button>
+  1217→                    </div>
+  1218→                  </td>
+  1219→                </tr>
+  1220→              ))}
+  1221→              {data.length === 0 && (
+  1222→                <tr>
+  1223→                  <td colSpan={7} className="px-4 py-8 text-center" style={{ color: 'var(--clay-ink-soft)' }}>
+  1224→                    Tiada kategori. Klik &quot;Tambah Kategori&quot; untuk menambah.
+  1225→                  </td>
+  1226→                </tr>
+  1227→              )}
+  1228→            </tbody>
+  1229→          </table>
+  1230→        </div>
+  1231→      </div>
+  1232→
+  1233→      {/* Add/Edit Dialog */}
+  1234→      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+  1235→        <DialogContent className="sm:max-w-md" style={{ background: 'var(--clay)', borderRadius: '24px', boxShadow: 'var(--clay-shadow-lg)', border: '1px solid rgba(255,255,255,0.6)' }}>
+  1236→          <DialogHeader>
+  1237→            <DialogTitle style={{ color: 'var(--clay-ink)' }}>
+  1238→              {editingItem ? 'Kemaskini Kategori' : 'Tambah Kategori Baharu'}
+  1239→            </DialogTitle>
+  1240→            <DialogDescription style={{ color: 'var(--clay-ink-soft)' }}>
+  1241→              {editingItem ? 'Kemaskini maklumat kategori program.' : 'Isi maklumat kategori program baharu.'}
+  1242→            </DialogDescription>
+  1243→          </DialogHeader>
+  1244→          <div className="space-y-4 py-2">
+  1245→            {/* Kod Kategori */}
+  1246→            <div>
+  1247→              <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Kod Kategori <span style={{ color: 'var(--clay-destructive)' }}>*</span></label>
+  1248→              <Input
+  1249→                value={formKod}
+  1250→                onChange={e => setFormKod(e.target.value)}
+  1251→                placeholder="cth: KP, PI, BK"
+  1252→                className="h-10"
+  1253→                style={{ borderRadius: '16px', boxShadow: 'var(--clay-inset)', background: 'var(--clay)', border: '2px solid transparent' }}
+  1254→              />
+  1255→              <p className="text-xs mt-1" style={{ color: 'var(--clay-ink-soft)' }}>Kod unik ringkas (2-5 aksara)</p>
+  1256→            </div>
+  1257→            {/* Nama Kategori */}
+  1258→            <div>
+  1259→              <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Nama Kategori <span style={{ color: 'var(--clay-destructive)' }}>*</span></label>
+  1260→              <Input
+  1261→                value={formNama}
+  1262→                onChange={e => setFormNama(e.target.value)}
+  1263→                placeholder="cth: Kemahiran Perdana"
+  1264→                className="h-10"
+  1265→                style={{ borderRadius: '16px', boxShadow: 'var(--clay-inset)', background: 'var(--clay)', border: '2px solid transparent' }}
+  1266→              />
+  1267→            </div>
+  1268→            {/* Keterangan */}
+  1269→            <div>
+  1270→              <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Keterangan</label>
+  1271→              <Input
+  1272→                value={formKeterangan}
+  1273→                onChange={e => setFormKeterangan(e.target.value)}
+  1274→                placeholder="Penerangan ringkas (pilihan)"
+  1275→                className="h-10"
+  1276→                style={{ borderRadius: '16px', boxShadow: 'var(--clay-inset)', background: 'var(--clay)', border: '2px solid transparent' }}
+  1277→              />
+  1278→            </div>
+  1279→            {/* Warna Label */}
+  1280→            <div>
+  1281→              <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Warna Label</label>
+  1282→              <div className="flex items-center gap-2 flex-wrap">
+  1283→                {colorPresets.map(c => (
+  1284→                  <button
+  1285→                    key={c}
+  1286→                    onClick={() => setFormWarna(c)}
+  1287→                    className="w-7 h-7 rounded-full transition-all hover:scale-110"
+  1288→                    style={{
+  1289→                      background: c,
+  1290→                      border: formWarna === c ? '3px solid var(--clay-ink)' : '2px solid rgba(255,255,255,0.6)',
+  1291→                      boxShadow: formWarna === c ? '0 0 0 2px rgba(124,108,240,0.3)' : 'none',
+  1292→                    }}
+  1293→                  />
+  1294→                ))}
+  1295→                <input
+  1296→                  type="color"
+  1297→                  value={formWarna}
+  1298→                  onChange={e => setFormWarna(e.target.value)}
+  1299→                  className="w-7 h-7 rounded-full cursor-pointer border-0 p-0"
+  1300→                  style={{ background: 'transparent' }}
+  1301→                />
+  1302→              </div>
+  1303→            </div>
+  1304→            {/* Status */}
+  1305→            <div>
+  1306→              <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Status</label>
+  1307→              <Select value={formStatus} onValueChange={setFormStatus}>
+  1308→                <SelectTrigger className="h-10" style={{ borderRadius: '16px', boxShadow: 'var(--clay-inset)', background: 'var(--clay)', border: '2px solid transparent' }}>
+  1309→                  <SelectValue />
+  1310→                </SelectTrigger>
+  1311→                <SelectContent style={{ borderRadius: '16px' }}>
+  1312→                  <SelectItem value="aktif">Aktif</SelectItem>
+  1313→                  <SelectItem value="arkib">Arkib</SelectItem>
+  1314→                </SelectContent>
+  1315→              </Select>
+  1316→            </div>
+  1317→          </div>
+  1318→          <DialogFooter className="gap-2">
+  1319→            <Button
+  1320→              variant="outline"
+  1321→              onClick={() => setDialogOpen(false)}
+  1322→              className="clay-btn-secondary text-sm px-4"
+  1323→              style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}
+  1324→            >
+  1325→              Batal
+  1326→            </Button>
+  1327→            <Button
+  1328→              onClick={handleSave}
+  1329→              disabled={saving}
+  1330→              className="clay-btn text-sm px-5 flex items-center gap-2"
+  1331→              style={{ background: 'var(--clay-primary)', color: 'white', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}
+  1332→            >
+  1333→              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+  1334→              {saving ? 'Menyimpan...' : editingItem ? 'Kemaskini' : 'Tambah'}
+  1335→            </Button>
+  1336→          </DialogFooter>
+  1337→        </DialogContent>
+  1338→      </Dialog>
+  1339→
+  1340→      {/* Delete Confirmation Dialog */}
+  1341→      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+  1342→        <DialogContent className="sm:max-w-sm" style={{ background: 'var(--clay)', borderRadius: '24px', boxShadow: 'var(--clay-shadow-lg)', border: '1px solid rgba(255,255,255,0.6)' }}>
+  1343→          <DialogHeader>
+  1344→            <DialogTitle style={{ color: 'var(--clay-destructive)' }} className="flex items-center gap-2">
+  1345→              <AlertCircle className="w-5 h-5" /> Padam Kategori
+  1346→            </DialogTitle>
+  1347→            <DialogDescription style={{ color: 'var(--clay-ink-soft)' }}>
+  1348→              Adakah anda pasti ingin memadam kategori <strong style={{ color: 'var(--clay-ink)' }}>{deletingItem?.namaKategori}</strong> ({deletingItem?.kodKategori})?
+  1349→            </DialogDescription>
+  1350→          </DialogHeader>
+  1351→          {deletingItem && (deletingItem._count?.kursus || 0) > 0 && (
+  1352→            <div className="rounded-xl p-3 text-sm" style={{ background: 'rgba(226,109,142,0.1)', color: 'var(--clay-destructive)', borderRadius: '12px' }}>
+  1353→              ⚠️ {deletingItem._count?.kursus} kursus menggunakan kategori ini. Sila arkibkan sebagai ganti.
+  1354→            </div>
+  1355→          )}
+  1356→          <DialogFooter className="gap-2">
+  1357→            <Button
+  1358→              variant="outline"
+  1359→              onClick={() => { setDeleteDialogOpen(false); setDeletingItem(null) }}
+  1360→              className="clay-btn-secondary text-sm px-4"
+  1361→              style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}
+  1362→            >
+  1363→              Batal
+  1364→            </Button>
+  1365→            <Button
+  1366→              onClick={handleDelete}
+  1367→              disabled={saving || (deletingItem && (deletingItem._count?.kursus || 0) > 0)}
+  1368→              className="text-sm px-5 flex items-center gap-2"
+  1369→              style={{ background: 'var(--clay-destructive)', color: 'white', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}
+  1370→            >
+  1371→              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+  1372→              {saving ? 'Memadam...' : 'Padam'}
+  1373→            </Button>
+  1374→          </DialogFooter>
+  1375→        </DialogContent>
+  1376→      </Dialog>
+  1377→    </div>
+  1378→  )
+  1379→}
+  1380→
+  1381→// ============================================================
+  1382→// KURSUS TAB
+  1383→// ============================================================
+  1384→function KursusTab({ user }: { user: AdminUser }) {
+  1385→  const [data, setData] = useState<any[]>([])
+  1386→  const [kategoriList, setKategoriList] = useState<any[]>([])
+  1387→  const [loading, setLoading] = useState(true)
+  1388→  const [dialogOpen, setDialogOpen] = useState(false)
+  1389→  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  1390→  const [viewDialogOpen, setViewDialogOpen] = useState(false)
+  1391→  const [editingItem, setEditingItem] = useState<any>(null)
+  1392→  const [deletingItem, setDeletingItem] = useState<any>(null)
+  1393→  const [viewingItem, setViewingItem] = useState<any>(null)
+  1394→  const [viewPeserta, setViewPeserta] = useState<any[]>([])
+  1395→  const [viewLoading, setViewLoading] = useState(false)
+  1396→  const [saving, setSaving] = useState(false)
+  1397→  const { toast } = useToast()
+  1398→
+  1399→  // Form state
+  1400→  const [fKod, setFKod] = useState('')
+  1401→  const [fNamaBm, setFNamaBm] = useState('')
+  1402→  const [fNamaBi, setFNamaBi] = useState('')
+  1403→  const [fKategoriId, setFKategoriId] = useState('')
+  1404→  const [fTarikhMula, setFTarikhMula] = useState('')
+  1405→  const [fTarikhTamat, setFTarikhTamat] = useState('')
+  1406→  const [fTempohJam, setFTempohJam] = useState('')
+  1407→  const [fPenyelaras, setFPenyelaras] = useState('')
+  1408→  const [fTempat, setFTempat] = useState('ADTEC JTM Kampus Sandakan')
+  1409→  const [fPenganjur, setFPenganjur] = useState('')
+  1410→  const [fCatatan, setFCatatan] = useState('')
+  1411→  const [fStatus, setFStatus] = useState('draf')
+  1412→
+  1413→  // Share/QR Code state
+  1414→  const [shareDialogOpen, setShareDialogOpen] = useState(false)
+  1415→  const [shareItem, setShareItem] = useState<any>(null)
+  1416→  const [qrDataUrl, setQrDataUrl] = useState('')
+  1417→  const [qrLoading, setQrLoading] = useState(false)
+  1418→  const [linkCopied, setLinkCopied] = useState(false)
+  1419→
+  1420→  // Pendaftaran Awam state
+  1421→  const [pendaftaranList, setPendaftaranList] = useState<any[]>([])
+  1422→
+  1423→  const fetchData = () => {
+  1424→    setLoading(true)
+  1425→    fetch('/api/kursus').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
+  1426→  }
+  1427→
+  1428→  useEffect(() => {
+  1429→    fetch('/api/kursus').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
+  1430→    fetch('/api/kategori').then(r => r.json()).then(d => { if (d.berjaya) setKategoriList(d.data) })
+  1431→  }, [])
+  1432→
+  1433→  const resetForm = () => {
+  1434→    setFKod(''); setFNamaBm(''); setFNamaBi(''); setFKategoriId(''); setFTarikhMula(''); setFTarikhTamat('')
+  1435→    setFTempohJam(''); setFPenyelaras(''); setFTempat('ADTEC JTM Kampus Sandakan'); setFPenganjur(''); setFCatatan(''); setFStatus('draf')
+  1436→  }
+  1437→
+  1438→  const openAddDialog = () => {
+  1439→    setEditingItem(null); resetForm()
+  1440→    if (kategoriList.length > 0) setFKategoriId(kategoriList[0].id)
+  1441→    setDialogOpen(true)
+  1442→  }
+  1443→
+  1444→  const openEditDialog = (item: any) => {
+  1445→    setEditingItem(item)
+  1446→    setFKod(item.kodKursus); setFNamaBm(item.namaKursusBm); setFNamaBi(item.namaKursusBi || '')
+  1447→    setFKategoriId(item.kategoriId || item.kategori?.id || '')
+  1448→    setFTarikhMula(item.tarikhMula?.split('T')[0] || ''); setFTarikhTamat(item.tarikhTamat?.split('T')[0] || '')
+  1449→    setFTempohJam(item.tempohJam?.toString() || ''); setFPenyelaras(item.namaPenyelaras || '')
+  1450→    setFTempat(item.tempat || 'ADTEC JTM Kampus Sandakan'); setFPenganjur(item.penganjurBersama || '')
+  1451→    setFCatatan(item.catatan || ''); setFStatus(item.status)
+  1452→    setDialogOpen(true)
+  1453→  }
+  1454→
+  1455→  const openViewDialog = async (item: any) => {
+  1456→    setViewingItem(item); setViewDialogOpen(true); setViewLoading(true)
+  1457→    const res = await fetch(`/api/kursus?id=${item.id}`)
+  1458→    const d = await res.json()
+  1459→    if (d.berjaya) { setViewPeserta(d.data.peserta || []); setViewingItem(d.data) }
+  1460→    const pendaftaranRes = await fetch(`/api/pendaftaran-awam?kursusId=${item.id}`)
+  1461→    const pendaftaranData = await pendaftaranRes.json()
+  1462→    if (pendaftaranData.berjaya) setPendaftaranList(pendaftaranData.data)
+  1463→    setViewLoading(false)
+  1464→  }
+  1465→
+  1466→  const openDeleteDialog = (item: any) => { setDeletingItem(item); setDeleteDialogOpen(true) }
+  1467→
+  1468→  const openShareDialog = async (item: any) => {
+  1469→    setShareItem(item)
+  1470→    setShareDialogOpen(true)
+  1471→    setQrLoading(true)
+  1472→    setLinkCopied(false)
+  1473→    const baseUrl = window.location.origin
+  1474→    const regLink = `${baseUrl}/?daftar=${item.id}`
+  1475→    try {
+  1476→      const QRCode = (await import('qrcode')).default
+  1477→      const dataUrl = await QRCode.toDataURL(regLink, {
+  1478→        width: 256,
+  1479→        margin: 2,
+  1480→        color: { dark: '#5B4ACF', light: '#F8F6FF' },
+  1481→      })
+  1482→      setQrDataUrl(dataUrl)
+  1483→    } catch {
+  1484→      setQrDataUrl('')
+  1485→    }
+  1486→    setQrLoading(false)
+  1487→  }
+  1488→
+  1489→  const copyLink = () => {
+  1490→    const baseUrl = window.location.origin
+  1491→    const regLink = `${baseUrl}/?daftar=${shareItem.id}`
+  1492→    navigator.clipboard.writeText(regLink)
+  1493→    setLinkCopied(true)
+  1494→    setTimeout(() => setLinkCopied(false), 2000)
+  1495→  }
+  1496→
+  1497→  const handleLulusPendaftaran = async (id: string) => {
+  1498→    try {
+  1499→      const res = await fetch('/api/pendaftaran-awam', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, tindakan: 'lulus' }) })
+  1500→      const result = await res.json()
+  1501→      if (result.berjaya) {
+  1502→        toast({ title: 'Diluluskan', description: 'Pendaftaran diluluskan dan peserta ditambah.' })
+  1503→        if (viewingItem) {
+  1504→          const kRes = await fetch(`/api/kursus?id=${viewingItem.id}`)
+  1505→          const kData = await kRes.json()
+  1506→          if (kData.berjaya) { setViewPeserta(kData.data.peserta || []); setViewingItem(kData.data) }
+  1507→          const pRes = await fetch(`/api/pendaftaran-awam?kursusId=${viewingItem.id}`)
+  1508→          const pData = await pRes.json()
+  1509→          if (pData.berjaya) setPendaftaranList(pData.data)
+  1510→        }
+  1511→        fetchData()
+  1512→      } else {
+  1513→        toast({ title: 'Ralat', description: result.mesej, variant: 'destructive' })
+  1514→      }
+  1515→    } catch {
+  1516→      toast({ title: 'Ralat', description: 'Gagal meluluskan pendaftaran.', variant: 'destructive' })
+  1517→    }
+  1518→  }
+  1519→
+  1520→  const handleTolakPendaftaran = async (id: string) => {
+  1521→    try {
+  1522→      const res = await fetch('/api/pendaftaran-awam', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, tindakan: 'tolak' }) })
+  1523→      const result = await res.json()
+  1524→      if (result.berjaya) {
+  1525→        toast({ title: 'Ditolak', description: 'Pendaftaran ditolak.' })
+  1526→        if (viewingItem) {
+  1527→          const pRes = await fetch(`/api/pendaftaran-awam?kursusId=${viewingItem.id}`)
+  1528→          const pData = await pRes.json()
+  1529→          if (pData.berjaya) setPendaftaranList(pData.data)
+  1530→        }
+  1531→      } else {
+  1532→        toast({ title: 'Ralat', description: result.mesej, variant: 'destructive' })
+  1533→      }
+  1534→    } catch {
+  1535→      toast({ title: 'Ralat', description: 'Gagal menolak pendaftaran.', variant: 'destructive' })
+  1536→    }
+  1537→  }
+  1538→
+  1539→  const handleSave = async () => {
+  1540→    if (!fKod.trim() || !fNamaBm.trim() || !fKategoriId || !fTarikhMula || !fTarikhTamat) {
+  1541→      toast({ title: 'Ralat', description: 'Kod, Nama BM, Kategori dan Tarikh wajib diisi.', variant: 'destructive' }); return
+  1542→    }
+  1543→    setSaving(true)
+  1544→    try {
+  1545→      const isEdit = !!editingItem
+  1546→      const payload: any = {
+  1547→        kodKursus: fKod.trim(), namaKursusBm: fNamaBm.trim(), namaKursusBi: fNamaBi.trim(),
+  1548→        kategoriId: fKategoriId, tarikhMula: fTarikhMula, tarikhTamat: fTarikhTamat,
+  1549→        tempohJam: fTempohJam, namaPenyelaras: fPenyelaras, tempat: fTempat,
+  1550→        penganjurBersama: fPenganjur, catatan: fCatatan, status: fStatus,
+  1551→      }
+  1552→      if (isEdit) payload.id = editingItem.id
+  1553→      else payload.diciptaOlehId = user.id
+  1554→
+  1555→      const res = await fetch('/api/kursus', { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+  1556→      const result = await res.json()
+  1557→      if (result.berjaya) {
+  1558→        toast({ title: isEdit ? 'Kursus Dikemaskini' : 'Kursus Ditambah', description: isEdit ? 'Kursus berjaya dikemaskini.' : 'Kursus baharu berjaya ditambah.' })
+  1559→        setDialogOpen(false); fetchData()
+  1560→      } else {
+  1561→        toast({ title: 'Ralat', description: result.mesej, variant: 'destructive' })
+  1562→      }
+  1563→    } catch {
+  1564→      toast({ title: 'Ralat', description: 'Gagal menyimpan kursus.', variant: 'destructive' })
+  1565→    }
+  1566→    setSaving(false)
+  1567→  }
+  1568→
+  1569→  const handleDelete = async () => {
+  1570→    if (!deletingItem) return
+  1571→    setSaving(true)
+  1572→    try {
+  1573→      const res = await fetch(`/api/kursus?id=${deletingItem.id}`, { method: 'DELETE' })
+  1574→      const result = await res.json()
+  1575→      if (result.berjaya) {
+  1576→        toast({ title: 'Kursus Dipadam', description: 'Kursus berjaya dipadam.' })
+  1577→        setDeleteDialogOpen(false); setDeletingItem(null); fetchData()
+  1578→      } else {
+  1579→        toast({ title: 'Ralat', description: result.mesej, variant: 'destructive' })
+  1580→      }
+  1581→    } catch {
+  1582→      toast({ title: 'Ralat', description: 'Gagal memadam kursus.', variant: 'destructive' })
+  1583→    }
+  1584→    setSaving(false)
+  1585→  }
+  1586→
+  1587→  if (loading) return <LoadingSpinner />
+  1588→
+  1589→  const clayInput = { borderRadius: '16px', boxShadow: 'var(--clay-inset)', background: 'var(--clay)', border: '2px solid transparent' }
+  1590→
+  1591→  return (
+  1592→    <div className="space-y-4">
+  1593→      <div className="flex items-center justify-between">
+  1594→        <h3 className="font-semibold" style={{ color: 'var(--clay-ink)' }}>Pengurusan Kursus / Program</h3>
+  1595→        <Button onClick={openAddDialog} className="clay-btn text-sm px-4 py-2 flex items-center gap-2" style={{ background: 'var(--clay-primary)', color: 'white', borderRadius: '20px', boxShadow: 'var(--clay-shadow-sm)' }}>
+  1596→          <Plus className="w-4 h-4" /> Tambah Kursus
+  1597→        </Button>
+  1598→      </div>
+  1599→
+  1600→      <div className="clay-card p-0 overflow-hidden">
+  1601→        <div className="overflow-x-auto">
+  1602→          <table className="w-full text-sm">
+  1603→            <thead>
+  1604→              <tr style={{ background: 'var(--clay-primary)', color: 'white' }}>
+  1605→                <th className="px-3 py-3 text-left rounded-tl-xl">Kod</th>
+  1606→                <th className="px-3 py-3 text-left">Nama Kursus</th>
+  1607→                <th className="px-3 py-3 text-left">Kategori</th>
+  1608→                <th className="px-3 py-3 text-center">Peserta</th>
+  1609→                <th className="px-3 py-3 text-center">Sijil</th>
+  1610→                <th className="px-3 py-3 text-center">Status</th>
+  1611→                <th className="px-3 py-3 text-center">Tarikh</th>
+  1612→                <th className="px-3 py-3 text-center rounded-tr-xl">Tindakan</th>
+  1613→              </tr>
+  1614→            </thead>
+  1615→            <tbody>
+  1616→              {data.map((k, i) => (
+  1617→                <tr key={k.id} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(124,108,240,0.04)' }}>
+  1618→                  <td className="px-3 py-3 font-mono text-xs" style={{ color: 'var(--clay-primary)' }}>{k.kodKursus}</td>
+  1619→                  <td className="px-3 py-3" style={{ color: 'var(--clay-ink)' }}>
+  1620→                    <p className="font-medium">{k.namaKursusBm}</p>
+  1621→                    {k.namaKursusBi && <p className="text-xs italic" style={{ color: 'var(--clay-ink-soft)' }}>{k.namaKursusBi}</p>}
+  1622→                  </td>
+  1623→                  <td className="px-3 py-3">
+  1624→                    <span className="inline-block px-2 py-0.5 rounded-full text-xs" style={{ background: (k.kategori?.warnaLabel || '#7C6CF0') + '20', color: k.kategori?.warnaLabel || '#7C6CF0' }}>
+  1625→                      {k.kategori?.namaKategori || '-'}
+  1626→                    </span>
+  1627→                  </td>
+  1628→                  <td className="px-3 py-3 text-center" style={{ color: 'var(--clay-ink-secondary)' }}>{k._count?.peserta || 0}</td>
+  1629→                  <td className="px-3 py-3 text-center" style={{ color: 'var(--clay-ink-secondary)' }}>{k._count?.sijil || 0}</td>
+  1630→                  <td className="px-3 py-3 text-center">
+  1631→                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+  1632→                      style={{ background: k.status === 'aktif' ? 'var(--clay-success-bg)' : k.status === 'tamat' ? 'var(--clay-warning-bg)' : 'rgba(124,108,240,0.08)', color: k.status === 'aktif' ? 'var(--clay-success)' : k.status === 'tamat' ? 'var(--clay-warning)' : 'var(--clay-primary)' }}>
+  1633→                      {k.status === 'aktif' ? 'Aktif' : k.status === 'tamat' ? 'Tamat' : k.status === 'draf' ? 'Draf' : 'Arkib'}
+  1634→                    </span>
+  1635→                  </td>
+  1636→                  <td className="px-3 py-3 text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+  1637→                    {formatDateShort(k.tarikhMula)}<br />– {formatDateShort(k.tarikhTamat)}
+  1638→                  </td>
+  1639→                  <td className="px-3 py-3 text-center">
+  1640→                    <div className="flex items-center justify-center gap-1">
+  1641→                      <button onClick={() => openShareDialog(k)} className="p-1.5 rounded-lg transition-all hover:scale-110" style={{ background: 'rgba(79,196,161,0.15)', color: '#2AA68E' }} title="Kongsi Pautan Pendaftaran">
+  1642→                        <Share2 className="w-3.5 h-3.5" />
+  1643→                      </button>
+  1644→                      <button onClick={() => openViewDialog(k)} className="p-1.5 rounded-lg transition-all hover:scale-110" style={{ background: 'rgba(79,196,161,0.1)', color: 'var(--clay-success)' }} title="Papar Peserta">
+  1645→                        <Eye className="w-3.5 h-3.5" />
+  1646→                      </button>
+  1647→                      <button onClick={() => openEditDialog(k)} className="p-1.5 rounded-lg transition-all hover:scale-110" style={{ background: 'rgba(124,108,240,0.1)', color: 'var(--clay-primary)' }} title="Kemaskini">
+  1648→                        <Edit2 className="w-3.5 h-3.5" />
+  1649→                      </button>
+  1650→                      <button onClick={() => openDeleteDialog(k)} className="p-1.5 rounded-lg transition-all hover:scale-110" style={{ background: 'rgba(226,109,142,0.1)', color: 'var(--clay-destructive)' }} title="Padam">
+  1651→                        <Trash2 className="w-3.5 h-3.5" />
+  1652→                      </button>
+  1653→                    </div>
+  1654→                  </td>
+  1655→                </tr>
+  1656→              ))}
+  1657→              {data.length === 0 && (
+  1658→                <tr><td colSpan={8} className="px-4 py-8 text-center" style={{ color: 'var(--clay-ink-soft)' }}>Tiada kursus. Klik &quot;Tambah Kursus&quot; untuk menambah.</td></tr>
+  1659→              )}
+  1660→            </tbody>
+  1661→          </table>
+  1662→        </div>
+  1663→      </div>
+  1664→
+  1665→      {/* ====== ADD / EDIT DIALOG ====== */}
+  1666→      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+  1667→        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto" style={{ background: 'var(--clay)', borderRadius: '24px', boxShadow: 'var(--clay-shadow-lg)', border: '1px solid rgba(255,255,255,0.6)' }}>
+  1668→          <DialogHeader>
+  1669→            <DialogTitle style={{ color: 'var(--clay-ink)' }}>{editingItem ? 'Kemaskini Kursus' : 'Tambah Kursus Baharu'}</DialogTitle>
+  1670→            <DialogDescription style={{ color: 'var(--clay-ink-soft)' }}>{editingItem ? 'Kemaskini maklumat kursus.' : 'Isi maklumat kursus / program baharu.'}</DialogDescription>
+  1671→          </DialogHeader>
+  1672→          <div className="space-y-3 py-2">
+  1673→            <div className="grid grid-cols-2 gap-3">
+  1674→              <div>
+  1675→                <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Kod Kursus <span style={{ color: 'var(--clay-destructive)' }}>*</span></label>
+  1676→                <Input value={fKod} onChange={e => setFKod(e.target.value)} placeholder="ADTEC-SDK/KP/2026/018" className="h-10" style={clayInput} />
+  1677→              </div>
+  1678→              <div>
+  1679→                <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Kategori <span style={{ color: 'var(--clay-destructive)' }}>*</span></label>
+  1680→                <Select value={fKategoriId} onValueChange={setFKategoriId}>
+  1681→                  <SelectTrigger className="h-10" style={clayInput}><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
+  1682→                  <SelectContent style={{ borderRadius: '16px' }}>{kategoriList.map((k: any) => <SelectItem key={k.id} value={k.id}>{k.kodKategori} — {k.namaKategori}</SelectItem>)}</SelectContent>
+  1683→                </Select>
+  1684→              </div>
+  1685→            </div>
+  1686→            <div>
+  1687→              <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Nama Kursus (BM) <span style={{ color: 'var(--clay-destructive)' }}>*</span></label>
+  1688→              <Input value={fNamaBm} onChange={e => setFNamaBm(e.target.value)} placeholder="Pendawaian Elektrik Domestik" className="h-10" style={clayInput} />
+  1689→            </div>
+  1690→            <div>
+  1691→              <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Nama Kursus (BI)</label>
+  1692→              <Input value={fNamaBi} onChange={e => setFNamaBi(e.target.value)} placeholder="Domestic Electrical Wiring" className="h-10" style={clayInput} />
+  1693→            </div>
+  1694→            <div className="grid grid-cols-2 gap-3">
+  1695→              <div>
+  1696→                <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Tarikh Mula <span style={{ color: 'var(--clay-destructive)' }}>*</span></label>
+  1697→                <Input type="date" value={fTarikhMula} onChange={e => setFTarikhMula(e.target.value)} className="h-10" style={clayInput} />
+  1698→              </div>
+  1699→              <div>
+  1700→                <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Tarikh Tamat <span style={{ color: 'var(--clay-destructive)' }}>*</span></label>
+  1701→                <Input type="date" value={fTarikhTamat} onChange={e => setFTarikhTamat(e.target.value)} className="h-10" style={clayInput} />
+  1702→              </div>
+  1703→            </div>
+  1704→            <div className="grid grid-cols-2 gap-3">
+  1705→              <div>
+  1706→                <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Tempoh (Jam)</label>
+  1707→                <Input value={fTempohJam} onChange={e => setFTempohJam(e.target.value)} placeholder="80" className="h-10" style={clayInput} />
+  1708→              </div>
+  1709→              <div>
+  1710→                <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Status</label>
+  1711→                <Select value={fStatus} onValueChange={setFStatus}>
+  1712→                  <SelectTrigger className="h-10" style={clayInput}><SelectValue /></SelectTrigger>
+  1713→                  <SelectContent style={{ borderRadius: '16px' }}>
+  1714→                    <SelectItem value="draf">Draf</SelectItem>
+  1715→                    <SelectItem value="aktif">Aktif</SelectItem>
+  1716→                    <SelectItem value="tamat">Tamat</SelectItem>
+  1717→                    <SelectItem value="arkib">Arkib</SelectItem>
+  1718→                  </SelectContent>
+  1719→                </Select>
+  1720→              </div>
+  1721→            </div>
+  1722→            <div className="grid grid-cols-2 gap-3">
+  1723→              <div>
+  1724→                <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Penyelaras</label>
+  1725→                <Input value={fPenyelaras} onChange={e => setFPenyelaras(e.target.value)} placeholder="Nama penyelaras" className="h-10" style={clayInput} />
+  1726→              </div>
+  1727→              <div>
+  1728→                <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Tempat</label>
+  1729→                <Input value={fTempat} onChange={e => setFTempat(e.target.value)} className="h-10" style={clayInput} />
+  1730→              </div>
+  1731→            </div>
+  1732→            <div>
+  1733→              <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Penganjur Bersama</label>
+  1734→              <Input value={fPenganjur} onChange={e => setFPenganjur(e.target.value)} placeholder="Pilihan" className="h-10" style={clayInput} />
+  1735→            </div>
+  1736→            <div>
+  1737→              <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Catatan</label>
+  1738→              <Input value={fCatatan} onChange={e => setFCatatan(e.target.value)} placeholder="Pilihan" className="h-10" style={clayInput} />
+  1739→            </div>
+  1740→          </div>
+  1741→          <DialogFooter className="gap-2">
+  1742→            <Button variant="outline" onClick={() => setDialogOpen(false)} className="clay-btn-secondary text-sm px-4" style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}>Batal</Button>
+  1743→            <Button onClick={handleSave} disabled={saving} className="clay-btn text-sm px-5 flex items-center gap-2" style={{ background: 'var(--clay-primary)', color: 'white', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}>
+  1744→              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+  1745→              {saving ? 'Menyimpan...' : editingItem ? 'Kemaskini' : 'Tambah'}
+  1746→            </Button>
+  1747→          </DialogFooter>
+  1748→        </DialogContent>
+  1749→      </Dialog>
+  1750→
+  1751→      {/* ====== VIEW DIALOG (Peserta List) ====== */}
+  1752→      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+  1753→        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto" style={{ background: 'var(--clay)', borderRadius: '24px', boxShadow: 'var(--clay-shadow-lg)', border: '1px solid rgba(255,255,255,0.6)' }}>
+  1754→          <DialogHeader>
+  1755→            <DialogTitle style={{ color: 'var(--clay-ink)' }} className="flex items-center gap-2">
+  1756→              <Eye className="w-5 h-5" style={{ color: 'var(--clay-success)' }} />
+  1757→              {viewingItem?.namaKursusBm || 'Maklumat Kursus'}
+  1758→            </DialogTitle>
+  1759→            <DialogDescription style={{ color: 'var(--clay-ink-soft)' }}>
+  1760→              {viewingItem?.kodKursus} · {viewingItem?.kategori?.namaKategori}
+  1761→            </DialogDescription>
+  1762→          </DialogHeader>
+  1763→
+  1764→          {viewLoading ? (
+  1765→            <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--clay-primary)' }} /></div>
+  1766→          ) : (
+  1767→            <div className="space-y-4">
+  1768→              {/* Kursus Info Cards */}
+  1769→              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+  1770→                {[
+  1771→                  { label: 'Tarikh Mula', value: viewingItem?.tarikhMula ? formatDateShort(viewingItem.tarikhMula) : '-' },
+  1772→                  { label: 'Tarikh Tamat', value: viewingItem?.tarikhTamat ? formatDateShort(viewingItem.tarikhTamat) : '-' },
+  1773→                  { label: 'Tempoh', value: viewingItem?.tempohJam ? `${viewingItem.tempohJam} jam` : '-' },
+  1774→                  { label: 'Penyelaras', value: viewingItem?.namaPenyelaras || '-' },
+  1775→                ].map(info => (
+  1776→                  <div key={info.label} className="clay-card-sm p-3 text-center">
+  1777→                    <p className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>{info.label}</p>
+  1778→                    <p className="font-semibold text-sm" style={{ color: 'var(--clay-ink)' }}>{info.value}</p>
+  1779→                  </div>
+  1780→                ))}
+  1781→              </div>
+  1782→
+  1783→              {/* Peserta Table */}
+  1784→              <div>
+  1785→                <div className="flex items-center justify-between mb-2">
+  1786→                  <h4 className="font-semibold text-sm" style={{ color: 'var(--clay-ink)' }}>
+  1787→                    Senarai Peserta ({viewPeserta.length})
+  1788→                  </h4>
+  1789→                  <span className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>
+  1790→                    {(viewingItem?._count?.sijil || viewPeserta.reduce((a: number, p: any) => a + (p.sijil?.length || 0), 0))} sijil dijana
+  1791→                  </span>
+  1792→                </div>
+  1793→                <div className="rounded-xl overflow-hidden" style={{ boxShadow: 'var(--clay-shadow-sm)' }}>
+  1794→                  <table className="w-full text-sm">
+  1795→                    <thead>
+  1796→                      <tr style={{ background: 'rgba(124,108,240,0.08)' }}>
+  1797→                        <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--clay-primary)' }}>#</th>
+  1798→                        <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--clay-primary)' }}>Nama Penuh</th>
+  1799→                        <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--clay-primary)' }}>No. MyKad</th>
+  1800→                        <th className="px-3 py-2 text-center text-xs" style={{ color: 'var(--clay-primary)' }}>Kelayakan</th>
+  1801→                        <th className="px-3 py-2 text-center text-xs" style={{ color: 'var(--clay-primary)' }}>Sijil</th>
+  1802→                      </tr>
+  1803→                    </thead>
+  1804→                    <tbody>
+  1805→                      {viewPeserta.map((p: any, idx: number) => (
+  1806→                        <tr key={p.id} style={{ background: idx % 2 === 0 ? 'var(--clay)' : 'rgba(124,108,240,0.03)' }}>
+  1807→                          <td className="px-3 py-2 text-xs" style={{ color: 'var(--clay-ink-soft)' }}>{idx + 1}</td>
+  1808→                          <td className="px-3 py-2 font-medium" style={{ color: 'var(--clay-ink)' }}>{p.namaPenuh}</td>
+  1809→                          <td className="px-3 py-2 font-mono text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>{p.noMykad}</td>
+  1810→                          <td className="px-3 py-2 text-center">
+  1811→                            <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+  1812→                              style={{ background: p.statusKelayakan === 'layak' ? 'var(--clay-success-bg)' : 'var(--clay-warning-bg)', color: p.statusKelayakan === 'layak' ? 'var(--clay-success)' : 'var(--clay-warning)' }}>
+  1813→                              {p.statusKelayakan === 'layak' ? 'Layak' : 'Tidak Layak'}
+  1814→                            </span>
+  1815→                          </td>
+  1816→                          <td className="px-3 py-2 text-center">
+  1817→                            {p.sijil && p.sijil.length > 0 ? (
+  1818→                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold" style={{ background: 'var(--clay-success-bg)', color: 'var(--clay-success)' }}>
+  1819→                                <CheckCircle2 className="w-3 h-3" /> {p.sijil.length}
+  1820→                              </span>
+  1821→                            ) : (
+  1822→                              <span className="text-xs" style={{ color: 'var(--clay-ink-soft)' }}>—</span>
+  1823→                            )}
+  1824→                          </td>
+  1825→                        </tr>
+  1826→                      ))}
+  1827→                      {viewPeserta.length === 0 && (
+  1828→                        <tr><td colSpan={5} className="px-3 py-6 text-center text-xs" style={{ color: 'var(--clay-ink-soft)' }}>Tiada peserta berdaftar.</td></tr>
+  1829→                      )}
+  1830→                    </tbody>
+  1831→                  </table>
+  1832→                </div>
+  1833→              </div>
+  1834→
+  1835→              {/* Pendaftaran Menunggu Kelulusan */}
+  1836→              {pendaftaranList.filter((p: any) => p.status === 'menunggu').length > 0 && (
+  1837→                <div>
+  1838→                  <div className="flex items-center justify-between mb-2">
+  1839→                    <h4 className="font-semibold text-sm flex items-center gap-2" style={{ color: 'var(--clay-ink)' }}>
+  1840→                      <Clock className="w-4 h-4" style={{ color: 'var(--clay-warning)' }} />
+  1841→                      Pendaftaran Menunggu Kelulusan ({pendaftaranList.filter((p: any) => p.status === 'menunggu').length})
+  1842→                    </h4>
+  1843→                  </div>
+  1844→                  <div className="rounded-xl overflow-hidden" style={{ boxShadow: 'var(--clay-shadow-sm)' }}>
+  1845→                    <table className="w-full text-sm">
+  1846→                      <thead>
+  1847→                        <tr style={{ background: 'rgba(232,163,61,0.08)' }}>
+  1848→                          <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--clay-warning)' }}>#</th>
+  1849→                          <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--clay-warning)' }}>Nama</th>
+  1850→                          <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--clay-warning)' }}>No. MyKad</th>
+  1851→                          <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--clay-warning)' }}>Telefon</th>
+  1852→                          <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--clay-warning)' }}>Emel</th>
+  1853→                          <th className="px-3 py-2 text-center text-xs" style={{ color: 'var(--clay-warning)' }}>Tarikh</th>
+  1854→                          <th className="px-3 py-2 text-center text-xs" style={{ color: 'var(--clay-warning)' }}>Tindakan</th>
+  1855→                        </tr>
+  1856→                      </thead>
+  1857→                      <tbody>
+  1858→                        {pendaftaranList.filter((p: any) => p.status === 'menunggu').map((p: any, idx: number) => (
+  1859→                          <tr key={p.id} style={{ background: idx % 2 === 0 ? 'var(--clay)' : 'rgba(232,163,61,0.03)' }}>
+  1860→                            <td className="px-3 py-2 text-xs" style={{ color: 'var(--clay-ink-soft)' }}>{idx + 1}</td>
+  1861→                            <td className="px-3 py-2 font-medium" style={{ color: 'var(--clay-ink)' }}>{p.namaPenuh}</td>
+  1862→                            <td className="px-3 py-2 font-mono text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>{p.noMykad}</td>
+  1863→                            <td className="px-3 py-2 text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>{p.noTelefon || '—'}</td>
+  1864→                            <td className="px-3 py-2 text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>{p.emel || '—'}</td>
+  1865→                            <td className="px-3 py-2 text-center text-xs" style={{ color: 'var(--clay-ink-soft)' }}>{formatDateShort(p.diciptaPada)}</td>
+  1866→                            <td className="px-3 py-2 text-center">
+  1867→                              <div className="flex items-center justify-center gap-1">
+  1868→                                <button onClick={() => handleLulusPendaftaran(p.id)} className="p-1 rounded-lg transition-all hover:scale-110" style={{ background: 'var(--clay-success-bg)', color: 'var(--clay-success)' }} title="Luluskan">
+  1869→                                  <CheckCircle2 className="w-3.5 h-3.5" />
+  1870→                                </button>
+  1871→                                <button onClick={() => handleTolakPendaftaran(p.id)} className="p-1 rounded-lg transition-all hover:scale-110" style={{ background: 'var(--clay-danger-bg)', color: 'var(--clay-danger)' }} title="Tolak">
+  1872→                                  <XCircle className="w-3.5 h-3.5" />
+  1873→                                </button>
+  1874→                              </div>
+  1875→                            </td>
+  1876→                          </tr>
+  1877→                        ))}
+  1878→                      </tbody>
+  1879→                    </table>
+  1880→                  </div>
+  1881→                </div>
+  1882→              )}
+  1883→            </div>
+  1884→          )}
+  1885→        </DialogContent>
+  1886→      </Dialog>
+  1887→
+  1888→      {/* ====== DELETE DIALOG ====== */}
+  1889→      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+  1890→        <DialogContent className="sm:max-w-sm" style={{ background: 'var(--clay)', borderRadius: '24px', boxShadow: 'var(--clay-shadow-lg)', border: '1px solid rgba(255,255,255,0.6)' }}>
+  1891→          <DialogHeader>
+  1892→            <DialogTitle style={{ color: 'var(--clay-destructive)' }} className="flex items-center gap-2">
+  1893→              <AlertCircle className="w-5 h-5" /> Padam Kursus
+  1894→            </DialogTitle>
+  1895→            <DialogDescription style={{ color: 'var(--clay-ink-soft)' }}>
+  1896→              Adakah anda pasti ingin memadam kursus <strong style={{ color: 'var(--clay-ink)' }}>{deletingItem?.namaKursusBm}</strong>?
+  1897→            </DialogDescription>
+  1898→          </DialogHeader>
+  1899→          {deletingItem && (deletingItem._count?.sijil || 0) > 0 && (
+  1900→            <div className="rounded-xl p-3 text-sm" style={{ background: 'rgba(226,109,142,0.1)', color: 'var(--clay-destructive)', borderRadius: '12px' }}>
+  1901→              ⚠️ {deletingItem._count?.sijil} sijil telah dijana. Sila arkibkan kursus sebagai ganti.
+  1902→            </div>
+  1903→          )}
+  1904→          {deletingItem && (deletingItem._count?.sijil || 0) === 0 && (deletingItem._count?.peserta || 0) > 0 && (
+  1905→            <div className="rounded-xl p-3 text-sm" style={{ background: 'rgba(232,163,61,0.1)', color: 'var(--clay-warning)', borderRadius: '12px' }}>
+  1906→              ⚠️ {deletingItem._count?.peserta} peserta akan turut dipadam.
+  1907→            </div>
+  1908→          )}
+  1909→          <DialogFooter className="gap-2">
+  1910→            <Button variant="outline" onClick={() => { setDeleteDialogOpen(false); setDeletingItem(null) }} className="clay-btn-secondary text-sm px-4" style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}>Batal</Button>
+  1911→            <Button onClick={handleDelete} disabled={saving || (deletingItem && (deletingItem._count?.sijil || 0) > 0)} className="text-sm px-5 flex items-center gap-2" style={{ background: 'var(--clay-destructive)', color: 'white', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}>
+  1912→              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+  1913→              {saving ? 'Memadam...' : 'Padam'}
+  1914→            </Button>
+  1915→          </DialogFooter>
+  1916→        </DialogContent>
+  1917→      </Dialog>
+  1918→
+  1919→      {/* ====== SHARE / QR CODE DIALOG ====== */}
+  1920→      <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+  1921→        <DialogContent className="sm:max-w-md" style={{ background: 'var(--clay)', borderRadius: '24px', boxShadow: 'var(--clay-shadow-lg)', border: '1px solid rgba(255,255,255,0.6)' }}>
+  1922→          <DialogHeader>
+  1923→            <DialogTitle style={{ color: 'var(--clay-ink)' }} className="flex items-center gap-2">
+  1924→              <QrCode className="w-5 h-5" style={{ color: 'var(--clay-primary)' }} />
+  1925→              Pautan Pendaftaran Kursus
+  1926→            </DialogTitle>
+  1927→            <DialogDescription style={{ color: 'var(--clay-ink-soft)' }}>
+  1928→              Kongsi pautan atau QR code ini kepada peserta untuk mendaftar kursus <strong style={{ color: 'var(--clay-ink)' }}>{shareItem?.namaKursusBm}</strong>
+  1929→            </DialogDescription>
+  1930→          </DialogHeader>
+  1931→          <div className="space-y-4 py-2">
+  1932→            {/* QR Code */}
+  1933→            <div className="clay-card-sm p-4 flex flex-col items-center">
+  1934→              {qrLoading ? (
+  1935→                <div className="w-48 h-48 flex items-center justify-center">
+  1936→                  <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--clay-primary)' }} />
+  1937→                </div>
+  1938→              ) : qrDataUrl ? (
+  1939→                <>
+  1940→                  <img src={qrDataUrl} alt="QR Code Pendaftaran" className="w-48 h-48 rounded-xl" />
+  1941→                  <p className="text-xs mt-2" style={{ color: 'var(--clay-ink-soft)' }}>Imbas QR code untuk mendaftar</p>
+  1942→                </>
+  1943→              ) : (
+  1944→                <p className="text-sm" style={{ color: 'var(--clay-danger)' }}>Gagal menjana QR code</p>
+  1945→              )}
+  1946→            </div>
+  1947→            {/* Link */}
+  1948→            <div className="clay-card-sm p-3">
+  1949→              <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink-soft)' }}>Pautan Pendaftaran</label>
+  1950→              <div className="flex items-center gap-2">
+  1951→                <div className="flex-1 px-3 py-2 rounded-xl text-xs font-mono break-all" style={{ background: 'var(--clay-inset-bg, rgba(124,108,240,0.06))', color: 'var(--clay-primary)', boxShadow: 'var(--clay-inset)' }}>
+  1952→                  {typeof window !== 'undefined' ? `${window.location.origin}/?daftar=${shareItem?.id}` : ''}
+  1953→                </div>
+  1954→                <button
+  1955→                  onClick={copyLink}
+  1956→                  className="p-2 rounded-xl transition-all hover:scale-105"
+  1957→                  style={{ background: linkCopied ? 'var(--clay-success-bg)' : 'var(--clay-primary)', color: linkCopied ? 'var(--clay-success)' : 'white', boxShadow: 'var(--clay-shadow-sm)' }}
+  1958→                  title="Salin Pautan"
+  1959→                >
+  1960→                  {linkCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+  1961→                </button>
+  1962→              </div>
+  1963→            </div>
+  1964→            {/* Info */}
+  1965→            <div className="flex items-start gap-2 p-3 rounded-xl" style={{ background: 'rgba(79,196,161,0.08)' }}>
+  1966→              <Info className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--clay-success)' }} />
+  1967→              <p className="text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>
+  1968→                Peserta yang mendaftar melalui pautan ini perlu diluluskan oleh pentadbir sebelum dimasukkan sebagai peserta rasmi.
+  1969→              </p>
+  1970→            </div>
+  1971→          </div>
+  1972→          <DialogFooter>
+  1973→            <Button variant="outline" onClick={() => setShareDialogOpen(false)} className="clay-btn-secondary text-sm px-4" style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}>Tutup</Button>
+  1974→          </DialogFooter>
+  1975→        </DialogContent>
+  1976→      </Dialog>
+  1977→    </div>
+  1978→  )
+  1979→}
+  1980→
+  1981→// ============================================================
+  1982→// PESERTA TAB
+  1983→// ============================================================
+  1984→function PesertaTab() {
+  1985→  const [kursusList, setKursusList] = useState<any[]>([])
+  1986→  const [selectedKursus, setSelectedKursus] = useState<string>('')
+  1987→  const [pesertaList, setPesertaList] = useState<any[]>([])
+  1988→  const [loading, setLoading] = useState(true)
+  1989→
+  1990→  // Load kursus list and first set of peserta on mount
+  1991→  useEffect(() => {
+  1992→    fetch('/api/kursus').then(r => r.json()).then(d => {
+  1993→      if (d.berjaya) {
+  1994→        setKursusList(d.data)
+  1995→        if (d.data.length > 0) {
+  1996→          const firstId = d.data[0].id
+  1997→          setSelectedKursus(firstId)
+  1998→          fetch(`/api/peserta?kursusId=${firstId}`).then(r2 => r2.json()).then(d2 => {
+  1999→            if (d2.berjaya) setPesertaList(d2.data)
+  2000→          }).finally(() => setLoading(false))
+
+[showing lines 1-2000 of 3442; use offset=2001 with limit to continue reading]

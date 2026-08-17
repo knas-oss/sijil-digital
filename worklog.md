@@ -142,3 +142,27 @@ Stage Summary:
 - Active template cards have green border glow and "Aktif" badge on preview
 - API backend confirmed working correctly for template activation/deactivation
 - UX significantly improved: clear toggle, clear visual feedback
+
+---
+Task ID: 7
+Agent: Main Agent
+Task: Betulkan ralat gagal menyimpan tandatangan semasa upload files dalam Galeri Templat Sijil
+
+Work Log:
+- Diagnosed root cause: /api/upload/tandatangan API route was completely missing from filesystem
+- The route was documented as created in worklog Task 4 but the file did not exist
+- Frontend code at page.tsx lines 2842/2910 called POST /api/upload/tandatangan and lines 2862/2930 called DELETE /api/upload/tandatangan, both returning 404
+- Created /src/app/api/upload/tandatangan/route.ts with:
+  - POST handler: validates PNG format (header check), max 2MB size, saves to /public/signatures/, auto-cleans old signatures of same type, returns {berjaya:true, data:{laluan:'/signatures/xxx.png'}}
+  - DELETE handler: validates path (only /signatures/ allowed, no path traversal), deletes file from disk
+- Created /public/signatures/ directory for storing uploaded PNG signature files
+- Tested POST endpoint: returns proper success response with signature path
+- Tested DELETE endpoint: properly removes file from disk
+- Verified browser UI: Template Editor shows "Tandatangan Digital" section with two "Muat Naik .png" buttons
+- No console errors, no API 404s, signature upload flow fully functional
+
+Stage Summary:
+- /api/upload/tandatangan POST and DELETE endpoints now exist and work correctly
+- Signature PNG files saved to /public/signatures/ directory
+- PDF generation (jana-sijil) reads signatures from public/ paths, so uploaded signatures will embed correctly in certificates
+- Auto-cleanup of old signatures prevents disk bloat
