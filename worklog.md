@@ -209,3 +209,31 @@ Stage Summary:
 - Both fields saved to database and rendered in PDF certificates
 - Canvas preview shows jawatan and nama dynamically
 - Institution name "Kolej Teknologi Termaju (ADTEC)" shifted down when nama is present
+
+---
+Task ID: 10
+Agent: Main Agent
+Task: Susun semula teks tandatangan mengikut procedure rasmi kerajaan Malaysia (Nama → Jawatan → Agesi, centre-aligned) dan geser/besarkan Cop Rasmi
+
+Work Log:
+- Updated PDF generation (jana-sijil/route.ts) left signature area:
+  - Reordered text: Nama Pengarah (bold, size 10) → Jawatan (size 9) → Agensi (size 8)
+  - All three texts now centre-aligned using font.widthOfTextAtSize calculation with sigCenterX=220
+- Updated PDF generation right signature (Cop Rasmi):
+  - Shifted image position right: x from width-320 to width-290
+  - Centre-aligned text with copRasmiCenterX=width-230
+  - Increased font size from 10 to 12, changed to helveticaBold
+- Updated template canvas preview (page.tsx):
+  - Reordered signature text: Nama → Jawatan → Agensi
+  - Nama displayed with font-semibold for emphasis
+  - Cop Rasmi area shifted right: left-[52%] → left-[56%], right-[8%] → right-[5%]
+  - Cop Rasmi text enlarged: text-[4px] → text-[5px], added font-semibold
+  - Cop Rasmi image enlarged: h-6 → h-7
+- Tested API: GET /api/templat returns correct fields
+- Tested PDF generation: HTTP 200, no errors
+- Lint passes
+
+Stage Summary:
+- Left signature now follows Malaysian government procedure: Nama → Jawatan → Agensi, all centre-aligned
+- Cop Rasmi shifted slightly right and enlarged (PDF: size 10→12 bold, preview: text-[4px]→text-[5px] bold)
+- PDF centre-alignment uses font width calculation for precise positioning
