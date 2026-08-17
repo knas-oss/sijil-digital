@@ -331,11 +331,10 @@ export async function POST(request: NextRequest) {
         x: 120, y: sigY + 25, size: 10, font: helvetica, color: rgb(0.5, 0.5, 0.5),
       })
     }
-    // Signature text: Susunan rasmi — Nama, Jawatan, Agensi (centre-aligned)
+    // Signature text: Susunan rasmi — Nama, Jawatan (centre-aligned, tanpa agensi)
     const sigCenterX = 220 // centre of left signature block
     const namaText = sijil.templat?.namaPenandatangan
     const jawatanText = sijil.templat?.jawatanPenandatangan || 'Pengarah'
-    const agensiText = 'Kolej Teknologi Termaju (ADTEC)'
     // Row 1: Nama Pengarah (bold, size 10)
     if (namaText) {
       const namaW = helveticaBold.widthOfTextAtSize(namaText, 10)
@@ -349,14 +348,8 @@ export async function POST(request: NextRequest) {
     page.drawText(jawatanText, {
       x: sigCenterX - jawatanW / 2, y: jawatanY, size: 9, font: helvetica, color: rgb(0.18, 0.19, 0.31),
     })
-    // Row 3: Agensi (smaller, size 8)
-    const agensiY = jawatanY - 13
-    const agensiW = helvetica.widthOfTextAtSize(agensiText, 8)
-    page.drawText(agensiText, {
-      x: sigCenterX - agensiW / 2, y: agensiY, size: 8, font: helvetica, color: rgb(0.36, 0.37, 0.5),
-    })
 
-    // Right signature: Penyelaras (with digital signature if available)
+    // Right signature: Cop Rasmi (with digital signature if available)
     const sigPenyelarasPath = sijil.templat?.laluanTandatanganPenyelaras
     if (sigPenyelarasPath) {
       try {
@@ -365,15 +358,15 @@ export async function POST(request: NextRequest) {
           const sigBytes = fs.readFileSync(fullPath)
           const sigImage = await pdfDoc.embedPng(sigBytes)
           const sigDims = sigImage.scale(1)
-          const sigMaxW = 160
-          const sigMaxH = 45
+          const sigMaxW = 180
+          const sigMaxH = 50
           const sigScaleW = sigMaxW / sigDims.width
           const sigScaleH = sigMaxH / sigDims.height
           const sigScale = Math.min(sigScaleW, sigScaleH)
           const sigW = sigDims.width * sigScale
           const sigH = sigDims.height * sigScale
           page.drawImage(sigImage, {
-            x: width - 290, y: sigY + 30,
+            x: width - 270, y: sigY + 30,
             width: sigW, height: sigH,
           })
         }
@@ -381,12 +374,12 @@ export async function POST(request: NextRequest) {
         // Signature embed failed, skip line
       }
     }
-    // Cop Rasmi (centre-aligned, shifted right, larger text)
+    // Cop Rasmi (centre-aligned, size 9)
     const copRasmiText = 'Cop Rasmi'
-    const copRasmiCenterX = width - 230
-    const copRasmiW = helveticaBold.widthOfTextAtSize(copRasmiText, 12)
+    const copRasmiCenterX = width - 190
+    const copRasmiW = helvetica.widthOfTextAtSize(copRasmiText, 9)
     page.drawText(copRasmiText, {
-      x: copRasmiCenterX - copRasmiW / 2, y: sigY + 10, size: 12, font: helveticaBold, color: rgb(0.18, 0.19, 0.31),
+      x: copRasmiCenterX - copRasmiW / 2, y: sigY + 10, size: 9, font: helvetica, color: rgb(0.18, 0.19, 0.31),
     })
 
     // --- Serial Number ---

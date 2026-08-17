@@ -2771,15 +2771,14 @@ function TemplateEditor({ template, onSave, onClose }: {
                 <div className="mt-0.5" style={{ width: '80%', height: '1px', background: 'rgba(120,124,170,0.15)' }} />
                 {namaPenandatangan && <p className="text-[4px] mt-0.5 font-semibold" style={{ color: 'rgba(120,124,170,0.35)' }}>{namaPenandatangan}</p>}
                 <p className="text-[4px] mt-0.5" style={{ color: 'rgba(120,124,170,0.3)' }}>{jawatanPenandatangan || 'Pengarah'}</p>
-                <p className="text-[3px] mt-0.5" style={{ color: 'rgba(120,124,170,0.25)' }}>Kolej Teknologi Termaju (ADTEC)</p>
               </div>
-              <div className="absolute bottom-[18%] left-[56%] right-[5%] flex flex-col items-center">
+              <div className="absolute bottom-[18%] left-[58%] right-[3%] flex flex-col items-center">
                 {tandatanganPenyelaras ? (
-                  <img src={tandatanganPenyelaras} alt="Tandatangan Penyelaras" className="h-7 object-contain opacity-60" />
+                  <img src={tandatanganPenyelaras} alt="Cop Rasmi" className="h-8 object-contain opacity-70" />
                 ) : (
-                  <p className="text-[5px] italic" style={{ color: 'rgba(120,124,170,0.3)' }}>Cop Rasmi</p>
+                  <p className="text-[4px] italic" style={{ color: 'rgba(120,124,170,0.3)' }}>Cop Rasmi</p>
                 )}
-                <p className="text-[5px] mt-0.5 font-semibold" style={{ color: 'rgba(120,124,170,0.35)' }}>Cop Rasmi</p>
+                <p className="text-[4px] mt-0.5" style={{ color: 'rgba(120,124,170,0.35)' }}>Cop Rasmi</p>
               </div>
 
               {/* Empty state */}

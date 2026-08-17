@@ -237,3 +237,23 @@ Stage Summary:
 - Left signature now follows Malaysian government procedure: Nama → Jawatan → Agensi, all centre-aligned
 - Cop Rasmi shifted slightly right and enlarged (PDF: size 10→12 bold, preview: text-[4px]→text-[5px] bold)
 - PDF centre-alignment uses font width calculation for precise positioning
+
+---
+Task ID: 11
+Agent: Main Agent
+Task: Buang Nama Agensi, hanya Nama → Jawatan (centre-aligned). Imej Cop Rasmi geser kanan & besarkan, teks Cop Rasmi saiz 9 centre-aligned.
+
+Work Log:
+- PDF (jana-sijil/route.ts): Removed Agensi text ("Kolej Teknologi Termaju (ADTEC)") from left signature area
+- PDF: Left signature now shows only Nama Pengarah (bold, size 10) → Jawatan (size 9), both centre-aligned
+- PDF: Cop Rasmi image enlarged (maxW 160→180, maxH 45→50), shifted right (x: width-290→width-270)
+- PDF: Cop Rasmi text changed to size 9, centre-aligned with copRasmiCenterX=width-190, normal font (not bold)
+- Canvas preview (page.tsx): Removed Agensi text from left signature
+- Canvas preview: Cop Rasmi area shifted right (left-[56%]→left-[58%]), image enlarged (h-7→h-8), opacity increased (0.60→0.70)
+- Canvas preview: Cop Rasmi text changed to text-[4px] normal (from text-[5px] bold) for consistency with PDF size 9
+- Lint passes, PDF generation HTTP 200
+
+Stage Summary:
+- Left signature: Nama → Jawatan only (no Agensi), both centre-aligned
+- Cop Rasmi image: shifted right and enlarged (PDF max 180×50, preview h-8)
+- Cop Rasmi text: size 9, centre-aligned, normal weight
