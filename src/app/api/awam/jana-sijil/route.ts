@@ -107,22 +107,22 @@ export async function POST(request: NextRequest) {
     })
 
     // --- Header: Logo & Institution Name ---
-    // Embed official logo at the top
-    const logoShift = 45 // vertical shift to make room for logo
+    // Embed official logo at the top (460×340 px target)
+    const logoShift = 65 // vertical shift to make room for larger logo
     try {
       const logoPath = path.join(process.cwd(), 'public', 'logo-rasmi.png')
       if (fs.existsSync(logoPath)) {
         const logoBytes = fs.readFileSync(logoPath)
         const logoImage = await pdfDoc.embedPng(logoBytes)
         const logoDims = logoImage.scale(1)
-        // Scale logo: max height 50pts, maintain aspect ratio
-        const logoMaxH = 50
-        const logoScale = logoMaxH / logoDims.height
-        const logoW = logoDims.width * logoScale
-        const logoH = logoMaxH
+        // Scale logo to fit ~80pts wide (proportional to 460px at 3508px canvas width)
+        const logoMaxW = 80
+        const logoScale = logoMaxW / logoDims.width
+        const logoW = logoMaxW
+        const logoH = logoDims.height * logoScale
         page.drawImage(logoImage, {
           x: width / 2 - logoW / 2,
-          y: height - 18 - logoH,
+          y: height - 15 - logoH,
           width: logoW,
           height: logoH,
         })

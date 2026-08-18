@@ -2699,7 +2699,6 @@ function TemplateEditor({ template, onSave, onClose }: {
                 width: '100%',
                 aspectRatio: isLandscape ? '297/210' : '210/297',
                 background: 'linear-gradient(135deg, #fafbff 0%, #f0f1f8 50%, #e8eaf4 100%)',
-                border: '2px solid var(--border)',
                 boxShadow: 'inset 0 2px 8px rgba(120,124,170,0.1)',
               }}
               onMouseMove={handleMouseMove}
@@ -2714,16 +2713,13 @@ function TemplateEditor({ template, onSave, onClose }: {
 
               {/* Certificate header preview */}
               <div className="absolute top-0 left-0 right-0 text-center pt-2">
-                <img src="/logo-rasmi.png" alt="Logo Rasmi ADTEC" className="h-8 mx-auto mb-1 object-contain" />
+                <img src="/logo-rasmi.png" alt="Logo Rasmi ADTEC" className="mx-auto mb-1 object-contain" style={{ width: '460px', maxWidth: '100%', height: '340px' }} />
                 <p className="text-[7px] font-bold tracking-wider" style={{ color: 'rgba(47,49,80,0.4)' }}>KOLEJ TEKNOLOGI TERMAJU (ADTEC)</p>
                 <p className="text-[5px]" style={{ color: 'rgba(47,49,80,0.25)' }}>JABATAN TENAGA MANUSIA, KEMENTERIAN SUMBER MANUSIA</p>
                 <div className="mx-auto mt-1" style={{ width: '60%', height: '1px', background: 'rgba(124,108,240,0.2)' }} />
                 <p className="text-[9px] font-bold mt-2" style={{ color: 'rgba(47,49,80,0.35)' }}>SIJIL PENYERTAAN</p>
                 <p className="text-[6px] italic" style={{ color: 'rgba(47,49,80,0.2)' }}>CERTIFICATE OF PARTICIPATION</p>
               </div>
-
-              {/* Decorative border */}
-              <div className="absolute inset-2 rounded-md" style={{ border: '1px solid rgba(124,108,240,0.15)' }} />
 
               {/* Field items */}
               {medan.map((m: any, index: number) => {
