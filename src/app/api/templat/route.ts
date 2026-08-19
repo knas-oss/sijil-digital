@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
-    // Create template with fields
+    // Create template with fields and metadata
     const templat = await db.templatSijil.create({
       data: {
         namaTemplat: body.namaTemplat,
@@ -34,6 +34,11 @@ export async function POST(request: NextRequest) {
         tinggiPx: body.tinggiPx || 2480,
         status: 'draf',
         dimuatNaikOlehId: body.dimuatNaikOlehId,
+        laluanTandatanganPengarah: body.laluanTandatanganPengarah || null,
+        laluanTandatanganPenyelaras: body.laluanTandatanganPenyelaras || null,
+        logoRasmi: body.logoRasmi || null,
+        jawatanPenandatangan: body.jawatanPenandatangan || null,
+        namaPenandatangan: body.namaPenandatangan || null,
       },
     })
 
@@ -48,6 +53,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ berjaya: true, data: templat })
   } catch (error) {
+    console.error('Templat POST error:', error)
     return NextResponse.json({ berjaya: false, mesej: 'Ralat mencipta templat.' }, { status: 500 })
   }
 }
@@ -76,6 +82,7 @@ export async function PUT(request: NextRequest) {
       if (body.status !== undefined) updateData.status = body.status
       if (body.laluanTandatanganPengarah !== undefined) updateData.laluanTandatanganPengarah = body.laluanTandatanganPengarah
       if (body.laluanTandatanganPenyelaras !== undefined) updateData.laluanTandatanganPenyelaras = body.laluanTandatanganPenyelaras
+      if (body.logoRasmi !== undefined) updateData.logoRasmi = body.logoRasmi
       if (body.jawatanPenandatangan !== undefined) updateData.jawatanPenandatangan = body.jawatanPenandatangan
       if (body.namaPenandatangan !== undefined) updateData.namaPenandatangan = body.namaPenandatangan
 
