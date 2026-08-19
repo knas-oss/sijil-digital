@@ -2713,7 +2713,6 @@ function TemplateEditor({ template, onSave, onClose }: {
 
               {/* Certificate header preview */}
               <div className="absolute top-0 left-0 right-0 text-center pt-2">
-                <img src="/logo-rasmi.png" alt="Logo Rasmi ADTEC" className="mx-auto mb-1 object-contain" style={{ width: '460px', maxWidth: '100%', height: '340px' }} />
                 <p className="text-[7px] font-bold tracking-wider" style={{ color: 'rgba(47,49,80,0.4)' }}>KOLEJ TEKNOLOGI TERMAJU (ADTEC)</p>
                 <p className="text-[5px]" style={{ color: 'rgba(47,49,80,0.25)' }}>JABATAN TENAGA MANUSIA, KEMENTERIAN SUMBER MANUSIA</p>
                 <div className="mx-auto mt-1" style={{ width: '60%', height: '1px', background: 'rgba(124,108,240,0.2)' }} />
