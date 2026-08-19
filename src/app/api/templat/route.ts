@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
         laluanTandatanganPengarah: body.laluanTandatanganPengarah || null,
         laluanTandatanganPenyelaras: body.laluanTandatanganPenyelaras || null,
         logoRasmi: body.logoRasmi || null,
+        latarBelakang: body.latarBelakang || null,
         jawatanPenandatangan: body.jawatanPenandatangan || null,
         namaPenandatangan: body.namaPenandatangan || null,
       },
@@ -83,6 +84,7 @@ export async function PUT(request: NextRequest) {
       if (body.laluanTandatanganPengarah !== undefined) updateData.laluanTandatanganPengarah = body.laluanTandatanganPengarah
       if (body.laluanTandatanganPenyelaras !== undefined) updateData.laluanTandatanganPenyelaras = body.laluanTandatanganPenyelaras
       if (body.logoRasmi !== undefined) updateData.logoRasmi = body.logoRasmi
+      if (body.latarBelakang !== undefined) updateData.latarBelakang = body.latarBelakang
       if (body.jawatanPenandatangan !== undefined) updateData.jawatanPenandatangan = body.jawatanPenandatangan
       if (body.namaPenandatangan !== undefined) updateData.namaPenandatangan = body.namaPenandatangan
 

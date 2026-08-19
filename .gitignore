@@ -1,1 +1,45 @@
-Nothing needs to be added to the .gitignore file based on the provided file changes, as they only include source code files (.ts) without any build artifacts, dependencies, or temporary files that would require ignoring.
+```
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Environment variables
+.env
+.env.local
+.env.*
+!.env.example
+
+# Cache directories
+.cache/
+.nyc_output/
+coverage/
+.nyc_output/
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Database
+prisma/migrations/
+*.db
+*.db-journal
+
+# Temporary files
+*.tmp
+*.temp
+```

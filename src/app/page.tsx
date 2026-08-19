@@ -2536,6 +2536,7 @@ function TemplateEditor({ template, onSave, onClose }: {
   const [tandatanganPengarah, setTandatanganPengarah] = useState<string>(template.laluanTandatanganPengarah || '')
   const [tandatanganPenyelaras, setTandatanganPenyelaras] = useState<string>(template.laluanTandatanganPenyelaras || '')
   const [logoRasmi, setLogoRasmi] = useState<string>(template.logoRasmi || '')
+  const [templatBackground, setTemplatBackground] = useState<string>(template.latarBelakang || '')
   const [jawatanPenandatangan, setJawatanPenandatangan] = useState<string>(template.jawatanPenandatangan || 'Pengarah')
   const [namaPenandatangan, setNamaPenandatangan] = useState<string>(template.namaPenandatangan || '')
   const [jawatanCustom, setJawatanCustom] = useState<string>('')
@@ -2543,10 +2544,11 @@ function TemplateEditor({ template, onSave, onClose }: {
     const preset = ['Pengarah', 'Timbalan Pengarah Latihan', 'Timbalan Pengarah Operasi']
     return preset.includes(template.jawatanPenandatangan || 'Pengarah') ? 'preset' : 'custom'
   })
-  const [uploadingSig, setUploadingSig] = useState<string | null>(null) // 'pengarah' | 'penyelaras' | 'logo' | null
+  const [uploadingSig, setUploadingSig] = useState<string | null>(null) // 'pengarah' | 'penyelaras' | 'logo' | 'templat' | null
   const pengarahInputRef = useRef<HTMLInputElement>(null)
   const penyelarasInputRef = useRef<HTMLInputElement>(null)
   const logoInputRef = useRef<HTMLInputElement>(null)
+  const templatBgInputRef = useRef<HTMLInputElement>(null)
 
   const isLandscape = template.orientasi === 'landskap'
 
@@ -2638,12 +2640,13 @@ function TemplateEditor({ template, onSave, onClose }: {
     }
     setSaving(true)
     
-    // Prepare full template data including logo and signatures
+    // Prepare full template data including logo, signatures, and background
     const templateData = {
       medan: medan,
       laluanTandatanganPengarah: tandatanganPengarah || null,
       laluanTandatanganPenyelaras: tandatanganPenyelaras || null,
       logoRasmi: logoRasmi || null,
+      latarBelakang: templatBackground || null,
       jawatanPenandatangan: jawatanPenandatangan || null,
       namaPenandatangan: namaPenandatangan || null,
     }
@@ -2896,6 +2899,78 @@ function TemplateEditor({ template, onSave, onClose }: {
 
         {/* Right Panel: Field List + Properties */}
         <div className="w-full lg:w-80 space-y-4">
+          {/* Upload Template Background */}
+          <div className="clay-card p-4">
+            <h4 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--clay-ink)' }}>
+              <ImageIcon className="w-4 h-4" style={{ color: 'var(--clay-primary)' }} />
+              Latar Belakang Sijil
+            </h4>
+            <p className="text-xs mb-3" style={{ color: 'var(--clay-ink-soft)' }}>Muat naik reka bentuk sijil (.png atau .jpg, maks 5MB)</p>
+
+            <input
+              ref={templatBgInputRef}
+              type="file"
+              accept=".png,.jpg,.jpeg"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                if (!file.type.startsWith('image/')) {
+                  toast({ title: 'Format Tidak Sah', description: 'Hanya fail imej (.png, .jpg) sahaja dibenarkan.', variant: 'destructive' })
+                  return
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                  toast({ title: 'Saiz Terlalu Besar', description: 'Saiz fail tidak boleh melebihi 5MB.', variant: 'destructive' })
+                  return
+                }
+                setUploadingSig('templat')
+                try {
+                  const formData = new FormData()
+                  formData.append('fail', file)
+                  formData.append('jenis', 'templat')
+                  const res = await fetch('/api/upload/tandatangan', { method: 'POST', body: formData })
+                  const result = await res.json()
+                  if (result.berjaya) {
+                    setTemplatBackground(result.laluan)
+                    toast({ title: 'Templat Dimuat Naik', description: 'Latar belakang sijil berjaya dimuat naik.' })
+                  } else {
+                    toast({ title: 'Ralat', description: result.mesej || 'Gagal memuat naik.', variant: 'destructive' })
+                  }
+                } catch {
+                  toast({ title: 'Ralat', description: 'Gagal memuat naik templat.', variant: 'destructive' })
+                }
+                setUploadingSig(null)
+                if (templatBgInputRef.current) templatBgInputRef.current.value = ''
+              }}
+            />
+            {templatBackground ? (
+              <div className="relative rounded-xl overflow-hidden" style={{ background: 'var(--clay-bg)', border: '1px solid var(--border)' }}>
+                <img src={templatBackground} alt="Latar Belakang Sijil" className="w-full h-32 object-cover p-2" />
+                <button
+                  onClick={() => setTemplatBackground('')}
+                  className="absolute top-1 right-1 p-1 rounded-lg transition-all"
+                  style={{ background: 'rgba(226,109,142,0.15)', color: 'var(--clay-danger)' }}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => templatBgInputRef.current?.click()}
+                disabled={uploadingSig === 'templat'}
+                className="w-full py-3 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition-all hover:scale-[1.01] disabled:opacity-50"
+                style={{
+                  background: 'var(--clay-bg)',
+                  border: '2px dashed var(--border)',
+                  color: 'var(--clay-ink-soft)',
+                }}
+              >
+                {uploadingSig === 'templat' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                {uploadingSig === 'templat' ? 'Memuat naik...' : 'Muat Naik Latar Belakang'}
+              </button>
+            )}
+          </div>
+
           {/* Add Fields */}
           <div className="clay-card p-4">
             <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--clay-ink)' }}>Tambah Medan</h4>
