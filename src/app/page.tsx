@@ -2524,9 +2524,10 @@ function TemplateEditor({ template, onSave, onClose }: {
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
 
-  // Tandatangan digital
+  // Tandatangan digital & Logo
   const [tandatanganPengarah, setTandatanganPengarah] = useState<string>(template.laluanTandatanganPengarah || '')
   const [tandatanganPenyelaras, setTandatanganPenyelaras] = useState<string>(template.laluanTandatanganPenyelaras || '')
+  const [logoRasmi, setLogoRasmi] = useState<string>(template.logoRasmi || '')
   const [jawatanPenandatangan, setJawatanPenandatangan] = useState<string>(template.jawatanPenandatangan || 'Pengarah')
   const [namaPenandatangan, setNamaPenandatangan] = useState<string>(template.namaPenandatangan || '')
   const [jawatanCustom, setJawatanCustom] = useState<string>('')
@@ -2534,9 +2535,10 @@ function TemplateEditor({ template, onSave, onClose }: {
     const preset = ['Pengarah', 'Timbalan Pengarah Latihan', 'Timbalan Pengarah Operasi']
     return preset.includes(template.jawatanPenandatangan || 'Pengarah') ? 'preset' : 'custom'
   })
-  const [uploadingSig, setUploadingSig] = useState<string | null>(null) // 'pengarah' | 'penyelaras' | null
+  const [uploadingSig, setUploadingSig] = useState<string | null>(null) // 'pengarah' | 'penyelaras' | 'logo' | null
   const pengarahInputRef = useRef<HTMLInputElement>(null)
   const penyelarasInputRef = useRef<HTMLInputElement>(null)
+  const logoInputRef = useRef<HTMLInputElement>(null)
 
   const isLandscape = template.orientasi === 'landskap'
 
@@ -2637,6 +2639,7 @@ function TemplateEditor({ template, onSave, onClose }: {
             templatId: template.id,
             laluanTandatanganPengarah: tandatanganPengarah || null,
             laluanTandatanganPenyelaras: tandatanganPenyelaras || null,
+            logoRasmi: logoRasmi || null,
             jawatanPenandatangan: jawatanPenandatangan || null,
             namaPenandatangan: namaPenandatangan || null,
           }),
@@ -2711,14 +2714,74 @@ function TemplateEditor({ template, onSave, onClose }: {
                 backgroundSize: '10% 10%',
               }} />
 
-              {/* Certificate header preview */}
-              <div className="absolute top-0 left-0 right-0 text-center pt-2">
-                <p className="text-[7px] font-bold tracking-wider" style={{ color: 'rgba(47,49,80,0.4)' }}>KOLEJ TEKNOLOGI TERMAJU (ADTEC)</p>
-                <p className="text-[5px]" style={{ color: 'rgba(47,49,80,0.25)' }}>JABATAN TENAGA MANUSIA, KEMENTERIAN SUMBER MANUSIA</p>
-                <div className="mx-auto mt-1" style={{ width: '60%', height: '1px', background: 'rgba(124,108,240,0.2)' }} />
-                <p className="text-[9px] font-bold mt-2" style={{ color: 'rgba(47,49,80,0.35)' }}>SIJIL PENYERTAAN</p>
-                <p className="text-[6px] italic" style={{ color: 'rgba(47,49,80,0.2)' }}>CERTIFICATE OF PARTICIPATION</p>
-              </div>
+              {/* Certificate header preview - draggable elements container */}
+              {medan.filter((m: any) => m.kunciMedan.startsWith('header_')).map((m: any, index: number) => {
+                const actualIndex = medan.indexOf(m)
+                const isSelected = selectedField === actualIndex
+                const isDraggingThis = dragging === actualIndex
+                const displayText = m.teksHeader || ''
+                
+                return (
+                  <div
+                    key={m.kunciMedan}
+                    className="absolute select-none"
+                    style={{
+                      left: `${m.posXPeratus}%`,
+                      top: `${m.posYPeratus}%`,
+                      transform: 'translate(-50%, -50%)',
+                      cursor: isDraggingThis ? 'grabbing' : 'grab',
+                      zIndex: isDraggingThis ? 100 : isSelected ? 50 : 10,
+                      transition: isDraggingThis ? 'none' : 'box-shadow 0.15s',
+                    }}
+                    onMouseDown={(e) => handleMouseDown(e, actualIndex)}
+                    onClick={(e) => { e.stopPropagation(); setSelectedField(actualIndex) }}
+                  >
+                    <div
+                      className="px-2 py-1 rounded-lg text-center whitespace-nowrap"
+                      style={{
+                        fontSize: `${Math.max(4, Math.min(8, m.saizFon / 3))}px`,
+                        fontWeight: m.gayaFon === 'tebal' ? 700 : 400,
+                        fontStyle: m.gayaFon === 'condong' ? 'italic' : 'normal',
+                        color: m.warnaFon,
+                        background: isSelected ? 'rgba(124,108,240,0.12)' : 'rgba(255,255,255,0.7)',
+                        border: isSelected ? '2px solid var(--clay-primary)' : '1px dashed rgba(120,124,170,0.3)',
+                        boxShadow: isSelected ? '0 0 0 3px rgba(124,108,240,0.15)' : 'none',
+                      }}
+                    >
+                      <span className="block">{displayText}</span>
+                    </div>
+                    <p className="text-[4px] mt-0.5 text-center font-medium" style={{ color: isSelected ? 'var(--clay-primary)' : 'rgba(120,124,170,0.6)' }}>
+                      {m.kunciMedan.replace(/_/g, ' ')}
+                    </p>
+                  </div>
+                )
+              })}
+
+              {/* Logo Rasmi - draggable if exists */}
+              {logoRasmi && (
+                <div
+                  className="absolute select-none"
+                  style={{
+                    left: '50%',
+                    top: '2%',
+                    transform: 'translate(-50%, -50%)',
+                    cursor: 'grab',
+                  }}
+                >
+                  <img src={logoRasmi} alt="Logo Rasmi" className="h-8 object-contain" />
+                </div>
+              )}
+
+              {/* Default static header (shown only if no header fields added) */}
+              {medan.filter((m: any) => m.kunciMedan.startsWith('header_')).length === 0 && !logoRasmi && (
+                <div className="absolute top-0 left-0 right-0 text-center pt-2">
+                  <p className="text-[7px] font-bold tracking-wider" style={{ color: 'rgba(47,49,80,0.4)' }}>KOLEJ TEKNOLOGI TERMAJU (ADTEC)</p>
+                  <p className="text-[5px]" style={{ color: 'rgba(47,49,80,0.25)' }}>JABATAN TENAGA MANUSIA, KEMENTERIAN SUMBER MANUSIA</p>
+                  <div className="mx-auto mt-1" style={{ width: '60%', height: '1px', background: 'rgba(124,108,240,0.2)' }} />
+                  <p className="text-[9px] font-bold mt-2" style={{ color: 'rgba(47,49,80,0.35)' }}>SIJIL PENYERTAAN</p>
+                  <p className="text-[6px] italic" style={{ color: 'rgba(47,49,80,0.2)' }}>CERTIFICATE OF PARTICIPATION</p>
+                </div>
+              )}
 
               {/* Field items */}
               {medan.map((m: any, index: number) => {
@@ -3033,6 +3096,77 @@ function TemplateEditor({ template, onSave, onClose }: {
                 </button>
               )}
             </div>
+          </div>
+
+          {/* Logo Rasmi Upload */}
+          <div className="clay-card p-4">
+            <h4 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--clay-ink)' }}>
+              <ImageIcon className="w-4 h-4" style={{ color: 'var(--clay-primary)' }} />
+              Logo Rasmi
+            </h4>
+            <p className="text-xs mb-3" style={{ color: 'var(--clay-ink-soft)' }}>Muat naik logo rasmi (.png sahaja). Logo akan dipaparkan di bahagian atas sijil.</p>
+
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept=".png"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                if (!file.type.startsWith('image/png')) {
+                  toast({ title: 'Format Tidak Sah', description: 'Hanya fail .png sahaja dibenarkan.', variant: 'destructive' })
+                  return
+                }
+                setUploadingSig('logo')
+                try {
+                  const formData = new FormData()
+                  formData.append('fail', file)
+                  formData.append('jenis', 'logo')
+                  const res = await fetch('/api/upload/tandatangan', { method: 'POST', body: formData })
+                  const result = await res.json()
+                  if (result.berjaya) {
+                    setLogoRasmi(result.laluan)
+                    toast({ title: 'Logo Dimuat Naik', description: 'Logo rasmi berjaya dimuat naik.' })
+                  } else {
+                    toast({ title: 'Ralat', description: result.mesej || 'Gagal memuat naik.', variant: 'destructive' })
+                  }
+                } catch {
+                  toast({ title: 'Ralat', description: 'Gagal memuat naik logo.', variant: 'destructive' })
+                }
+                setUploadingSig(null)
+                if (logoInputRef.current) logoInputRef.current.value = ''
+              }}
+            />
+            {logoRasmi ? (
+              <div className="relative rounded-xl overflow-hidden" style={{ background: 'var(--clay-bg)', border: '1px solid var(--border)' }}>
+                <img src={logoRasmi} alt="Logo Rasmi" className="w-full h-20 object-contain p-2" />
+                <button
+                  onClick={async () => {
+                    try { await fetch(`/api/upload/tandatangan?laluan=${encodeURIComponent(logoRasmi)}`, { method: 'DELETE' }) } catch {}
+                    setLogoRasmi('')
+                  }}
+                  className="absolute top-1 right-1 p-1 rounded-lg transition-all"
+                  style={{ background: 'rgba(226,109,142,0.15)', color: 'var(--clay-danger)' }}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => logoInputRef.current?.click()}
+                disabled={uploadingSig === 'logo'}
+                className="w-full py-3 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition-all hover:scale-[1.01] disabled:opacity-50"
+                style={{
+                  background: 'var(--clay-bg)',
+                  border: '2px dashed var(--border)',
+                  color: 'var(--clay-ink-soft)',
+                }}
+              >
+                {uploadingSig === 'logo' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                {uploadingSig === 'logo' ? 'Memuat naik...' : 'Muat Naik Logo (.png)'}
+              </button>
+            )}
           </div>
 
           {/* Current Fields List */}
