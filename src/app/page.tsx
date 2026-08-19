@@ -2181,13 +2181,13 @@ function TemplatTab({ user }: { user: AdminUser }) {
     return (
       <TemplateEditor
         template={editingTemplate}
-        onSave={async (updatedMedan: any[]) => {
+        onSave={async (templateData: any) => {
           try {
             const isNew = editingTemplate.id === 'new'
             let templatId = editingTemplate.id
 
             if (isNew) {
-              // Create template first via POST
+              // Create template first via POST with all data
               const createRes = await fetch('/api/templat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -2197,7 +2197,12 @@ function TemplatTab({ user }: { user: AdminUser }) {
                   orientasi: editingTemplate.orientasi,
                   saizKertas: editingTemplate.saizKertas,
                   dimuatNaikOlehId: user.id,
-                  medan: updatedMedan,
+                  medan: templateData.medan,
+                  laluanTandatanganPengarah: templateData.laluanTandatanganPengarah,
+                  laluanTandatanganPenyelaras: templateData.laluanTandatanganPenyelaras,
+                  logoRasmi: templateData.logoRasmi,
+                  jawatanPenandatangan: templateData.jawatanPenandatangan,
+                  namaPenandatangan: templateData.namaPenandatangan,
                 }),
               })
               const createResult = await createRes.json()
@@ -2208,11 +2213,14 @@ function TemplatTab({ user }: { user: AdminUser }) {
                 return
               }
             } else {
-              // Update existing template fields via PUT
+              // Update existing template with all data via PUT
               const res = await fetch('/api/templat', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ templatId, medan: updatedMedan }),
+                body: JSON.stringify({ 
+                  templatId, 
+                  ...templateData,
+                }),
               })
               const result = await res.json()
               if (!result.berjaya) {
@@ -2221,7 +2229,7 @@ function TemplatTab({ user }: { user: AdminUser }) {
               }
             }
 
-            toast({ title: 'Templat Disimpan', description: isNew ? 'Templat baharu berjaya dicipta.' : 'Medan templat berjaya dikemaskini.' })
+            toast({ title: 'Templat Disimpan', description: isNew ? 'Templat baharu berjaya dicipta.' : 'Templat berjaya dikemaskini.' })
             setEditingTemplate(null)
             setLoading(true)
             fetch('/api/templat').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
@@ -2629,7 +2637,18 @@ function TemplateEditor({ template, onSave, onClose }: {
       return
     }
     setSaving(true)
-    // Save signature paths to template first (if not new)
+    
+    // Prepare full template data including logo and signatures
+    const templateData = {
+      medan: medan,
+      laluanTandatanganPengarah: tandatanganPengarah || null,
+      laluanTandatanganPenyelaras: tandatanganPenyelaras || null,
+      logoRasmi: logoRasmi || null,
+      jawatanPenandatangan: jawatanPenandatangan || null,
+      namaPenandatangan: namaPenandatangan || null,
+    }
+    
+    // Save signature paths and logo to database first (if not new)
     if (template.id !== 'new') {
       try {
         await fetch('/api/templat', {
@@ -2637,16 +2656,14 @@ function TemplateEditor({ template, onSave, onClose }: {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             templatId: template.id,
-            laluanTandatanganPengarah: tandatanganPengarah || null,
-            laluanTandatanganPenyelaras: tandatanganPenyelaras || null,
-            logoRasmi: logoRasmi || null,
-            jawatanPenandatangan: jawatanPenandatangan || null,
-            namaPenandatangan: namaPenandatangan || null,
+            ...templateData,
           }),
         })
       } catch {}
     }
-    await onSave(medan)
+    
+    // Pass full template data to onSave
+    await onSave(templateData)
     setSaving(false)
   }
 
