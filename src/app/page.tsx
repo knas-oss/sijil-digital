@@ -1444,15 +1444,15 @@ function KursusTab({ user }: { user: AdminUser }) {
 
   // Pendaftaran Awam state
   const [pendaftaranList, setPendaftaranList] = useState<any[]>([])
+  const [pendaftaranList, setPendaftaranList] = useState<any[]>([])
 
-  const fetchData = () => {
-    setLoading(true)
-    fetch('/api/kursus').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
-  }
-
-  useEffect(() => {
-    fetch('/api/kursus').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
-    fetch('/api/kategori').then(r => r.json()).then(d => { if (d.berjaya) setKategoriList(d.data) })
+  // Upload peserta pukal state
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploadPreview, setUploadPreview] = useState<any[]>([])
+  const [uploadLoading, setUploadLoading] = useState(false)
+  const [uploadSuccessCount, setUploadSuccessCount] = useState(0)
+  const [uploadError, setUploadError] = useState('')
   }, [])
 
   const resetForm = () => {
@@ -1486,6 +1486,132 @@ function KursusTab({ user }: { user: AdminUser }) {
     const pendaftaranData = await pendaftaranRes.json()
     if (pendaftaranData.berjaya) setPendaftaranList(pendaftaranData.data)
     setViewLoading(false)
+  }
+
+  const openUploadDialog = (item: any) => {
+    setShareItem(item)
+    setUploadDialogOpen(true)
+    setUploadFile(null)
+    setUploadPreview([])
+    setUploadError('')
+    setUploadSuccessCount(0)
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    // Validate file type
+    const validTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+      'text/csv'
+    ]
+    if (!validTypes.includes(file.type) && !file.name.endsWith('.csv')) {
+      setUploadError('Sila muat naik fail Excel (.xlsx, .xls) atau CSV sahaja.')
+      return
+    }
+
+    setUploadFile(file)
+    setUploadLoading(true)
+    setUploadError('')
+
+    try {
+      // Read and parse the file
+      const arrayBuffer = await file.arrayBuffer()
+      const workbook = (await import('xlsx')).read(arrayBuffer)
+      const sheetName = workbook.SheetNames[0]
+      const worksheet = workbook.Sheets[sheetName]
+      const jsonData = (await import('xlsx')).utils.sheet_to_json(worksheet)
+
+      // Validate and format data
+      const preview = jsonData.map((row: any, idx: number) => ({
+        no: idx + 1,
+        namaPenuh: row.namaPenuh || row.NamaPenuh || row.NAMA || '-',
+        noMykad: row.noMykad || row.NoMykad || row.MYKAD || row['No. MyKad'] || '-',
+        noTelefon: row.noTelefon || row.NoTelefon || row.TELEFON || row.Telefon || '-',
+        emel: row.emel || row.Emel || row.EMAIL || row.Email || '-',
+        jantina: row.jantina || row.Jantina || row.JANTINA || '-',
+      }))
+
+      setUploadPreview(preview.slice(0, 10)) // Show first 10 for preview
+    } catch (err) {
+      setUploadError('Gagal membaca fail. Pastikan format fail adalah betul.')
+    } finally {
+      setUploadLoading(false)
+    }
+  }
+
+  const handleUploadPeserta = async () => {
+    if (!uploadFile || !shareItem) return
+
+    setUploadLoading(true)
+    setUploadError('')
+
+    try {
+      const arrayBuffer = await uploadFile.arrayBuffer()
+      const workbook = (await import('xlsx')).read(arrayBuffer)
+      const sheetName = workbook.SheetNames[0]
+      const worksheet = workbook.Sheets[sheetName]
+      const jsonData = (await import('xlsx')).utils.sheet_to_json(worksheet)
+
+      let successCount = 0
+      let errorCount = 0
+
+      for (const row of jsonData) {
+        const namaPenuh = row.namaPenuh || row.NamaPenuh || row.NAMA
+        const noMykadRaw = row.noMykad || row.NoMykad || row.MYKAD || row['No. MyKad']
+        
+        if (!namaPenuh || !noMykadRaw) {
+          errorCount++
+          continue
+        }
+
+        // Format MyKad - remove non-digits
+        const noMykad = String(noMykadRaw).replace(/[^0-9]/g, '')
+        
+        if (noMykad.length !== 12) {
+          errorCount++
+          continue
+        }
+
+        try {
+          const res = await fetch('/api/peserta', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              kursusId: shareItem.id,
+              namaPenuh: namaPenuh.trim(),
+              noMykad: noMykad,
+              noTelefon: row.noTelefon || row.NoTelefon || row.TELEFON || '',
+              emel: row.emel || row.Emel || row.EMAIL || '',
+              jantina: row.jantina || row.Jantina || row.JANTINA || '',
+            }),
+          })
+          const result = await res.json()
+          if (result.berjaya) {
+            successCount++
+          } else {
+            errorCount++
+          }
+        } catch {
+          errorCount++
+        }
+      }
+
+      setUploadSuccessCount(successCount)
+      toast({
+        title: 'Upload Berjaya',
+        description: `${successCount} peserta berjaya ditambah. ${errorCount > 0 ? `${errorCount} gagal.` : ''}`,
+      })
+      
+      setUploadDialogOpen(false)
+      fetchData() // Refresh data
+    } catch (err) {
+      setUploadError('Ralat semasa memproses upload. Sila cuba lagi.')
+    } finally {
+      setUploadLoading(false)
+    }
   }
 
   const openDeleteDialog = (item: any) => { setDeletingItem(item); setDeleteDialogOpen(true) }
@@ -1663,6 +1789,9 @@ function KursusTab({ user }: { user: AdminUser }) {
                   </td>
                   <td className="px-3 py-3 text-center">
                     <div className="flex items-center justify-center gap-1">
+                      <button onClick={() => openUploadDialog(k)} className="p-1.5 rounded-lg transition-all hover:scale-110" style={{ background: 'rgba(124,108,240,0.15)', color: '#7C6CF0' }} title="Upload Peserta Pukal">
+                        <Upload className="w-3.5 h-3.5" />
+                      </button>
                       <button onClick={() => openShareDialog(k)} className="p-1.5 rounded-lg transition-all hover:scale-110" style={{ background: 'rgba(79,196,161,0.15)', color: '#2AA68E' }} title="Kongsi Pautan Pendaftaran">
                         <Share2 className="w-3.5 h-3.5" />
                       </button>
@@ -1999,6 +2128,118 @@ function KursusTab({ user }: { user: AdminUser }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ====== UPLOAD PESERTA PUKAL DIALOG ====== */}
+      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto" style={{ background: 'var(--clay)', borderRadius: '24px', boxShadow: 'var(--clay-shadow-lg)', border: '1px solid rgba(255,255,255,0.6)' }}>
+          <DialogHeader>
+            <DialogTitle style={{ color: 'var(--clay-ink)' }} className="flex items-center gap-2">
+              <Upload className="w-5 h-5" style={{ color: 'var(--clay-primary)' }} />
+              Upload Peserta Secara Pukal
+            </DialogTitle>
+            <DialogDescription style={{ color: 'var(--clay-ink-soft)' }}>
+              Muat naik fail Excel atau CSV untuk menambah peserta ke kursus <strong style={{ color: 'var(--clay-ink)' }}>{shareItem?.namaKursusBm}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {/* Upload Area */}
+            <div className="clay-card-sm p-6 flex flex-col items-center justify-center border-2 border-dashed rounded-xl" style={{ borderColor: uploadFile ? 'var(--clay-success)' : 'rgba(124,108,240,0.3)', background: uploadFile ? 'rgba(79,196,161,0.05)' : 'rgba(124,108,240,0.03)' }}>
+              <input
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleFileUpload}
+                disabled={uploadLoading}
+                className="hidden"
+                id="upload-excel"
+              />
+              <label htmlFor="upload-excel" className="cursor-pointer flex flex-col items-center">
+                {uploadFile ? (
+                  <>
+                    <CheckCircle2 className="w-12 h-12 mb-2" style={{ color: 'var(--clay-success)' }} />
+                    <p className="font-semibold text-sm" style={{ color: 'var(--clay-ink)' }}>{uploadFile.name}</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--clay-ink-soft)' }}>{(uploadFile.size / 1024).toFixed(1)} KB</p>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-12 h-12 mb-2" style={{ color: 'var(--clay-primary)' }} />
+                    <p className="font-semibold text-sm" style={{ color: 'var(--clay-ink)' }}>Klik untuk muat naik fail</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--clay-ink-soft)' }}>Format: .xlsx, .xls, atau .csv (Maks 5MB)</p>
+                  </>
+                )}
+              </label>
+            </div>
+
+            {/* Preview Table */}
+            {uploadPreview.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-sm mb-2" style={{ color: 'var(--clay-ink)' }}>Pratonton ({uploadPreview.length} rekod pertama):</h4>
+                <div className="rounded-xl overflow-hidden" style={{ boxShadow: 'var(--clay-shadow-sm)' }}>
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr style={{ background: 'rgba(124,108,240,0.08)' }}>
+                        <th className="px-2 py-2 text-left" style={{ color: 'var(--clay-primary)' }}>#</th>
+                        <th className="px-2 py-2 text-left" style={{ color: 'var(--clay-primary)' }}>Nama</th>
+                        <th className="px-2 py-2 text-left" style={{ color: 'var(--clay-primary)' }}>No. MyKad</th>
+                        <th className="px-2 py-2 text-left" style={{ color: 'var(--clay-primary)' }}>Telefon</th>
+                        <th className="px-2 py-2 text-left" style={{ color: 'var(--clay-primary)' }}>Emel</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {uploadPreview.map((p: any) => (
+                        <tr key={p.no} style={{ background: 'var(--clay)' }}>
+                          <td className="px-2 py-2" style={{ color: 'var(--clay-ink-soft)' }}>{p.no}</td>
+                          <td className="px-2 py-2 font-medium" style={{ color: 'var(--clay-ink)' }}>{p.namaPenuh}</td>
+                          <td className="px-2 py-2 font-mono" style={{ color: 'var(--clay-ink-secondary)' }}>{p.noMykad}</td>
+                          <td className="px-2 py-2" style={{ color: 'var(--clay-ink-secondary)' }}>{p.noTelefon}</td>
+                          <td className="px-2 py-2" style={{ color: 'var(--clay-ink-secondary)' }}>{p.emel}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Error Message */}
+            {uploadError && (
+              <div className="flex items-start gap-2 p-3 rounded-xl" style={{ background: 'var(--clay-danger-bg)', color: 'var(--clay-danger)' }}>
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-xs">{uploadError}</p>
+              </div>
+            )}
+
+            {/* Info */}
+            <div className="flex items-start gap-2 p-3 rounded-xl" style={{ background: 'rgba(79,196,161,0.08)' }}>
+              <Info className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--clay-success)' }} />
+              <div className="text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>
+                <p className="font-semibold mb-1">Format fail yang diperlukan:</p>
+                <ul className="list-disc list-inside space-y-0.5">
+                  <li>Lajur wajib: <strong>NamaPenuh</strong>, <strong>NoMykad</strong></li>
+                  <li>Lajur pilihan: NoTelefon, Emel, Jantina</li>
+                  <li>Pastikan nombor MyKad adalah 12 digit</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUploadDialogOpen(false)} className="clay-btn-secondary text-sm px-4" style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}>Batal</Button>
+            <Button 
+              onClick={handleUploadPeserta} 
+              disabled={!uploadFile || uploadLoading}
+              className="clay-btn text-sm px-6 flex items-center gap-2" 
+              style={{ 
+                background: !uploadFile || uploadLoading ? 'rgba(124,108,240,0.5)' : 'var(--clay-primary)', 
+                color: 'white', 
+                borderRadius: '20px', 
+                boxShadow: 'var(--clay-shadow-sm)' 
+              }}
+            >
+              {uploadLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {uploadLoading ? 'Memproses...' : `Upload ${uploadPreview.length > 0 ? `(${uploadPreview.length}+)` : ''}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -2181,13 +2422,13 @@ function TemplatTab({ user }: { user: AdminUser }) {
     return (
       <TemplateEditor
         template={editingTemplate}
-        onSave={async (updatedMedan: any[]) => {
+        onSave={async (templateData: any) => {
           try {
             const isNew = editingTemplate.id === 'new'
             let templatId = editingTemplate.id
 
             if (isNew) {
-              // Create template first via POST
+              // Create template first via POST with all data
               const createRes = await fetch('/api/templat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -2197,7 +2438,12 @@ function TemplatTab({ user }: { user: AdminUser }) {
                   orientasi: editingTemplate.orientasi,
                   saizKertas: editingTemplate.saizKertas,
                   dimuatNaikOlehId: user.id,
-                  medan: updatedMedan,
+                  medan: templateData.medan,
+                  laluanTandatanganPengarah: templateData.laluanTandatanganPengarah,
+                  laluanTandatanganPenyelaras: templateData.laluanTandatanganPenyelaras,
+                  logoRasmi: templateData.logoRasmi,
+                  jawatanPenandatangan: templateData.jawatanPenandatangan,
+                  namaPenandatangan: templateData.namaPenandatangan,
                 }),
               })
               const createResult = await createRes.json()
@@ -2208,11 +2454,14 @@ function TemplatTab({ user }: { user: AdminUser }) {
                 return
               }
             } else {
-              // Update existing template fields via PUT
+              // Update existing template with all data via PUT
               const res = await fetch('/api/templat', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ templatId, medan: updatedMedan }),
+                body: JSON.stringify({ 
+                  templatId, 
+                  ...templateData,
+                }),
               })
               const result = await res.json()
               if (!result.berjaya) {
@@ -2221,7 +2470,7 @@ function TemplatTab({ user }: { user: AdminUser }) {
               }
             }
 
-            toast({ title: 'Templat Disimpan', description: isNew ? 'Templat baharu berjaya dicipta.' : 'Medan templat berjaya dikemaskini.' })
+            toast({ title: 'Templat Disimpan', description: isNew ? 'Templat baharu berjaya dicipta.' : 'Templat berjaya dikemaskini.' })
             setEditingTemplate(null)
             setLoading(true)
             fetch('/api/templat').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
@@ -2524,9 +2773,11 @@ function TemplateEditor({ template, onSave, onClose }: {
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
 
-  // Tandatangan digital
+  // Tandatangan digital & Logo
   const [tandatanganPengarah, setTandatanganPengarah] = useState<string>(template.laluanTandatanganPengarah || '')
   const [tandatanganPenyelaras, setTandatanganPenyelaras] = useState<string>(template.laluanTandatanganPenyelaras || '')
+  const [logoRasmi, setLogoRasmi] = useState<string>(template.logoRasmi || '')
+  const [templatBackground, setTemplatBackground] = useState<string>(template.latarBelakang || '')
   const [jawatanPenandatangan, setJawatanPenandatangan] = useState<string>(template.jawatanPenandatangan || 'Pengarah')
   const [namaPenandatangan, setNamaPenandatangan] = useState<string>(template.namaPenandatangan || '')
   const [jawatanCustom, setJawatanCustom] = useState<string>('')
@@ -2534,9 +2785,11 @@ function TemplateEditor({ template, onSave, onClose }: {
     const preset = ['Pengarah', 'Timbalan Pengarah Latihan', 'Timbalan Pengarah Operasi']
     return preset.includes(template.jawatanPenandatangan || 'Pengarah') ? 'preset' : 'custom'
   })
-  const [uploadingSig, setUploadingSig] = useState<string | null>(null) // 'pengarah' | 'penyelaras' | null
+  const [uploadingSig, setUploadingSig] = useState<string | null>(null) // 'pengarah' | 'penyelaras' | 'logo' | 'templat' | null
   const pengarahInputRef = useRef<HTMLInputElement>(null)
   const penyelarasInputRef = useRef<HTMLInputElement>(null)
+  const logoInputRef = useRef<HTMLInputElement>(null)
+  const templatBgInputRef = useRef<HTMLInputElement>(null)
 
   const isLandscape = template.orientasi === 'landskap'
 
@@ -2627,7 +2880,19 @@ function TemplateEditor({ template, onSave, onClose }: {
       return
     }
     setSaving(true)
-    // Save signature paths to template first (if not new)
+    
+    // Prepare full template data including logo, signatures, and background
+    const templateData = {
+      medan: medan,
+      laluanTandatanganPengarah: tandatanganPengarah || null,
+      laluanTandatanganPenyelaras: tandatanganPenyelaras || null,
+      logoRasmi: logoRasmi || null,
+      latarBelakang: templatBackground || null,
+      jawatanPenandatangan: jawatanPenandatangan || null,
+      namaPenandatangan: namaPenandatangan || null,
+    }
+    
+    // Save signature paths and logo to database first (if not new)
     if (template.id !== 'new') {
       try {
         await fetch('/api/templat', {
@@ -2635,15 +2900,14 @@ function TemplateEditor({ template, onSave, onClose }: {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             templatId: template.id,
-            laluanTandatanganPengarah: tandatanganPengarah || null,
-            laluanTandatanganPenyelaras: tandatanganPenyelaras || null,
-            jawatanPenandatangan: jawatanPenandatangan || null,
-            namaPenandatangan: namaPenandatangan || null,
+            ...templateData,
           }),
         })
       } catch {}
     }
-    await onSave(medan)
+    
+    // Pass full template data to onSave
+    await onSave(templateData)
     setSaving(false)
   }
 
@@ -2711,15 +2975,74 @@ function TemplateEditor({ template, onSave, onClose }: {
                 backgroundSize: '10% 10%',
               }} />
 
-              {/* Certificate header preview */}
-              <div className="absolute top-0 left-0 right-0 text-center pt-2">
-                <img src="/logo-rasmi.png" alt="Logo Rasmi ADTEC" className="mx-auto mb-1 object-contain" style={{ width: '460px', maxWidth: '100%', height: '340px' }} />
-                <p className="text-[7px] font-bold tracking-wider" style={{ color: 'rgba(47,49,80,0.4)' }}>KOLEJ TEKNOLOGI TERMAJU (ADTEC)</p>
-                <p className="text-[5px]" style={{ color: 'rgba(47,49,80,0.25)' }}>JABATAN TENAGA MANUSIA, KEMENTERIAN SUMBER MANUSIA</p>
-                <div className="mx-auto mt-1" style={{ width: '60%', height: '1px', background: 'rgba(124,108,240,0.2)' }} />
-                <p className="text-[9px] font-bold mt-2" style={{ color: 'rgba(47,49,80,0.35)' }}>SIJIL PENYERTAAN</p>
-                <p className="text-[6px] italic" style={{ color: 'rgba(47,49,80,0.2)' }}>CERTIFICATE OF PARTICIPATION</p>
-              </div>
+              {/* Certificate header preview - draggable elements container */}
+              {medan.filter((m: any) => m.kunciMedan.startsWith('header_')).map((m: any, index: number) => {
+                const actualIndex = medan.indexOf(m)
+                const isSelected = selectedField === actualIndex
+                const isDraggingThis = dragging === actualIndex
+                const displayText = m.teksHeader || ''
+                
+                return (
+                  <div
+                    key={m.kunciMedan}
+                    className="absolute select-none"
+                    style={{
+                      left: `${m.posXPeratus}%`,
+                      top: `${m.posYPeratus}%`,
+                      transform: 'translate(-50%, -50%)',
+                      cursor: isDraggingThis ? 'grabbing' : 'grab',
+                      zIndex: isDraggingThis ? 100 : isSelected ? 50 : 10,
+                      transition: isDraggingThis ? 'none' : 'box-shadow 0.15s',
+                    }}
+                    onMouseDown={(e) => handleMouseDown(e, actualIndex)}
+                    onClick={(e) => { e.stopPropagation(); setSelectedField(actualIndex) }}
+                  >
+                    <div
+                      className="px-2 py-1 rounded-lg text-center whitespace-nowrap"
+                      style={{
+                        fontSize: `${Math.max(4, Math.min(8, m.saizFon / 3))}px`,
+                        fontWeight: m.gayaFon === 'tebal' ? 700 : 400,
+                        fontStyle: m.gayaFon === 'condong' ? 'italic' : 'normal',
+                        color: m.warnaFon,
+                        background: isSelected ? 'rgba(124,108,240,0.12)' : 'rgba(255,255,255,0.7)',
+                        border: isSelected ? '2px solid var(--clay-primary)' : '1px dashed rgba(120,124,170,0.3)',
+                        boxShadow: isSelected ? '0 0 0 3px rgba(124,108,240,0.15)' : 'none',
+                      }}
+                    >
+                      <span className="block">{displayText}</span>
+                    </div>
+                    <p className="text-[4px] mt-0.5 text-center font-medium" style={{ color: isSelected ? 'var(--clay-primary)' : 'rgba(120,124,170,0.6)' }}>
+                      {m.kunciMedan.replace(/_/g, ' ')}
+                    </p>
+                  </div>
+                )
+              })}
+
+              {/* Logo Rasmi - draggable if exists */}
+              {logoRasmi && (
+                <div
+                  className="absolute select-none"
+                  style={{
+                    left: '50%',
+                    top: '2%',
+                    transform: 'translate(-50%, -50%)',
+                    cursor: 'grab',
+                  }}
+                >
+                  <img src={logoRasmi} alt="Logo Rasmi" className="h-8 object-contain" />
+                </div>
+              )}
+
+              {/* Default static header (shown only if no header fields added) */}
+              {medan.filter((m: any) => m.kunciMedan.startsWith('header_')).length === 0 && !logoRasmi && (
+                <div className="absolute top-0 left-0 right-0 text-center pt-2">
+                  <p className="text-[7px] font-bold tracking-wider" style={{ color: 'rgba(47,49,80,0.4)' }}>KOLEJ TEKNOLOGI TERMAJU (ADTEC)</p>
+                  <p className="text-[5px]" style={{ color: 'rgba(47,49,80,0.25)' }}>JABATAN TENAGA MANUSIA, KEMENTERIAN SUMBER MANUSIA</p>
+                  <div className="mx-auto mt-1" style={{ width: '60%', height: '1px', background: 'rgba(124,108,240,0.2)' }} />
+                  <p className="text-[9px] font-bold mt-2" style={{ color: 'rgba(47,49,80,0.35)' }}>SIJIL PENYERTAAN</p>
+                  <p className="text-[6px] italic" style={{ color: 'rgba(47,49,80,0.2)' }}>CERTIFICATE OF PARTICIPATION</p>
+                </div>
+              )}
 
               {/* Field items */}
               {medan.map((m: any, index: number) => {
@@ -2817,6 +3140,78 @@ function TemplateEditor({ template, onSave, onClose }: {
 
         {/* Right Panel: Field List + Properties */}
         <div className="w-full lg:w-80 space-y-4">
+          {/* Upload Template Background */}
+          <div className="clay-card p-4">
+            <h4 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--clay-ink)' }}>
+              <ImageIcon className="w-4 h-4" style={{ color: 'var(--clay-primary)' }} />
+              Latar Belakang Sijil
+            </h4>
+            <p className="text-xs mb-3" style={{ color: 'var(--clay-ink-soft)' }}>Muat naik reka bentuk sijil (.png atau .jpg, maks 5MB)</p>
+
+            <input
+              ref={templatBgInputRef}
+              type="file"
+              accept=".png,.jpg,.jpeg"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                if (!file.type.startsWith('image/')) {
+                  toast({ title: 'Format Tidak Sah', description: 'Hanya fail imej (.png, .jpg) sahaja dibenarkan.', variant: 'destructive' })
+                  return
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                  toast({ title: 'Saiz Terlalu Besar', description: 'Saiz fail tidak boleh melebihi 5MB.', variant: 'destructive' })
+                  return
+                }
+                setUploadingSig('templat')
+                try {
+                  const formData = new FormData()
+                  formData.append('fail', file)
+                  formData.append('jenis', 'templat')
+                  const res = await fetch('/api/upload/tandatangan', { method: 'POST', body: formData })
+                  const result = await res.json()
+                  if (result.berjaya) {
+                    setTemplatBackground(result.laluan)
+                    toast({ title: 'Templat Dimuat Naik', description: 'Latar belakang sijil berjaya dimuat naik.' })
+                  } else {
+                    toast({ title: 'Ralat', description: result.mesej || 'Gagal memuat naik.', variant: 'destructive' })
+                  }
+                } catch {
+                  toast({ title: 'Ralat', description: 'Gagal memuat naik templat.', variant: 'destructive' })
+                }
+                setUploadingSig(null)
+                if (templatBgInputRef.current) templatBgInputRef.current.value = ''
+              }}
+            />
+            {templatBackground ? (
+              <div className="relative rounded-xl overflow-hidden" style={{ background: 'var(--clay-bg)', border: '1px solid var(--border)' }}>
+                <img src={templatBackground} alt="Latar Belakang Sijil" className="w-full h-32 object-cover p-2" />
+                <button
+                  onClick={() => setTemplatBackground('')}
+                  className="absolute top-1 right-1 p-1 rounded-lg transition-all"
+                  style={{ background: 'rgba(226,109,142,0.15)', color: 'var(--clay-danger)' }}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => templatBgInputRef.current?.click()}
+                disabled={uploadingSig === 'templat'}
+                className="w-full py-3 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition-all hover:scale-[1.01] disabled:opacity-50"
+                style={{
+                  background: 'var(--clay-bg)',
+                  border: '2px dashed var(--border)',
+                  color: 'var(--clay-ink-soft)',
+                }}
+              >
+                {uploadingSig === 'templat' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                {uploadingSig === 'templat' ? 'Memuat naik...' : 'Muat Naik Latar Belakang'}
+              </button>
+            )}
+          </div>
+
           {/* Add Fields */}
           <div className="clay-card p-4">
             <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--clay-ink)' }}>Tambah Medan</h4>
@@ -3034,6 +3429,77 @@ function TemplateEditor({ template, onSave, onClose }: {
                 </button>
               )}
             </div>
+          </div>
+
+          {/* Logo Rasmi Upload */}
+          <div className="clay-card p-4">
+            <h4 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--clay-ink)' }}>
+              <ImageIcon className="w-4 h-4" style={{ color: 'var(--clay-primary)' }} />
+              Logo Rasmi
+            </h4>
+            <p className="text-xs mb-3" style={{ color: 'var(--clay-ink-soft)' }}>Muat naik logo rasmi (.png sahaja). Logo akan dipaparkan di bahagian atas sijil.</p>
+
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept=".png"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                if (!file.type.startsWith('image/png')) {
+                  toast({ title: 'Format Tidak Sah', description: 'Hanya fail .png sahaja dibenarkan.', variant: 'destructive' })
+                  return
+                }
+                setUploadingSig('logo')
+                try {
+                  const formData = new FormData()
+                  formData.append('fail', file)
+                  formData.append('jenis', 'logo')
+                  const res = await fetch('/api/upload/tandatangan', { method: 'POST', body: formData })
+                  const result = await res.json()
+                  if (result.berjaya) {
+                    setLogoRasmi(result.laluan)
+                    toast({ title: 'Logo Dimuat Naik', description: 'Logo rasmi berjaya dimuat naik.' })
+                  } else {
+                    toast({ title: 'Ralat', description: result.mesej || 'Gagal memuat naik.', variant: 'destructive' })
+                  }
+                } catch {
+                  toast({ title: 'Ralat', description: 'Gagal memuat naik logo.', variant: 'destructive' })
+                }
+                setUploadingSig(null)
+                if (logoInputRef.current) logoInputRef.current.value = ''
+              }}
+            />
+            {logoRasmi ? (
+              <div className="relative rounded-xl overflow-hidden" style={{ background: 'var(--clay-bg)', border: '1px solid var(--border)' }}>
+                <img src={logoRasmi} alt="Logo Rasmi" className="w-full h-20 object-contain p-2" />
+                <button
+                  onClick={async () => {
+                    try { await fetch(`/api/upload/tandatangan?laluan=${encodeURIComponent(logoRasmi)}`, { method: 'DELETE' }) } catch {}
+                    setLogoRasmi('')
+                  }}
+                  className="absolute top-1 right-1 p-1 rounded-lg transition-all"
+                  style={{ background: 'rgba(226,109,142,0.15)', color: 'var(--clay-danger)' }}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => logoInputRef.current?.click()}
+                disabled={uploadingSig === 'logo'}
+                className="w-full py-3 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition-all hover:scale-[1.01] disabled:opacity-50"
+                style={{
+                  background: 'var(--clay-bg)',
+                  border: '2px dashed var(--border)',
+                  color: 'var(--clay-ink-soft)',
+                }}
+              >
+                {uploadingSig === 'logo' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                {uploadingSig === 'logo' ? 'Memuat naik...' : 'Muat Naik Logo (.png)'}
+              </button>
+            )}
           </div>
 
           {/* Current Fields List */}

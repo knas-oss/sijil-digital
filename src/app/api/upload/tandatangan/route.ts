@@ -6,6 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const file = (formData.get('file') || formData.get('fail')) as File | null
+    const jenis = formData.get('jenis') as string || 'tandatangan' // tandatangan, logo, templat
 
     if (!file) {
       return NextResponse.json({ berjaya: false, mesej: 'Fail diperlukan.' }, { status: 400 })
@@ -16,9 +17,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ berjaya: false, mesej: 'Hanya fail imej sahaja (.png, .jpg).' }, { status: 400 })
     }
 
-    // Validate file size (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      return NextResponse.json({ berjaya: false, mesej: 'Saiz fail maksimum 2MB.' }, { status: 400 })
+    // Validate file size (max 5MB for templates, 2MB for others)
+    const maxSize = jenis === 'templat' ? 5 * 1024 * 1024 : 2 * 1024 * 1024
+    if (file.size > maxSize) {
+      return NextResponse.json({ berjaya: false, mesej: `Saiz fail maksimum ${jenis === 'templat' ? '5MB' : '2MB'}.` }, { status: 400 })
     }
 
     // Convert to base64 data URL
@@ -30,15 +32,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       berjaya: true,
       laluan: dataUrl,
-      mesej: 'Tandatangan berjaya dimuat naik.',
+      mesej: `${jenis === 'templat' ? 'Templat' : jenis === 'logo' ? 'Logo' : 'Tandatangan'} berjaya dimuat naik.`,
     })
   } catch (error) {
-    console.error('Upload tandatangan error:', error)
+    console.error('Upload error:', error)
     return NextResponse.json({ berjaya: false, mesej: 'Ralat memuat naik fail.' }, { status: 500 })
   }
 }
 
 // DELETE /api/upload/tandatangan - Remove signature (no-op for base64 storage)
 export async function DELETE(request: NextRequest) {
-  return NextResponse.json({ berjaya: true, mesej: 'Tandatangan dipadam.' })
+  return NextResponse.json({ berjaya: true, mesej: 'Fail dipadam.' })
 }

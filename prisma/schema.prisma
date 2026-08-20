@@ -6,9 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider  = "sqlite"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 // ============================================================
@@ -164,6 +163,8 @@ model TemplatSijil {
   status        String   @default("draf") // draf | aktif | tidak_aktif | arkib
   laluanTandatanganPengarah String? // path ke fail tandatangan digital pengarah (.png)
   laluanTandatanganPenyelaras String? // path ke fail tandatangan digital penyelaras (.png)
+  logoRasmi     String?  // path ke fail logo rasmi (.png)
+  latarBelakang String?  // path ke fail latar belakang sijil (.png/.jpg)
   jawatanPenandatangan String? // jawatan penandatangan kiri (e.g. Pengarah, Timbalan Pengarah Latihan)
   namaPenandatangan String? // nama penuh penandatangan kiri
   diciptaPada   DateTime @default(now())
