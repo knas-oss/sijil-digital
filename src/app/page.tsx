@@ -1444,15 +1444,15 @@ function KursusTab({ user }: { user: AdminUser }) {
 
   // Pendaftaran Awam state
   const [pendaftaranList, setPendaftaranList] = useState<any[]>([])
+  const [pendaftaranList, setPendaftaranList] = useState<any[]>([])
 
-  const fetchData = () => {
-    setLoading(true)
-    fetch('/api/kursus').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
-  }
-
-  useEffect(() => {
-    fetch('/api/kursus').then(r => r.json()).then(d => { if (d.berjaya) setData(d.data) }).finally(() => setLoading(false))
-    fetch('/api/kategori').then(r => r.json()).then(d => { if (d.berjaya) setKategoriList(d.data) })
+  // Upload peserta pukal state
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploadPreview, setUploadPreview] = useState<any[]>([])
+  const [uploadLoading, setUploadLoading] = useState(false)
+  const [uploadSuccessCount, setUploadSuccessCount] = useState(0)
+  const [uploadError, setUploadError] = useState('')
   }, [])
 
   const resetForm = () => {
@@ -1486,6 +1486,132 @@ function KursusTab({ user }: { user: AdminUser }) {
     const pendaftaranData = await pendaftaranRes.json()
     if (pendaftaranData.berjaya) setPendaftaranList(pendaftaranData.data)
     setViewLoading(false)
+  }
+
+  const openUploadDialog = (item: any) => {
+    setShareItem(item)
+    setUploadDialogOpen(true)
+    setUploadFile(null)
+    setUploadPreview([])
+    setUploadError('')
+    setUploadSuccessCount(0)
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    // Validate file type
+    const validTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+      'text/csv'
+    ]
+    if (!validTypes.includes(file.type) && !file.name.endsWith('.csv')) {
+      setUploadError('Sila muat naik fail Excel (.xlsx, .xls) atau CSV sahaja.')
+      return
+    }
+
+    setUploadFile(file)
+    setUploadLoading(true)
+    setUploadError('')
+
+    try {
+      // Read and parse the file
+      const arrayBuffer = await file.arrayBuffer()
+      const workbook = (await import('xlsx')).read(arrayBuffer)
+      const sheetName = workbook.SheetNames[0]
+      const worksheet = workbook.Sheets[sheetName]
+      const jsonData = (await import('xlsx')).utils.sheet_to_json(worksheet)
+
+      // Validate and format data
+      const preview = jsonData.map((row: any, idx: number) => ({
+        no: idx + 1,
+        namaPenuh: row.namaPenuh || row.NamaPenuh || row.NAMA || '-',
+        noMykad: row.noMykad || row.NoMykad || row.MYKAD || row['No. MyKad'] || '-',
+        noTelefon: row.noTelefon || row.NoTelefon || row.TELEFON || row.Telefon || '-',
+        emel: row.emel || row.Emel || row.EMAIL || row.Email || '-',
+        jantina: row.jantina || row.Jantina || row.JANTINA || '-',
+      }))
+
+      setUploadPreview(preview.slice(0, 10)) // Show first 10 for preview
+    } catch (err) {
+      setUploadError('Gagal membaca fail. Pastikan format fail adalah betul.')
+    } finally {
+      setUploadLoading(false)
+    }
+  }
+
+  const handleUploadPeserta = async () => {
+    if (!uploadFile || !shareItem) return
+
+    setUploadLoading(true)
+    setUploadError('')
+
+    try {
+      const arrayBuffer = await uploadFile.arrayBuffer()
+      const workbook = (await import('xlsx')).read(arrayBuffer)
+      const sheetName = workbook.SheetNames[0]
+      const worksheet = workbook.Sheets[sheetName]
+      const jsonData = (await import('xlsx')).utils.sheet_to_json(worksheet)
+
+      let successCount = 0
+      let errorCount = 0
+
+      for (const row of jsonData) {
+        const namaPenuh = row.namaPenuh || row.NamaPenuh || row.NAMA
+        const noMykadRaw = row.noMykad || row.NoMykad || row.MYKAD || row['No. MyKad']
+        
+        if (!namaPenuh || !noMykadRaw) {
+          errorCount++
+          continue
+        }
+
+        // Format MyKad - remove non-digits
+        const noMykad = String(noMykadRaw).replace(/[^0-9]/g, '')
+        
+        if (noMykad.length !== 12) {
+          errorCount++
+          continue
+        }
+
+        try {
+          const res = await fetch('/api/peserta', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              kursusId: shareItem.id,
+              namaPenuh: namaPenuh.trim(),
+              noMykad: noMykad,
+              noTelefon: row.noTelefon || row.NoTelefon || row.TELEFON || '',
+              emel: row.emel || row.Emel || row.EMAIL || '',
+              jantina: row.jantina || row.Jantina || row.JANTINA || '',
+            }),
+          })
+          const result = await res.json()
+          if (result.berjaya) {
+            successCount++
+          } else {
+            errorCount++
+          }
+        } catch {
+          errorCount++
+        }
+      }
+
+      setUploadSuccessCount(successCount)
+      toast({
+        title: 'Upload Berjaya',
+        description: `${successCount} peserta berjaya ditambah. ${errorCount > 0 ? `${errorCount} gagal.` : ''}`,
+      })
+      
+      setUploadDialogOpen(false)
+      fetchData() // Refresh data
+    } catch (err) {
+      setUploadError('Ralat semasa memproses upload. Sila cuba lagi.')
+    } finally {
+      setUploadLoading(false)
+    }
   }
 
   const openDeleteDialog = (item: any) => { setDeletingItem(item); setDeleteDialogOpen(true) }
@@ -1663,6 +1789,9 @@ function KursusTab({ user }: { user: AdminUser }) {
                   </td>
                   <td className="px-3 py-3 text-center">
                     <div className="flex items-center justify-center gap-1">
+                      <button onClick={() => openUploadDialog(k)} className="p-1.5 rounded-lg transition-all hover:scale-110" style={{ background: 'rgba(124,108,240,0.15)', color: '#7C6CF0' }} title="Upload Peserta Pukal">
+                        <Upload className="w-3.5 h-3.5" />
+                      </button>
                       <button onClick={() => openShareDialog(k)} className="p-1.5 rounded-lg transition-all hover:scale-110" style={{ background: 'rgba(79,196,161,0.15)', color: '#2AA68E' }} title="Kongsi Pautan Pendaftaran">
                         <Share2 className="w-3.5 h-3.5" />
                       </button>
@@ -1996,6 +2125,118 @@ function KursusTab({ user }: { user: AdminUser }) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShareDialogOpen(false)} className="clay-btn-secondary text-sm px-4" style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}>Tutup</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ====== UPLOAD PESERTA PUKAL DIALOG ====== */}
+      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto" style={{ background: 'var(--clay)', borderRadius: '24px', boxShadow: 'var(--clay-shadow-lg)', border: '1px solid rgba(255,255,255,0.6)' }}>
+          <DialogHeader>
+            <DialogTitle style={{ color: 'var(--clay-ink)' }} className="flex items-center gap-2">
+              <Upload className="w-5 h-5" style={{ color: 'var(--clay-primary)' }} />
+              Upload Peserta Secara Pukal
+            </DialogTitle>
+            <DialogDescription style={{ color: 'var(--clay-ink-soft)' }}>
+              Muat naik fail Excel atau CSV untuk menambah peserta ke kursus <strong style={{ color: 'var(--clay-ink)' }}>{shareItem?.namaKursusBm}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {/* Upload Area */}
+            <div className="clay-card-sm p-6 flex flex-col items-center justify-center border-2 border-dashed rounded-xl" style={{ borderColor: uploadFile ? 'var(--clay-success)' : 'rgba(124,108,240,0.3)', background: uploadFile ? 'rgba(79,196,161,0.05)' : 'rgba(124,108,240,0.03)' }}>
+              <input
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleFileUpload}
+                disabled={uploadLoading}
+                className="hidden"
+                id="upload-excel"
+              />
+              <label htmlFor="upload-excel" className="cursor-pointer flex flex-col items-center">
+                {uploadFile ? (
+                  <>
+                    <CheckCircle2 className="w-12 h-12 mb-2" style={{ color: 'var(--clay-success)' }} />
+                    <p className="font-semibold text-sm" style={{ color: 'var(--clay-ink)' }}>{uploadFile.name}</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--clay-ink-soft)' }}>{(uploadFile.size / 1024).toFixed(1)} KB</p>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-12 h-12 mb-2" style={{ color: 'var(--clay-primary)' }} />
+                    <p className="font-semibold text-sm" style={{ color: 'var(--clay-ink)' }}>Klik untuk muat naik fail</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--clay-ink-soft)' }}>Format: .xlsx, .xls, atau .csv (Maks 5MB)</p>
+                  </>
+                )}
+              </label>
+            </div>
+
+            {/* Preview Table */}
+            {uploadPreview.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-sm mb-2" style={{ color: 'var(--clay-ink)' }}>Pratonton ({uploadPreview.length} rekod pertama):</h4>
+                <div className="rounded-xl overflow-hidden" style={{ boxShadow: 'var(--clay-shadow-sm)' }}>
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr style={{ background: 'rgba(124,108,240,0.08)' }}>
+                        <th className="px-2 py-2 text-left" style={{ color: 'var(--clay-primary)' }}>#</th>
+                        <th className="px-2 py-2 text-left" style={{ color: 'var(--clay-primary)' }}>Nama</th>
+                        <th className="px-2 py-2 text-left" style={{ color: 'var(--clay-primary)' }}>No. MyKad</th>
+                        <th className="px-2 py-2 text-left" style={{ color: 'var(--clay-primary)' }}>Telefon</th>
+                        <th className="px-2 py-2 text-left" style={{ color: 'var(--clay-primary)' }}>Emel</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {uploadPreview.map((p: any) => (
+                        <tr key={p.no} style={{ background: 'var(--clay)' }}>
+                          <td className="px-2 py-2" style={{ color: 'var(--clay-ink-soft)' }}>{p.no}</td>
+                          <td className="px-2 py-2 font-medium" style={{ color: 'var(--clay-ink)' }}>{p.namaPenuh}</td>
+                          <td className="px-2 py-2 font-mono" style={{ color: 'var(--clay-ink-secondary)' }}>{p.noMykad}</td>
+                          <td className="px-2 py-2" style={{ color: 'var(--clay-ink-secondary)' }}>{p.noTelefon}</td>
+                          <td className="px-2 py-2" style={{ color: 'var(--clay-ink-secondary)' }}>{p.emel}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Error Message */}
+            {uploadError && (
+              <div className="flex items-start gap-2 p-3 rounded-xl" style={{ background: 'var(--clay-danger-bg)', color: 'var(--clay-danger)' }}>
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-xs">{uploadError}</p>
+              </div>
+            )}
+
+            {/* Info */}
+            <div className="flex items-start gap-2 p-3 rounded-xl" style={{ background: 'rgba(79,196,161,0.08)' }}>
+              <Info className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--clay-success)' }} />
+              <div className="text-xs" style={{ color: 'var(--clay-ink-secondary)' }}>
+                <p className="font-semibold mb-1">Format fail yang diperlukan:</p>
+                <ul className="list-disc list-inside space-y-0.5">
+                  <li>Lajur wajib: <strong>NamaPenuh</strong>, <strong>NoMykad</strong></li>
+                  <li>Lajur pilihan: NoTelefon, Emel, Jantina</li>
+                  <li>Pastikan nombor MyKad adalah 12 digit</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUploadDialogOpen(false)} className="clay-btn-secondary text-sm px-4" style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}>Batal</Button>
+            <Button 
+              onClick={handleUploadPeserta} 
+              disabled={!uploadFile || uploadLoading}
+              className="clay-btn text-sm px-6 flex items-center gap-2" 
+              style={{ 
+                background: !uploadFile || uploadLoading ? 'rgba(124,108,240,0.5)' : 'var(--clay-primary)', 
+                color: 'white', 
+                borderRadius: '20px', 
+                boxShadow: 'var(--clay-shadow-sm)' 
+              }}
+            >
+              {uploadLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {uploadLoading ? 'Memproses...' : `Upload ${uploadPreview.length > 0 ? `(${uploadPreview.length}+)` : ''}`}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
