@@ -80,31 +80,73 @@ export async function POST(request: NextRequest) {
 
     const { width, height } = page.getSize()
 
-    // --- Background ---
-    // Light cream background
-    page.drawRectangle({
-      x: 0, y: 0, width, height,
-      color: rgb(1, 1, 1),
-    })
+    // --- Template Background Image ---
+    // Embed uploaded template image as background if available
+    const embedTemplateBg = async (bgPath: string | null | undefined): Promise<any> => {
+      if (!bgPath) return null
+      try {
+        if (bgPath.startsWith('data:image/')) {
+          const base64Data = bgPath.split(',')[1]
+          const bgBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0))
+          if (bgPath.includes('image/png')) {
+            return await pdfDoc.embedPng(bgBytes)
+          } else {
+            return await pdfDoc.embedJpg(bgBytes)
+          }
+        }
+        // File path (local development)
+        const fullPath = path.join(process.cwd(), 'public', bgPath)
+        if (fs.existsSync(fullPath)) {
+          const bgBytes = fs.readFileSync(fullPath)
+          if (bgPath.endsWith('.png')) {
+            return await pdfDoc.embedPng(bgBytes)
+          } else {
+            return await pdfDoc.embedJpg(bgBytes)
+          }
+        }
+      } catch (bgErr) {
+        console.error('Background embed error:', bgErr)
+      }
+      return null
+    }
+    
+    const templateBgImage = await embedTemplateBg(sijil.templat?.laluanFail)
+    if (templateBgImage) {
+      const bgDims = templateBgImage.scale(1)
+      const bgScale = Math.max(width / bgDims.width, height / bgDims.height) * 1.02
+      page.drawImage(templateBgImage, {
+        x: (width - bgDims.width * bgScale) / 2,
+        y: (height - bgDims.height * bgScale) / 2,
+        width: bgDims.width * bgScale,
+        height: bgDims.height * bgScale,
+        opacity: 0.8,
+      })
+    } else {
+      // --- Background (only if no template image) ---
+      page.drawRectangle({
+        x: 0, y: 0, width, height,
+        color: rgb(1, 1, 1),
+      })
 
-    // Decorative border
-    const borderWidth = 3
-    const borderMargin = 20
-    page.drawRectangle({
-      x: borderMargin, y: borderMargin,
-      width: width - borderMargin * 2, height: height - borderMargin * 2,
-      borderColor: rgb(0.486, 0.424, 0.941), // #7C6CF0
-      borderWidth,
-      opacity: 0.6,
-    })
-    // Inner border
-    page.drawRectangle({
-      x: borderMargin + 6, y: borderMargin + 6,
-      width: width - (borderMargin + 6) * 2, height: height - (borderMargin + 6) * 2,
-      borderColor: rgb(0.486, 0.424, 0.941),
-      borderWidth: 1,
-      opacity: 0.3,
-    })
+      // Decorative border
+      const borderWidth = 3
+      const borderMargin = 20
+      page.drawRectangle({
+        x: borderMargin, y: borderMargin,
+        width: width - borderMargin * 2, height: height - borderMargin * 2,
+        borderColor: rgb(0.486, 0.424, 0.941), // #7C6CF0
+        borderWidth,
+        opacity: 0.6,
+      })
+      // Inner border
+      page.drawRectangle({
+        x: borderMargin + 6, y: borderMargin + 6,
+        width: width - (borderMargin + 6) * 2, height: height - (borderMargin + 6) * 2,
+        borderColor: rgb(0.486, 0.424, 0.941),
+        borderWidth: 1,
+        opacity: 0.3,
+      })
+    }
 
     // --- Header: Logo & Institution Name ---
     // Embed official logo at the top (460×340 px target)
