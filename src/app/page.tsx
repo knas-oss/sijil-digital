@@ -2140,8 +2140,17 @@ function TemplatTab({ user }: { user: AdminUser }) {
   const [loading, setLoading] = useState(true)
   const [editingTemplate, setEditingTemplate] = useState<any>(null)
   const [statusLoading, setStatusLoading] = useState<string | null>(null)
-  const [orientasiFilter, setOrientasiFilter] = useState<string>('semua') // semua | landskap | potret
+  const [orientasiFilter, setOrientasiFilter] = useState<string>('semua')
   const [showNewDialog, setShowNewDialog] = useState(false)
+  const [showUploadDialog, setShowUploadDialog] = useState(false)
+  const [uploadingFile, setUploadingFile] = useState(false)
+  const [uploadedPreview, setUploadedPreview] = useState<string | null>(null)
+  const [uploadForm, setUploadForm] = useState({
+    namaTemplat: '',
+    orientasi: 'landskap' as 'landskap' | 'potret',
+    saizKertas: 'a4',
+    keterangan: '',
+  })
   const { toast } = useToast()
 
   const fetchData = useCallback(() => {
@@ -2243,13 +2252,22 @@ function TemplatTab({ user }: { user: AdminUser }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="font-semibold" style={{ color: 'var(--clay-ink)' }}>Galeri Templat Sijil</h3>
-        <Button
-          onClick={() => setShowNewDialog(true)}
-          className="clay-btn text-sm px-4 py-2 flex items-center gap-2"
-          style={{ background: 'var(--clay-primary)', color: 'white', borderRadius: '20px', boxShadow: 'var(--clay-shadow-sm)' }}
-        >
-          <Plus className="w-4 h-4" /> Templat Baharu
-        </Button>
+        <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setShowUploadDialog(true)}
+              className="clay-btn-secondary text-sm px-4 py-2 flex items-center gap-2"
+              style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '20px', boxShadow: 'var(--clay-shadow-sm)' }}
+            >
+              <Upload className="w-4 h-4" /> Upload Templat
+            </Button>
+            <Button
+              onClick={() => setShowNewDialog(true)}
+              className="clay-btn text-sm px-4 py-2 flex items-center gap-2"
+              style={{ background: 'var(--clay-primary)', color: 'white', borderRadius: '20px', boxShadow: 'var(--clay-shadow-sm)' }}
+            >
+              <Plus className="w-4 h-4" /> Templat Baharu
+            </Button>
+          </div>
       </div>
 
       {/* Orientation Filter Tabs */}
@@ -2309,6 +2327,206 @@ function TemplatTab({ user }: { user: AdminUser }) {
           </span>
         </button>
       </div>
+
+      {/* Upload Template Dialog */}
+      {showUploadDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }}>
+          <div className="clay-card-lg p-6 max-w-lg w-full mx-4" style={{ borderRadius: '24px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h3 className="text-lg font-bold mb-2" style={{ color: 'var(--clay-ink)' }}>Muat Naik Templat Sijil</h3>
+            <p className="text-sm mb-5" style={{ color: 'var(--clay-ink-soft)' }}>Muat naik imej latar templat sijil (format PNG/JPG maks 10MB).</p>
+
+            <div className="space-y-4">
+              {/* File Upload Area */}
+              <div>
+                <label className="text-xs font-semibold mb-1.5 block" style={{ color: 'var(--clay-ink)' }}>Gambar Templat <span style={{ color: 'var(--clay-destructive)' }}>*</span></label>
+                <div
+                  className="relative rounded-2xl p-8 text-center cursor-pointer transition-all hover:scale-[1.01]"
+                  style={{
+                    background: uploadedPreview ? 'var(--clay-bg)' : 'var(--clay-bg)',
+                    border: `2px dashed ${uploadedPreview ? 'var(--clay-success)' : 'var(--border)'}`,
+                  }}
+                  onClick={() => {
+                    const input = document.getElementById('template-upload-input') as HTMLInputElement
+                    input?.click()
+                  }}
+                >
+                  <input
+                    id="template-upload-input"
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      if (!file.type.startsWith('image/')) {
+                        toast({ title: 'Format Tidak Sah', description: 'Hanya fail imej dibenarkan.', variant: 'destructive' })
+                        return
+                      }
+                      if (file.size > 10 * 1024 * 1024) {
+                        toast({ title: 'Fail Terlalu Besar', description: 'Saiz maksimum 10MB.', variant: 'destructive' })
+                        return
+                      }
+                      const reader = new FileReader()
+                      reader.onload = (ev) => setUploadedPreview(ev.target?.result as string)
+                      reader.readAsDataURL(file)
+                      const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '')
+                      setUploadForm(prev => ({ ...prev, namaTemplat: nameWithoutExt }))
+                    }}
+                  />
+                  {uploadedPreview ? (
+                    <div>
+                      <img src={uploadedPreview} alt="Preview" className="max-h-40 mx-auto rounded-xl object-contain mb-2" />
+                      <p className="text-xs" style={{ color: 'var(--clay-success)' }}>
+                        <CheckCircle2 className="w-3 h-3 inline mr-1" /> Gambar dipilih
+                      </p>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setUploadedPreview(null); const inp = document.getElementById('template-upload-input') as HTMLInputElement; if (inp) inp.value = '' }}
+                        className="text-xs mt-1 underline"
+                        style={{ color: 'var(--clay-danger)' }}
+                      >
+                        Tukar gambar
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <Upload className="w-10 h-10 mx-auto mb-2" style={{ color: 'var(--clay-ink-soft)', opacity: 0.4 }} />
+                      <p className="text-sm font-medium" style={{ color: 'var(--clay-ink-secondary)' }}>Klik untuk pilih imej</p>
+                      <p className="text-xs mt-1" style={{ color: 'var(--clay-ink-soft)' }}>PNG atau JPG · Maks 10MB</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Template Name */}
+              <div>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Nama Templat <span style={{ color: 'var(--clay-destructive)' }}>*</span></label>
+                <Input
+                  value={uploadForm.namaTemplat}
+                  onChange={e => setUploadForm(prev => ({ ...prev, namaTemplat: e.target.value }))}
+                  placeholder="cth: Templat Sijil ADTEC 2026"
+                  className="h-10"
+                  style={{ borderRadius: '16px', boxShadow: 'var(--clay-inset)', background: 'var(--clay)', border: '2px solid transparent' }}
+                />
+              </div>
+
+              {/* Keterangan */}
+              <div>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Keterangan</label>
+                <Input
+                  value={uploadForm.keterangan}
+                  onChange={e => setUploadForm(prev => ({ ...prev, keterangan: e.target.value }))}
+                  placeholder="Penerangan ringkas templat (pilihan)"
+                  className="h-10"
+                  style={{ borderRadius: '16px', boxShadow: 'var(--clay-inset)', background: 'var(--clay)', border: '2px solid transparent' }}
+                />
+              </div>
+
+              {/* Orientation & Paper Size */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Orientasi</label>
+                  <Select value={uploadForm.orientasi} onValueChange={(v: any) => setUploadForm(prev => ({ ...prev, orientasi: v }))}>
+                    <SelectTrigger className="h-10" style={{ borderRadius: '16px', boxShadow: 'var(--clay-inset)', background: 'var(--clay)', border: '2px solid transparent' }}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent style={{ borderRadius: '16px' }}>
+                      <SelectItem value="landskap">Landskap (Mendatar)</SelectItem>
+                      <SelectItem value="potret">Potret (Menegak)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--clay-ink)' }}>Saiz Kertas</label>
+                  <Select value={uploadForm.saizKertas} onValueChange={(v) => setUploadForm(prev => ({ ...prev, saizKertas: v }))}>
+                    <SelectTrigger className="h-10" style={{ borderRadius: '16px', boxShadow: 'var(--clay-inset)', background: 'var(--clay)', border: '2px solid transparent' }}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent style={{ borderRadius: '16px' }}>
+                      <SelectItem value="a4">A4 (210×297mm)</SelectItem>
+                      <SelectItem value="a5">A5 (148×210mm)</SelectItem>
+                      <SelectItem value="letter">Letter (216×279mm)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  onClick={() => {
+                    setShowUploadDialog(false)
+                    setUploadedPreview(null)
+                    setUploadForm({ namaTemplat: '', orientasi: 'landskap', saizKertas: 'a4', keterangan: '' })
+                  }}
+                  variant="outline"
+                  className="flex-1 clay-btn-secondary text-sm px-4"
+                  style={{ background: 'var(--clay)', color: 'var(--clay-primary-dark)', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}
+                >
+                  Batal
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (!uploadedPreview || !uploadForm.namaTemplat.trim()) {
+                      toast({ title: 'Ralat', description: 'Gambar dan nama templat wajib diisi.', variant: 'destructive' })
+                      return
+                    }
+                    setUploadingFile(true)
+                    try {
+                      // 1. Upload the image
+                      const formData = new FormData()
+                      const fileInput = document.getElementById('template-upload-input') as HTMLInputElement
+                      if (fileInput?.files?.[0]) {
+                        formData.append('fail', fileInput.files[0])
+                      }
+                      const uploadRes = await fetch('/api/upload/templat', { method: 'POST', body: formData })
+                      const uploadResult = await uploadRes.json()
+                      if (!uploadResult.berjaya) {
+                        toast({ title: 'Ralat', description: uploadResult.mesej || 'Gagal muat naik.', variant: 'destructive' })
+                        return
+                      }
+
+                      // 2. Create template with the image path
+                      const createRes = await fetch('/api/templat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          namaTemplat: uploadForm.namaTemplat.trim(),
+                          keterangan: uploadForm.keterangan.trim(),
+                          laluanFail: uploadResult.laluan,
+                          orientasi: uploadForm.orientasi,
+                          saizKertas: uploadForm.saizKertas,
+                          jenisFail: 'png',
+                          dimuatNaikOlehId: user.id,
+                          medan: [],
+                        }),
+                      })
+                      const createResult = await createRes.json()
+                      if (createResult.berjaya) {
+                        toast({ title: 'Templat Dimuat Naik', description: `Templat "${uploadForm.namaTemplat}" berjaya dimuat naik.` })
+                        setShowUploadDialog(false)
+                        setUploadedPreview(null)
+                        setUploadForm({ namaTemplat: '', orientasi: 'landskap', saizKertas: 'a4', keterangan: '' })
+                        fetchData()
+                      } else {
+                        toast({ title: 'Ralat', description: createResult.mesej || 'Gagal mencipta templat.', variant: 'destructive' })
+                      }
+                    } catch {
+                      toast({ title: 'Ralat', description: 'Gagal memuat naik templat.', variant: 'destructive' })
+                    }
+                    setUploadingFile(false)
+                  }}
+                  disabled={uploadingFile || !uploadedPreview || !uploadForm.namaTemplat.trim()}
+                  className="flex-1 clay-btn text-sm px-4 flex items-center justify-center gap-2"
+                  style={{ background: 'var(--clay-primary)', color: 'white', borderRadius: '16px', boxShadow: 'var(--clay-shadow-sm)' }}
+                >
+                  {uploadingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                  {uploadingFile ? 'Memuat naik...' : 'Muat Naik Templat'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* New Template Dialog */}
       {showNewDialog && (
@@ -2412,10 +2630,19 @@ function TemplatTab({ user }: { user: AdminUser }) {
             {/* Template preview with field positions */}
             <div className="rounded-xl mb-4 relative overflow-hidden"
               style={{
-                background: 'linear-gradient(135deg, #f8f9ff, #eef0fa)',
+                background: t.laluanFail ? 'transparent' : 'linear-gradient(135deg, #f8f9ff, #eef0fa)',
                 aspectRatio: t.orientasi === 'landskap' ? '297/210' : '210/297',
                 border: '2px dashed var(--border)',
               }}>
+              {/* Background image thumbnail */}
+              {t.laluanFail && (
+                <img
+                  src={t.laluanFail}
+                  alt={t.namaTemplat}
+                  className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                  style={{ opacity: 0.4 }}
+                />
+              )}
               {/* Active badge on preview */}
               {t.status === 'aktif' && (
                 <div className="absolute top-2 right-2 z-20 px-2 py-0.5 rounded-full text-[9px] font-bold flex items-center gap-1"
@@ -2698,13 +2925,22 @@ function TemplateEditor({ template, onSave, onClose }: {
               style={{
                 width: '100%',
                 aspectRatio: isLandscape ? '297/210' : '210/297',
-                background: 'linear-gradient(135deg, #fafbff 0%, #f0f1f8 50%, #e8eaf4 100%)',
+                background: template.laluanFail ? 'transparent' : 'linear-gradient(135deg, #fafbff 0%, #f0f1f8 50%, #e8eaf4 100%)',
                 boxShadow: 'inset 0 2px 8px rgba(120,124,170,0.1)',
               }}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
             >
+              {/* Background image */}
+              {template.laluanFail && (
+                <img
+                  src={template.laluanFail}
+                  alt="Latar Templat"
+                  className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                  style={{ opacity: 0.5 }}
+                />
+              )}
               {/* Grid overlay */}
               <div className="absolute inset-0" style={{
                 backgroundImage: 'linear-gradient(rgba(120,124,170,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(120,124,170,0.06) 1px, transparent 1px)',
