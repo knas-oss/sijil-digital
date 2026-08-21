@@ -21,34 +21,72 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
-    // Create template with fields
-    const templat = await db.templatSijil.create({
-      data: {
-        namaTemplat: body.namaTemplat,
-        keterangan: body.keterangan,
-        laluanFail: body.laluanFail || '/templates/default.png',
-        jenisFail: body.jenisFail || 'png',
-        orientasi: body.orientasi || 'landskap',
-        saizKertas: body.saizKertas || 'a4',
-        lebarPx: body.lebarPx || 3508,
-        tinggiPx: body.tinggiPx || 2480,
-        status: 'draf',
-        dimuatNaikOlehId: body.dimuatNaikOlehId,
-      },
-    })
-
-    // Create fields if provided
-    if (body.medan && Array.isArray(body.medan)) {
-      for (const medan of body.medan) {
-        await db.medanTemplat.create({
-          data: { ...medan, templatId: templat.id },
-        })
-      }
+    if (!body.namaTemplat) {
+      return NextResponse.json({ berjaya: false, mesej: 'Nama templat diperlukan.' }, { status: 400 })
+    }
+    if (!body.dimuatNaikOlehId) {
+      return NextResponse.json({ berjaya: false, mesej: 'ID pengguna diperlukan.' }, { status: 400 })
     }
 
+    const orientasi = body.orientasi || 'landskap'
+    // Dimensi piksel A4: landskap 3508×2480, potret 2480×3508
+    const isPotret = orientasi === 'potret'
+    const lebarPx = body.lebarPx || (isPotret ? 2480 : 3508)
+    const tinggiPx = body.tinggiPx || (isPotret ? 3508 : 2480)
+
+    // Create template + fields atomically
+    const templat = await db.$transaction(async (tx) => {
+      const created = await tx.templatSijil.create({
+        data: {
+          namaTemplat: body.namaTemplat,
+          keterangan: body.keterangan,
+          laluanFail: body.laluanFail || '/templates/default.png',
+          jenisFail: body.jenisFail || 'png',
+          orientasi,
+          saizKertas: body.saizKertas || 'a4',
+          lebarPx,
+          tinggiPx,
+          status: body.status || 'draf',
+          laluanTandatanganPengarah: body.laluanTandatanganPengarah ?? null,
+          laluanTandatanganPenyelaras: body.laluanTandatanganPenyelaras ?? null,
+          jawatanPenandatangan: body.jawatanPenandatangan ?? null,
+          namaPenandatangan: body.namaPenandatangan ?? null,
+          dimuatNaikOlehId: body.dimuatNaikOlehId,
+        },
+      })
+
+      // Create fields if provided (map fields explicitly to avoid unknown-argument errors)
+      if (body.medan && Array.isArray(body.medan)) {
+        for (const medan of body.medan) {
+          await tx.medanTemplat.create({
+            data: {
+              kunciMedan: medan.kunciMedan,
+              jenisElemen: medan.jenisElemen || 'teks',
+              posXPeratus: medan.posXPeratus ?? 50,
+              posYPeratus: medan.posYPeratus ?? 50,
+              lebarPeratus: medan.lebarPeratus ?? 40,
+              keluargaFon: medan.keluargaFon || 'Times New Roman',
+              saizFon: medan.saizFon ?? 24,
+              warnaFon: medan.warnaFon || '#000000',
+              gayaFon: medan.gayaFon || 'normal',
+              penjajaran: medan.penjajaran || 'tengah',
+              autoKecil: medan.autoKecil ?? true,
+              templatId: created.id,
+            },
+          })
+        }
+      }
+
+      return created
+    })
+
     return NextResponse.json({ berjaya: true, data: templat })
-  } catch (error) {
-    return NextResponse.json({ berjaya: false, mesej: 'Ralat mencipta templat.' }, { status: 500 })
+  } catch (error: any) {
+    console.error('Templat POST error:', error)
+    const mesej = error?.code === 'P2003'
+      ? 'Ralat: pengguna tidak dijumpai. Sila log masuk semula dan cuba lagi.'
+      : 'Ralat mencipta templat.'
+    return NextResponse.json({ berjaya: false, mesej }, { status: 500 })
   }
 }
 

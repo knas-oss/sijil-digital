@@ -2190,7 +2190,7 @@ function TemplatTab({ user }: { user: AdminUser }) {
     return (
       <TemplateEditor
         template={editingTemplate}
-        onSave={async (updatedMedan: any[]) => {
+        onSave={async (updatedMedan: any[], signatureData?: any) => {
           try {
             const isNew = editingTemplate.id === 'new'
             let templatId = editingTemplate.id
@@ -2207,6 +2207,7 @@ function TemplatTab({ user }: { user: AdminUser }) {
                   saizKertas: editingTemplate.saizKertas,
                   dimuatNaikOlehId: user.id,
                   medan: updatedMedan,
+                  ...(signatureData || {}),
                 }),
               })
               const createResult = await createRes.json()
@@ -2740,7 +2741,12 @@ function TemplatTab({ user }: { user: AdminUser }) {
 // ============================================================
 function TemplateEditor({ template, onSave, onClose }: {
   template: any
-  onSave: (medan: any[]) => void
+  onSave: (medan: any[], signatureData?: {
+    laluanTandatanganPengarah: string | null
+    laluanTandatanganPenyelaras: string | null
+    jawatanPenandatangan: string | null
+    namaPenandatangan: string | null
+  }) => void
   onClose: () => void
 }) {
   const [medan, setMedan] = useState<any[]>(template.medanTemplat || [])
@@ -2854,23 +2860,23 @@ function TemplateEditor({ template, onSave, onClose }: {
       return
     }
     setSaving(true)
+    const signatureData = {
+      laluanTandatanganPengarah: tandatanganPengarah || null,
+      laluanTandatanganPenyelaras: tandatanganPenyelaras || null,
+      jawatanPenandatangan: jawatanPenandatangan || null,
+      namaPenandatangan: namaPenandatangan || null,
+    }
     // Save signature paths to template first (if not new)
     if (template.id !== 'new') {
       try {
         await fetch('/api/templat', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            templatId: template.id,
-            laluanTandatanganPengarah: tandatanganPengarah || null,
-            laluanTandatanganPenyelaras: tandatanganPenyelaras || null,
-            jawatanPenandatangan: jawatanPenandatangan || null,
-            namaPenandatangan: namaPenandatangan || null,
-          }),
+          body: JSON.stringify({ templatId: template.id, ...signatureData }),
         })
       } catch {}
     }
-    await onSave(medan)
+    await onSave(medan, signatureData)
     setSaving(false)
   }
 
